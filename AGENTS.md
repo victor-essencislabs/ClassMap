@@ -4,7 +4,7 @@ Este arquivo é versionado neste projeto (decisão do bootstrap-init, 2026-08-28
 
 ## Projeto
 
-ClassMap é uma ferramenta web sob medida para a Essencislabs que substitui o Visual Paradigm na documentação visual dos sistemas **Elims** e **GeoCloudAI**: diagramas de classes, diagrama de objetos e uma "Visão do Sistema" completa (campos, tipos, regras de permissão), com import/export em JSON e leitura de arquivos `.vpp` legados direto no navegador. Stack de produção decidida: **React + Vite** (frontend, hospedado na Vercel) + **Supabase** (Postgres + Auth + Realtime). Este repositório está começando do zero — ainda não existe código de aplicação, apenas a documentação de produto e a arquitetura de agentes de IA.
+ClassMap é uma ferramenta web sob medida para a Essencislabs que substitui o Visual Paradigm na documentação visual dos sistemas **Elims** e **GeoCloudAI**: diagramas de classes, diagrama de objetos e uma "Visão do Sistema" completa (campos, tipos, regras de permissão), com import/export em JSON e leitura de arquivos `.vpp` legados direto no navegador. Stack de produção decidida: **React + Vite** (frontend, hospedado na Vercel) + **Supabase** (Postgres + Auth + Realtime). As 5 tasks do MVP de produção (ADR-001) já têm código real em `src/` e `supabase/migrations/` (ver `.agents/context/CONTEXT.md`) — falta só provisionar a infraestrutura real (projeto Supabase, deploy Vercel) e validar com o time. O parser `.vpp` ainda não foi iniciado (avança em paralelo, ver `.claude/agents/parser-vpp.md`).
 
 ## Fontes de verdade
 
@@ -34,13 +34,13 @@ Antes de um commit ou handoff, rode a skill `bootstrap-audit` (teste de sanidade
 
 ## Mapa do repositório
 
-Estrutura **planejada** (nenhum código de aplicação existe ainda — será criada conforme as tasks do MVP de produção avançarem):
+Estrutura real, já implementada (TASK-001..005 do MVP — ver `.agents/context/CONTEXT.md` para o estado exato de cada uma):
 
 - `src/features/class-diagram/` — canvas, cards de classe e conectores UML do Diagrama de Classes
 - `src/features/object-diagram/` — instâncias e valores de atributos do Diagrama de Objetos
 - `src/features/system-view/` — Visão do Sistema (módulo → entidade → campos/API/permissões)
-- `src/features/import-export/` — schema JSON de diagrama (contrato público) e sua validação
-- `src/features/vpp-import/` — parser de arquivos `.vpp` (tokenizador + analisador recursivo via sql.js/WASM)
+- `src/features/import-export/` — schema JSON de diagrama (contrato público) e sua validação (hoje só Diagrama de Classes)
+- `src/features/vpp-import/` — **ainda planejado**: parser de arquivos `.vpp` (tokenizador + analisador recursivo via sql.js/WASM), fora do escopo das 5 tasks do MVP acima
 - `src/lib/supabase/` — client Supabase, queries respeitando RLS, presence
 - `supabase/migrations/` — schema Postgres e políticas RLS, versionados
 - `docs/` — documentação real do produto (ver mapa em `docs/README.md`)

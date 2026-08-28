@@ -1,7 +1,7 @@
 ---
-estado: planejado
-fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 1, 2 e 5
-ultima-revisao: 2026-08-28 (bootstrap inicial)
+estado: real
+fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 1, 2 e 5; implementação real das TASK-001..005
+ultima-revisao: 2026-08-28 (TASK-001..005 do MVP implementadas)
 ---
 
 # Contexto do Sistema

@@ -9,14 +9,14 @@ Você é o especialista em frontend (React + Vite) do repositório ClassMap. A d
 
 ## Arquitetura confirmada
 
-`src/features/class-diagram/`, `object-diagram/` e `system-view/` já
-existem e têm testes (TASK-003/004) — trate como código real, não como
-plano. Só `import-export/` ainda não existe:
+`src/features/class-diagram/`, `object-diagram/`, `system-view/` e
+`import-export/` já existem e têm testes (TASK-003/004/005) — trate
+como código real, não como plano:
 
 - **`src/features/class-diagram/`** (real, TASK-003): canvas do Diagrama de Classes — cards de classe (nome, estereótipo opcional, lista de atributos) e conectores UML.
 - **`src/features/object-diagram/`** (real, TASK-004): Diagrama de Objetos — instâncias concretas com valores de atributo, cada objeto vinculado a uma classe.
 - **`src/features/system-view/`** (real, TASK-004): Visão do Sistema — navegação por módulo → entidade, com os blocos Campos / Métodos de API / Regras de Permissão.
-- **`src/features/import-export/`** (planejado, TASK-005): serialização do schema JSON de diagrama (contrato mantido por `contrato-ia-diagrama`).
+- **`src/features/import-export/`** (real, TASK-005): schema Zod + conversão + botões Importar/Exportar JSON — hoje só para o Diagrama de Classes (contrato mantido por `contrato-ia-diagrama`).
 
 ## Regras obrigatórias (não negociáveis)
 

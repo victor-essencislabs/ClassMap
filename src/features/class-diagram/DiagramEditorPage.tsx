@@ -4,6 +4,7 @@ import { getCurrentUserId, getDiagram, getMyProjectRole, updateDiagramContent } 
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import { ClassDiagramCanvas } from './ClassDiagramCanvas'
 import { emptyClassDiagramContent, isClassDiagramContent, type ClassDiagramContent } from './types'
+import { ImportExportControls } from '../import-export/ImportExportControls'
 
 const AUTOSAVE_DELAY_MS = 800
 
@@ -67,6 +68,13 @@ export function DiagramEditorPage() {
         <h1>{diagram.name}</h1>
         {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
       </div>
+
+      <ImportExportControls
+        content={content}
+        fileName={diagram.name}
+        canImport={!readOnly}
+        onImport={handleChange}
+      />
 
       <ClassDiagramCanvas content={content} readOnly={readOnly} onChange={handleChange} />
     </section>

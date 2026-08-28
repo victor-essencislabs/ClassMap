@@ -352,3 +352,19 @@ button {
   flex: 1;
   min-width: 0;
 }
+
+/* ---- Import/Export JSON (TASK-005) ---- */
+
+.import-export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.import-errors {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+}

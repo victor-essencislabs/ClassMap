@@ -1,12 +1,12 @@
 ---
-estado: planejado
-fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 5 e 6
-ultima-revisao: 2026-08-28 (bootstrap inicial)
+estado: real
+fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 5 e 6; implementação real das TASK-001..005
+ultima-revisao: 2026-08-28 (TASK-001..005 do MVP implementadas)
 ---
 
 # Dependências
 
-Direção estrita de dependência entre camadas/containers, planejada para a implementação do MVP.
+Direção estrita de dependência entre camadas/containers — regras seguidas pela implementação real das TASK-001..005 (`src/lib/supabase/queries.ts` é o único lugar que chama o SDK do Supabase; nenhum componente de canvas/card faz isso diretamente).
 
 ## "Backend" (não há processo próprio — é o SDK do Supabase)
 

@@ -9,11 +9,10 @@ _(ver `.agents/tasks/active/`)_
 2. **TASK-002** — Scaffold do frontend e navegação autenticada: código completo (build/lint passam); falta conectar a um projeto Supabase real para validar CA-02 a CA-05 (mesma pendência acima).
 3. **TASK-003** — Diagrama de Classes: canvas/cards/conectores completo, com testes automatizados (unitários + componente); falta validação manual em navegador e persistência real (mesma pendência acima).
 4. **TASK-004** — Diagrama de Objetos e Visão do Sistema: ambos completos, com testes automatizados; mesma pendência de validação manual/persistência real acima. Precisou de uma migration nova (`diagrams.type` ganhou `'system-view'`).
+5. **TASK-005** — Contrato JSON de import/export (só Diagrama de Classes, com testes), botões Importar/Exportar: completo. Deploy na Vercel, validação de custo e sessão com o time (CA-04/05/06) **pendentes** — exigem conta Vercel e pessoas reais, não só credenciais técnicas.
 
 ## Planejados
-Ver `.agents/tasks/backlog/`. Sequência do MVP de produção decidida em ADR-001 (fatiamento por camada técnica):
-
-5. TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (depende de TASK-003/004)
+Nenhuma task em `.agents/tasks/backlog/` no momento — todas as 5 do MVP (ADR-001) estão em `active/`. Ver "Ativos" acima para o que falta em cada uma antes de fechar o MVP.
 
 ## Concluídos
 _(ver `.agents/tasks/completed/`)_

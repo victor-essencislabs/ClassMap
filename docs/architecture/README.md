@@ -2,7 +2,7 @@
 
 Visão estrutural de ClassMap: contexto do sistema, containers, componentes, dependências permitidas/proibidas, comunicação síncrona/assíncrona, implantação, observabilidade, tolerância a falhas.
 
-**Estado geral: planejado.** Este repositório é greenfield — nenhum destes documentos descreve código existente ainda; todos descrevem a arquitetura de produção decidida em `ClassMap_Documentacao.pdf` (Essencislabs, Agosto 2026), a ser implementada.
+**Estado misto.** `context.md`, `components.md` e `dependencies.md` já descrevem código real (as 5 tasks do MVP, ver `.agents/context/CONTEXT.md`) — `estado: real` no frontmatter de cada um. `containers.md` e `deployment.md` continuam `estado: planejado`: descrevem a topologia de implantação decidida em `ClassMap_Documentacao.pdf` (Essencislabs, Agosto 2026), ainda não real porque nenhum projeto Supabase/Vercel foi provisionado.
 
 ## Documentos
 
