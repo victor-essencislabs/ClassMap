@@ -15,17 +15,24 @@ ClassMap é uma ferramenta web para a Essencislabs que substitui o Visual Paradi
 ## Iniciativas ativas
 
 - **Bootstrap da arquitetura de agentes e documentação** (branch `main`): concluído — `AGENTS.md`/`CLAUDE.md`, `.agents/`, `.claude/`, `.codex/` e `docs/` já commitados (`49621e0`).
-- **Planejamento do MVP de produção** (ver ADR-001): decidido fatiar por camada técnica (dados → frontend → integração). 5 tasks em `.agents/tasks/backlog/`, nenhuma iniciada ainda:
-  - TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase (`supabase-multitenant`)
-  - TASK-002 — Scaffold do frontend e navegação autenticada (`frontend-diagramas`, depende de TASK-001)
-  - TASK-003 — Diagrama de Classes (`frontend-diagramas`, depende de TASK-002)
-  - TASK-004 — Diagrama de Objetos e Visão do Sistema (`frontend-diagramas`, depende de TASK-003)
-  - TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (`contrato-ia-diagrama`, depende de TASK-003/004)
-- Próximo passo: mover TASK-001 para `active/` e iniciar a implementação.
+- **Planejamento do MVP de produção** (ver ADR-001): decidido fatiar por camada técnica (dados → frontend → integração). 5 tasks em `.agents/tasks/` (fatiadas por camada, ver ADR-001):
+  - **TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase** (`supabase-multitenant`) — **em `active/`**, schema e políticas RLS implementados e validados localmente (ver abaixo); falta provisionar o projeto Supabase real e validar CA-05.
+  - TASK-002 — Scaffold do frontend e navegação autenticada (`frontend-diagramas`, backlog, depende de TASK-001)
+  - TASK-003 — Diagrama de Classes (`frontend-diagramas`, backlog, depende de TASK-002)
+  - TASK-004 — Diagrama de Objetos e Visão do Sistema (`frontend-diagramas`, backlog, depende de TASK-003)
+  - TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (`contrato-ia-diagrama`, backlog, depende de TASK-003/004)
+- Próximo passo: provisionar um projeto Supabase real, aplicar as migrations de `supabase/migrations/` e validar CA-05 (cadastro/login reais) antes de mover TASK-001 para `completed/` e começar a TASK-002.
 
 ## Arquitetura vigente
 
-Nenhuma implementada ainda — ver arquitetura **planejada** em `docs/architecture/` (todos os documentos marcados `estado: planejado`) e os papéis em `.claude/agents/` (`frontend-diagramas`, `supabase-multitenant`, `parser-vpp`, `contrato-ia-diagrama`).
+Camada de dados (TASK-001) tem código real pela primeira vez:
+`supabase/migrations/` (schema Organização→Usuários→Projetos→Diagramas +
+RLS, ver `supabase/README.md`) — validado contra um Postgres local, ainda
+não contra um projeto Supabase gerenciado real. Frontend e as demais
+camadas continuam só **planejadas** em `docs/architecture/` (documentos
+marcados `estado: planejado`) — ver os papéis em `.claude/agents/`
+(`frontend-diagramas`, `supabase-multitenant`, `parser-vpp`,
+`contrato-ia-diagrama`).
 
 ## Restrições importantes
 
