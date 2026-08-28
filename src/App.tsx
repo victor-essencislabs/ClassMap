@@ -7,7 +7,7 @@ import { AppLayout } from './features/navigation/AppLayout'
 import { OrganizationsPage } from './features/navigation/OrganizationsPage'
 import { ProjectsPage } from './features/navigation/ProjectsPage'
 import { DiagramsPage } from './features/navigation/DiagramsPage'
-import { DiagramEditorPage } from './features/class-diagram/DiagramEditorPage'
+import { DiagramRouterPage } from './features/navigation/DiagramRouterPage'
 import { NotConfiguredPage } from './features/setup/NotConfiguredPage'
 
 function App() {
@@ -54,7 +54,7 @@ function App() {
           element={
             <RequireAuth>
               <AppLayout>
-                <DiagramEditorPage />
+                <DiagramRouterPage />
               </AppLayout>
             </RequireAuth>
           }

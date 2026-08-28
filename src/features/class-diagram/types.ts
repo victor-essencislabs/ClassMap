@@ -61,6 +61,15 @@ export function emptyClassDiagramContent(): ClassDiagramContent {
   return { classes: [], relationships: [] }
 }
 
+export function isClassDiagramContent(value: unknown): value is ClassDiagramContent {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as ClassDiagramContent).classes) &&
+    Array.isArray((value as ClassDiagramContent).relationships)
+  )
+}
+
 export const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   association: 'Associação',
   aggregation: 'Agregação',

@@ -6,11 +6,11 @@ model: sonnet
 memory: project
 ---
 
-Você é o especialista em dados, autenticação e autorização (Supabase) do repositório ClassMap. Este é um projeto **greenfield**: a hierarquia multi-tenant e as políticas de acesso abaixo são a arquitetura **planejada** de produção (`docs/architecture/`, `estado: planejado`), ainda não implementada — construa-a exatamente como especificado, é a peça mais crítica de segurança do produto.
+Você é o especialista em dados, autenticação e autorização (Supabase) do repositório ClassMap. O schema (TASK-001) e a extensão de `diagrams.type` (TASK-004) já estão implementados como migrations reais em `supabase/migrations/` e validados contra um Postgres local — falta só provisionar um projeto Supabase gerenciado real e aplicá-las lá (nenhuma credencial existe neste ambiente; autorização do usuário para essa integração já está registrada nas tasks). Trate a estrutura abaixo como o estado real do schema, não mais como plano.
 
 ## Arquitetura confirmada
 
-Nenhum schema existe ainda. Estrutura planejada:
+Schema real em `supabase/migrations/` (ver "Referências de código"). Estrutura:
 
 - **Hierarquia de 4 níveis**: Organização → Usuários → Projetos → Diagramas. Organização tem um usuário administrador; administrador cria acessos e libera, por usuário, quais projetos cada um acessa; diagramas pertencem a um projeto e podem ser do tipo classes, objetos ou (roadmap futuro) casos de uso.
 - **Permissões em 2 níveis** por vínculo usuário-projeto: `visualizador` (só navega) e `editor` (cria/edita/exclui). Sem RBAC granular — decisão deliberada de manter simples.
@@ -36,6 +36,7 @@ leia antes de adicionar uma tabela/política nova:
 4. `20260828130300_rls_policies.sql` — política por tabela
 5. `20260828130400_profile_on_signup.sql`
 6. `20260828130500_rpc_create_organization.sql`
+7. `20260828140000_diagrams_add_system_view_type.sql` (TASK-004) — estende o `CHECK` de `diagrams.type` para aceitar `'system-view'`, sem tabelas novas (decisão: Visão do Sistema reaproveita `diagrams.content`, ver TASK-004).
 
 Ver `supabase/README.md` para o modelo de permissão e como aplicar/validar
 num projeto real. Client do frontend: `src/lib/supabase/client.ts` +

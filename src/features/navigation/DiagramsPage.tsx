@@ -6,14 +6,20 @@ import {
   getMyProjectRole,
   listDiagrams,
 } from '../../lib/supabase/queries'
-import type { Diagram, ProjectRole } from '../../lib/supabase/types'
+import type { Diagram, DiagramType, ProjectRole } from '../../lib/supabase/types'
+
+const DIAGRAM_TYPE_LABELS: Record<DiagramType, string> = {
+  classes: 'Diagrama de Classes',
+  objects: 'Diagrama de Objetos',
+  'system-view': 'Visão do Sistema',
+}
 
 export function DiagramsPage() {
   const { orgId, projectId } = useParams<{ orgId: string; projectId: string }>()
   const [diagrams, setDiagrams] = useState<Diagram[] | null>(null)
   const [role, setRole] = useState<ProjectRole | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState<DiagramType | null>(null)
 
   async function reload() {
     if (!projectId) return
@@ -27,17 +33,17 @@ export function DiagramsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
-  async function handleCreateDiagram() {
+  async function handleCreateDiagram(type: DiagramType) {
     if (!projectId) return
-    setCreating(true)
+    setCreating(type)
     setError(null)
     try {
-      await createEmptyDiagram(projectId, 'classes', 'Novo diagrama')
+      await createEmptyDiagram(projectId, type, DIAGRAM_TYPE_LABELS[type])
       await reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar diagrama.')
     } finally {
-      setCreating(false)
+      setCreating(null)
     }
   }
 
@@ -61,28 +67,21 @@ export function DiagramsPage() {
         <ul className="list">
           {diagrams.map((diagram) => (
             <li key={diagram.id}>
-              {diagram.type === 'classes' ? (
-                <Link to={`/orgs/${orgId}/projects/${projectId}/diagrams/${diagram.id}`}>
-                  {diagram.name}
-                </Link>
-              ) : (
-                diagram.name
-              )}{' '}
-              <span className="badge">{diagram.type}</span>
-              {diagram.type === 'objects' && (
-                <span className="badge" title="Diagrama de Objetos ainda não tem tela própria (TASK-004)">
-                  em breve
-                </span>
-              )}
+              <Link to={`/orgs/${orgId}/projects/${projectId}/diagrams/${diagram.id}`}>{diagram.name}</Link>{' '}
+              <span className="badge">{DIAGRAM_TYPE_LABELS[diagram.type]}</span>
             </li>
           ))}
         </ul>
       )}
 
       {canEdit && (
-        <button type="button" onClick={handleCreateDiagram} disabled={creating}>
-          {creating ? 'Criando…' : 'Criar diagrama'}
-        </button>
+        <div className="toolbar">
+          {(Object.keys(DIAGRAM_TYPE_LABELS) as DiagramType[]).map((type) => (
+            <button key={type} type="button" onClick={() => handleCreateDiagram(type)} disabled={creating !== null}>
+              {creating === type ? 'Criando…' : `+ ${DIAGRAM_TYPE_LABELS[type]}`}
+            </button>
+          ))}
+        </div>
       )}
     </section>
   )

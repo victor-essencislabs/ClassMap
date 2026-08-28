@@ -9,7 +9,7 @@
 
 export type OrganizationRole = 'admin' | 'member'
 export type ProjectRole = 'visualizador' | 'editor'
-export type DiagramType = 'classes' | 'objects'
+export type DiagramType = 'classes' | 'objects' | 'system-view'
 
 export interface Organization {
   id: string

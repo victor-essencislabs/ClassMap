@@ -245,3 +245,110 @@ button {
   color: #b91c1c;
   border-color: #b91c1c;
 }
+
+.object-card u {
+  text-decoration-thickness: 1px;
+}
+
+/* ---- Visão do Sistema (TASK-004) ---- */
+
+.system-view-page {
+  max-width: none;
+}
+
+.system-view-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.system-view-nav {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.system-view-module ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.system-view-module button {
+  width: 100%;
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  background: none;
+  border-radius: 0.25rem;
+}
+
+.system-view-module button.nav-active {
+  border-color: var(--border);
+  font-weight: 600;
+}
+
+.system-view-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.system-view-detail section {
+  margin-top: 1.5rem;
+}
+
+.entity-name-input {
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.table-scroll th,
+.table-scroll td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.4rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table-scroll input {
+  font: inherit;
+  font-size: 0.85rem;
+  width: 100%;
+  min-width: 4rem;
+  border: none;
+  background: transparent;
+}
+
+.table-scroll input[type='checkbox'] {
+  width: auto;
+  min-width: 0;
+}
+
+.permission-rule-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.permission-rule-row input {
+  flex: 1;
+  min-width: 0;
+}

@@ -18,11 +18,11 @@ ClassMap é uma ferramenta web para a Essencislabs que substitui o Visual Paradi
 - **Planejamento do MVP de produção** (ver ADR-001): decidido fatiar por camada técnica (dados → frontend → integração). 5 tasks em `.agents/tasks/` (fatiadas por camada, ver ADR-001):
   - **TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase** (`supabase-multitenant`) — **em `active/`**, schema e políticas RLS implementados e validados localmente; falta provisionar o projeto Supabase real e validar CA-05.
   - **TASK-002 — Scaffold do frontend e navegação autenticada** (`frontend-diagramas`) — **em `active/`**, adiantada à frente da sequência formal do ADR-001 por pedido explícito do usuário (2026-08-28, pelo celular): scaffold React+Vite+TS completo (build/lint passam), autenticação e navegação Organização→Projetos→Diagramas implementadas contra o schema da TASK-001; falta o mesmo projeto Supabase real para validar CA-02 a CA-05.
-  - **TASK-003 — Diagrama de Classes** (`frontend-diagramas`) — **em `active/`**, também adiantada: canvas com cards de classe, conectores ortogonais com os 5 símbolos UML e multiplicidade, painel de edição, persistência via Supabase (código pronto). Primeira task com testes automatizados do repositório (Vitest + Testing Library, 16 casos) — um bug real de seleção de conector foi pego e corrigido pelos testes antes de qualquer uso real. Falta validação manual em navegador e persistência real (mesma pendência das anteriores).
-  - TASK-004 — Diagrama de Objetos e Visão do Sistema (`frontend-diagramas`, backlog, depende de TASK-003)
+  - **TASK-003 — Diagrama de Classes** (`frontend-diagramas`) — **em `active/`**, também adiantada: canvas com cards de classe, conectores ortogonais com os 5 símbolos UML e multiplicidade, painel de edição, persistência via Supabase (código pronto). Primeira task com testes automatizados do repositório (Vitest + Testing Library) — um bug real de seleção de conector foi pego e corrigido pelos testes antes de qualquer uso real. Falta validação manual em navegador e persistência real (mesma pendência das anteriores).
+  - **TASK-004 — Diagrama de Objetos e Visão do Sistema** (`frontend-diagramas`) — **em `active/`**, também adiantada: Diagrama de Objetos (herança automática de atributos por snapshot) e Visão do Sistema (módulo→entidade, 3 blocos sempre presentes) completos, com testes. Exigiu uma migration nova (`diagrams.type` ganhou `'system-view'` — reaproveita a tabela `diagrams` em vez de tabelas relacionais novas, decisão registrada na task). Suíte de testes do repositório agora com 34 casos (6 arquivos). Mesma pendência de validação manual/persistência real.
   - TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (`contrato-ia-diagrama`, backlog, depende de TASK-003/004)
 - **Fluxo de git ajustado** (2026-08-28, pedido do usuário): projeto ainda sem colaboradores externos revisando — commits e push vão direto para `main`, sem branch de feature nem PR, até o usuário pedir o contrário.
-- Próximo passo real (requer computador): provisionar um projeto Supabase real, aplicar as migrations de `supabase/migrations/`, configurar Auth (Email/senha), preencher `.env.local` do frontend com as credenciais, e validar CA-05 da TASK-001 + CA-02 a CA-05 das TASK-002/003 (login real, isolamento visível na UI, persistência do diagrama). Autorização para essa integração já está registrada nas três tasks. Até lá, seguir adiantando o que não depender de credenciais — próximo candidato natural é a TASK-004 (Diagrama de Objetos e Visão do Sistema), que também não precisa de backend real para o essencial do código.
+- Próximo passo real (requer computador): provisionar um projeto Supabase real, aplicar as migrations de `supabase/migrations/` (incluindo a que adiciona `'system-view'` a `diagrams.type`), configurar Auth (Email/senha), preencher `.env.local` do frontend com as credenciais, e validar CA-05 da TASK-001 + os CAs pendentes das TASK-002/003/004 (login real, isolamento visível na UI, persistência de cada tipo de diagrama). Autorização para essa integração já está registrada nas quatro tasks. Só depois disso mover TASK-001..004 para `completed/` e seguir para a TASK-005 (contrato JSON de import/export, deploy na Vercel, validação com o time) — essa sim depende fortemente de infraestrutura real (deploy) e não dá para adiantar tanto sem ela quanto as anteriores.
 
 ## Arquitetura vigente
 
@@ -35,15 +35,17 @@ código real:
 - Raiz do repositório — app React 19 + Vite 8 + TypeScript
   (`package.json`, `src/`): `src/lib/supabase/` (client único + camada de
   queries), `src/features/auth/` (login, contexto de sessão, guard de
-  rota), `src/features/navigation/` (Organizações→Projetos→Diagramas) e
+  rota), `src/features/navigation/` (Organizações→Projetos→Diagramas),
   `src/features/class-diagram/` (canvas do Diagrama de Classes — cards,
-  conectores UML ortogonais, painel de edição). Builda, linta e testa
-  limpo (`npm test` — Vitest + Testing Library, 16 casos); ainda não foi
-  exercitado contra um Supabase real.
+  conectores UML ortogonais, painel de edição), `src/features/object-diagram/`
+  (instâncias com atributos herdados por snapshot) e
+  `src/features/system-view/` (módulo→entidade, 3 blocos sempre
+  presentes). Builda, linta e testa limpo (`npm test` — Vitest +
+  Testing Library, 34 casos); ainda não foi exercitado contra um
+  Supabase real.
 
-As demais camadas (Diagrama de Objetos, Visão do Sistema,
-import/export) continuam só **planejadas** em `docs/architecture/`
-(documentos marcados `estado: planejado`) — ver os papéis em
+A camada de import/export (TASK-005) continua só **planejada** em
+`docs/architecture/` (documentos marcados `estado: planejado`) — ver os papéis em
 `.claude/agents/` (`frontend-diagramas`, `supabase-multitenant`,
 `parser-vpp`, `contrato-ia-diagrama`).
 
