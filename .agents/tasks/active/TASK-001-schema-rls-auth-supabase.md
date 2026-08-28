@@ -134,6 +134,15 @@ Nenhuma do plano original.
   sessão foi contra um Postgres local simulando `auth.users`/`auth.uid()`
   (ver "Validação" abaixo), não o Supabase gerenciado.
 
+**Autorização registrada**: em 2026-08-28, o usuário (victor.sena@essencislabs.com,
+pelo celular, sem acesso a computador no momento) pediu para adiantar
+tudo o que fosse possível sem integração externa e autorizou
+explicitamente que a integração real com o Supabase (provisionar o
+projeto, aplicar as migrations, configurar Auth, preencher
+`.env.local`/variáveis da Vercel) seja feita assim que houver acesso a
+computador — nesta sessão ou em outra. Nenhuma dessas ações foi
+executada aqui por falta de credenciais, não por falta de autorização.
+
 ## Validação
 Nenhum comando de projeto (`package.json`/build/test) existe ainda neste
 repositório — a validação desta task é puramente SQL.

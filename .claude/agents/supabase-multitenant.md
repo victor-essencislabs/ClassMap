@@ -28,7 +28,20 @@ Nenhum schema existe ainda. Estrutura planejada:
 
 ## Referências de código (leia antes de replicar um padrão)
 
-Ainda não há código neste repositório. Ao iniciar a implementação, referencie aqui os arquivos reais de migration (`supabase/migrations/*.sql`) e o client (`src/lib/supabase/client.ts`).
+Migrations reais em `supabase/migrations/` (TASK-001), nesta ordem —
+leia antes de adicionar uma tabela/política nova:
+1. `20260828130000_extensions.sql`
+2. `20260828130100_schema_tables.sql` — tabelas e índices
+3. `20260828130200_auth_helpers.sql` — funções `SECURITY DEFINER` usadas pelas políticas (padrão a seguir para qualquer política nova que precise checar outra tabela, evitando recursão de RLS)
+4. `20260828130300_rls_policies.sql` — política por tabela
+5. `20260828130400_profile_on_signup.sql`
+6. `20260828130500_rpc_create_organization.sql`
+
+Ver `supabase/README.md` para o modelo de permissão e como aplicar/validar
+num projeto real. Client do frontend: `src/lib/supabase/client.ts` +
+`src/lib/supabase/queries.ts` (TASK-002) — qualquer query nova do
+frontend deve entrar em `queries.ts`, nunca chamar o SDK direto de um
+componente.
 
 ## O que você PODE fazer
 

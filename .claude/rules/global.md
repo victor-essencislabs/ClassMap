@@ -34,7 +34,15 @@ Todo o repositório: `src/` (frontend React/Vite), `supabase/migrations/` (schem
 
 ## Comandos de validação
 
-Ainda não existem — não há `package.json`/build/test neste repositório até a implementação do MVP começar. Nunca invente um comando; atualize esta seção com os comandos reais assim que existirem.
+Desde a TASK-002 (`package.json` na raiz):
+
+- `npm run build` — typecheck (`tsc -b`) + build de produção (Vite). Rodar antes de qualquer commit que toque `src/`.
+- `npm run lint` — `oxlint`.
+
+Ainda não há testes automatizados (unitários/E2E) neste repositório —
+nenhuma task até agora exigiu. Migrations do Supabase (TASK-001) não têm
+comando de teste automatizado; validação é manual, documentada em
+`supabase/README.md`.
 
 ## Condições de atualização
 

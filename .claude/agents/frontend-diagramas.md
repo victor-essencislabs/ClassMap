@@ -26,7 +26,22 @@ Nenhum código existe ainda neste repositório. A estrutura abaixo é a **planej
 
 ## Referências de código (leia antes de replicar um padrão)
 
-Ainda não há código neste repositório. Ao iniciar a implementação, atualize esta seção com exemplos reais (ex.: `src/features/class-diagram/Canvas.tsx` → `Connector.tsx` → `ClassCard.tsx`).
+Scaffold real da TASK-002 (React 19 + Vite 8 + TypeScript, raiz do
+repositório):
+- `src/lib/supabase/client.ts` + `queries.ts` — única camada que fala com
+  o Supabase; qualquer feature nova (`class-diagram/`, `object-diagram/`,
+  `system-view/`, `import-export/`) consome dados por aqui, nunca chamando
+  o SDK direto de um componente (RN-01 da TASK-002).
+- `src/features/auth/` — `AuthContext` (sessão), `RequireAuth` (guard de
+  rota), `LoginPage`.
+- `src/features/navigation/` — `AppLayout`, `OrganizationsPage`,
+  `ProjectsPage`, `DiagramsPage`: padrão de página (fetch em `useEffect`
+  + estado de loading/erro) e de reforço de UI por papel (`getMyProjectRole`
+  antes de mostrar um controle de edição) a seguir em `class-diagram/`,
+  `object-diagram/` e `system-view/`.
+- Rotas em `src/App.tsx` — o Diagrama de Classes (TASK-003) deve nascer
+  como rota `/orgs/:orgId/projects/:projectId/diagrams/:diagramId`, filha
+  da navegação já existente.
 
 ## O que você PODE fazer
 

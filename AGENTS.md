@@ -67,7 +67,17 @@ Ver `.claude/rules/global.md` para o detalhamento de cada regra.
 
 ## Comandos reais
 
-Ainda não existem — não há `package.json`/build/test neste repositório até o MVP de produção começar a ser implementado. Quando a implementação iniciar, esta seção deve ser preenchida com os comandos reais (nunca inventados).
+Existem desde a TASK-002 (scaffold do frontend, `package.json` na raiz):
+
+- `npm install` — instala dependências.
+- `npm run dev` — sobe o Vite em modo desenvolvimento.
+- `npm run build` — typecheck (`tsc -b`) + build de produção.
+- `npm run lint` — `oxlint`.
+- `npm run preview` — serve o build de produção localmente.
+
+Ainda não há suíte de testes automatizados (unitários/E2E) — nenhuma
+task até agora exigiu; adicionar aqui assim que uma existir. Comandos de
+migration do Supabase (TASK-001) estão documentados em `supabase/README.md`.
 
 ## Critérios de conclusão
 
