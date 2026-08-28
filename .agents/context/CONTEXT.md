@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-08-28 (bootstrap inicial)
+ultima-revisao: 2026-08-28 (bootstrap-plan — ADR-001 e TASK-001..005)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -14,8 +14,14 @@ ClassMap é uma ferramenta web para a Essencislabs que substitui o Visual Paradi
 
 ## Iniciativas ativas
 
-- **Bootstrap da arquitetura de agentes e documentação** (branch `main`): montagem inicial de `AGENTS.md`/`CLAUDE.md`, `.agents/`, `.claude/`, `.codex/` e `docs/`. Sem task formal ainda — é o próprio trabalho deste commit inicial.
-- Próxima iniciativa recomendada pela documentação de produto (ver `docs/roadmap/README.md`): validar o MVP de produção (autenticação + hierarquia organização/projeto) com um grupo pequeno do time antes de expandir para o resto do roadmap.
+- **Bootstrap da arquitetura de agentes e documentação** (branch `main`): concluído — `AGENTS.md`/`CLAUDE.md`, `.agents/`, `.claude/`, `.codex/` e `docs/` já commitados (`49621e0`).
+- **Planejamento do MVP de produção** (ver ADR-001): decidido fatiar por camada técnica (dados → frontend → integração). 5 tasks em `.agents/tasks/backlog/`, nenhuma iniciada ainda:
+  - TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase (`supabase-multitenant`)
+  - TASK-002 — Scaffold do frontend e navegação autenticada (`frontend-diagramas`, depende de TASK-001)
+  - TASK-003 — Diagrama de Classes (`frontend-diagramas`, depende de TASK-002)
+  - TASK-004 — Diagrama de Objetos e Visão do Sistema (`frontend-diagramas`, depende de TASK-003)
+  - TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (`contrato-ia-diagrama`, depende de TASK-003/004)
+- Próximo passo: mover TASK-001 para `active/` e iniciar a implementação.
 
 ## Arquitetura vigente
 
@@ -38,7 +44,7 @@ Nenhuma implementada ainda — ver arquitetura **planejada** em `docs/architectu
 
 ## Decisões recentes
 
-- Nenhum ADR registrado ainda — ver `.agents/decisions/README.md` (vazio, só com `_template.md`).
+- **ADR-001** — Fatiamento do MVP de produção por camada técnica (dados → frontend → integração). Ver `.agents/decisions/README.md`.
 
 ## Riscos atuais
 

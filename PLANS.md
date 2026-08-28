@@ -3,10 +3,16 @@
 Índice de `.agents/tasks/`.
 
 ## Ativos
-_(ver `.agents/tasks/active/`)_
+_(ver `.agents/tasks/active/`)_ — nenhuma iniciada ainda.
 
 ## Planejados
-_(ver `.agents/tasks/backlog/`)_
+Ver `.agents/tasks/backlog/`. Sequência do MVP de produção decidida em ADR-001 (fatiamento por camada técnica):
+
+1. TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase
+2. TASK-002 — Scaffold do frontend e navegação autenticada (depende de TASK-001)
+3. TASK-003 — Diagrama de Classes (depende de TASK-002)
+4. TASK-004 — Diagrama de Objetos e Visão do Sistema (depende de TASK-003)
+5. TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (depende de TASK-003/004)
 
 ## Concluídos
 _(ver `.agents/tasks/completed/`)_
