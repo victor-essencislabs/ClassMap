@@ -1,0 +1,29 @@
+# ClassMap — .gitignore
+#
+# Arquitetura de agentes de IA (.claude/, .codex/, .agents/), roteadores
+# (AGENTS.md / CLAUDE.md / PLANS.md) e docs/ são todos VERSIONADOS neste
+# projeto (decisão tomada no bootstrap-init, 2026-08-28) — nenhuma dessas
+# categorias é ignorada aqui.
+
+# ---- Sempre ignorar, independente de qualquer decisão acima ----
+.env*
+!.env.example
+secrets/**
+credentials/**
+*.pem
+*.key
+backups/**
+dumps/**
+
+# ---- Dependências e build (Node/Vite) ----
+# Antecipado para quando o código da aplicação (React + Vite) existir neste repositório.
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+npm-debug.log*
+
+# ---- Editor/SO ----
+.DS_Store
+Thumbs.db
