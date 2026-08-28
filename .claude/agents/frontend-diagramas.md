@@ -39,9 +39,20 @@ repositório):
   + estado de loading/erro) e de reforço de UI por papel (`getMyProjectRole`
   antes de mostrar um controle de edição) a seguir em `class-diagram/`,
   `object-diagram/` e `system-view/`.
-- Rotas em `src/App.tsx` — o Diagrama de Classes (TASK-003) deve nascer
+- Rotas em `src/App.tsx` — o Diagrama de Classes (TASK-003) já existe
   como rota `/orgs/:orgId/projects/:projectId/diagrams/:diagramId`, filha
-  da navegação já existente.
+  da navegação já existente. O Diagrama de Objetos (TASK-004) deve
+  ganhar uma rota irmã (ou reaproveitar a mesma, ramificando por
+  `diagram.type`) em vez de duplicar a navegação.
+- `src/features/class-diagram/` (TASK-003) — `types.ts` (estrutura do
+  conteúdo), `contentOperations.ts` (lógica pura de edição, testável sem
+  renderizar componentes — `contentOperations.test.ts`), `ClassCard.tsx`,
+  `Connector.tsx` (SVG ortogonal com os 5 símbolos UML),
+  `ClassDiagramCanvas.tsx` (canvas + painel de edição —
+  `ClassDiagramCanvas.test.tsx` cobre a interação via Testing Library),
+  `DiagramEditorPage.tsx` (carrega/salva via Supabase). Padrão a seguir
+  em `object-diagram/`: separar lógica pura de edição em um módulo
+  testável, do jeito que `contentOperations.ts` fez.
 
 ## O que você PODE fazer
 

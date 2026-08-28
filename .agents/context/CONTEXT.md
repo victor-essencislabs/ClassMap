@@ -18,11 +18,11 @@ ClassMap é uma ferramenta web para a Essencislabs que substitui o Visual Paradi
 - **Planejamento do MVP de produção** (ver ADR-001): decidido fatiar por camada técnica (dados → frontend → integração). 5 tasks em `.agents/tasks/` (fatiadas por camada, ver ADR-001):
   - **TASK-001 — Schema multi-tenant, RLS e autenticação no Supabase** (`supabase-multitenant`) — **em `active/`**, schema e políticas RLS implementados e validados localmente; falta provisionar o projeto Supabase real e validar CA-05.
   - **TASK-002 — Scaffold do frontend e navegação autenticada** (`frontend-diagramas`) — **em `active/`**, adiantada à frente da sequência formal do ADR-001 por pedido explícito do usuário (2026-08-28, pelo celular): scaffold React+Vite+TS completo (build/lint passam), autenticação e navegação Organização→Projetos→Diagramas implementadas contra o schema da TASK-001; falta o mesmo projeto Supabase real para validar CA-02 a CA-05.
-  - TASK-003 — Diagrama de Classes (`frontend-diagramas`, backlog, depende de TASK-002)
+  - **TASK-003 — Diagrama de Classes** (`frontend-diagramas`) — **em `active/`**, também adiantada: canvas com cards de classe, conectores ortogonais com os 5 símbolos UML e multiplicidade, painel de edição, persistência via Supabase (código pronto). Primeira task com testes automatizados do repositório (Vitest + Testing Library, 16 casos) — um bug real de seleção de conector foi pego e corrigido pelos testes antes de qualquer uso real. Falta validação manual em navegador e persistência real (mesma pendência das anteriores).
   - TASK-004 — Diagrama de Objetos e Visão do Sistema (`frontend-diagramas`, backlog, depende de TASK-003)
   - TASK-005 — Contrato JSON de import/export, deploy e validação do MVP (`contrato-ia-diagrama`, backlog, depende de TASK-003/004)
 - **Fluxo de git ajustado** (2026-08-28, pedido do usuário): projeto ainda sem colaboradores externos revisando — commits e push vão direto para `main`, sem branch de feature nem PR, até o usuário pedir o contrário.
-- Próximo passo real (requer computador): provisionar um projeto Supabase real, aplicar as migrations de `supabase/migrations/`, configurar Auth (Email/senha), preencher `.env.local` do frontend com as credenciais, e validar CA-05 da TASK-001 + CA-02 a CA-05 da TASK-002. Autorização para essa integração já está registrada nas duas tasks. Até lá, seguir adiantando o que não depender de credenciais (ex.: avançar em TASK-003 assim que fizer sentido sem um backend real para persistir/recarregar).
+- Próximo passo real (requer computador): provisionar um projeto Supabase real, aplicar as migrations de `supabase/migrations/`, configurar Auth (Email/senha), preencher `.env.local` do frontend com as credenciais, e validar CA-05 da TASK-001 + CA-02 a CA-05 das TASK-002/003 (login real, isolamento visível na UI, persistência do diagrama). Autorização para essa integração já está registrada nas três tasks. Até lá, seguir adiantando o que não depender de credenciais — próximo candidato natural é a TASK-004 (Diagrama de Objetos e Visão do Sistema), que também não precisa de backend real para o essencial do código.
 
 ## Arquitetura vigente
 
@@ -35,10 +35,13 @@ código real:
 - Raiz do repositório — app React 19 + Vite 8 + TypeScript
   (`package.json`, `src/`): `src/lib/supabase/` (client único + camada de
   queries), `src/features/auth/` (login, contexto de sessão, guard de
-  rota) e `src/features/navigation/` (Organizações→Projetos→Diagramas).
-  Builda e linta limpo; ainda não foi exercitado contra um Supabase real.
+  rota), `src/features/navigation/` (Organizações→Projetos→Diagramas) e
+  `src/features/class-diagram/` (canvas do Diagrama de Classes — cards,
+  conectores UML ortogonais, painel de edição). Builda, linta e testa
+  limpo (`npm test` — Vitest + Testing Library, 16 casos); ainda não foi
+  exercitado contra um Supabase real.
 
-As demais camadas (Diagrama de Classes/Objetos, Visão do Sistema,
+As demais camadas (Diagrama de Objetos, Visão do Sistema,
 import/export) continuam só **planejadas** em `docs/architecture/`
 (documentos marcados `estado: planejado`) — ver os papéis em
 `.claude/agents/` (`frontend-diagramas`, `supabase-multitenant`,

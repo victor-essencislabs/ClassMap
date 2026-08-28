@@ -74,10 +74,11 @@ Existem desde a TASK-002 (scaffold do frontend, `package.json` na raiz):
 - `npm run build` — typecheck (`tsc -b`) + build de produção.
 - `npm run lint` — `oxlint`.
 - `npm run preview` — serve o build de produção localmente.
+- `npm test` — `vitest run` (testes unitários e de componente; TASK-003 em diante).
 
-Ainda não há suíte de testes automatizados (unitários/E2E) — nenhuma
-task até agora exigiu; adicionar aqui assim que uma existir. Comandos de
-migration do Supabase (TASK-001) estão documentados em `supabase/README.md`.
+Ainda não há testes E2E (adiados para a TASK-005, contra um projeto
+Supabase real). Comandos de migration do Supabase (TASK-001) estão
+documentados em `supabase/README.md`.
 
 ## Critérios de conclusão
 

@@ -94,6 +94,28 @@ export async function getMyProjectRole(
   return (data?.role as ProjectRole | undefined) ?? null
 }
 
+/** Carrega um diagrama por id (RLS já exige algum papel no projeto dono dele). */
+export async function getDiagram(diagramId: string): Promise<Diagram> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('diagrams')
+    .select('id, project_id, type, name, content, created_at, updated_at')
+    .eq('id', diagramId)
+    .single()
+  if (error) throw error
+  return data as Diagram
+}
+
+/** Sobrescreve o `content` de um diagrama. RLS só permite se o usuário for `editor` do projeto (TASK-003). */
+export async function updateDiagramContent(
+  diagramId: string,
+  content: Record<string, unknown>,
+): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('diagrams').update({ content }).eq('id', diagramId)
+  if (error) throw error
+}
+
 /** Cria um diagrama vazio. RLS só permite se o usuário for `editor` do projeto (CA-03 da TASK-002). */
 export async function createEmptyDiagram(
   projectId: string,

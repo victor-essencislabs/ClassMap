@@ -38,10 +38,11 @@ Desde a TASK-002 (`package.json` na raiz):
 
 - `npm run build` — typecheck (`tsc -b`) + build de produção (Vite). Rodar antes de qualquer commit que toque `src/`.
 - `npm run lint` — `oxlint`.
+- `npm test` — `vitest run`. Rodar antes de qualquer commit que toque `src/features/class-diagram/` (ou outra feature que ganhe testes).
 
-Ainda não há testes automatizados (unitários/E2E) neste repositório —
-nenhuma task até agora exigiu. Migrations do Supabase (TASK-001) não têm
-comando de teste automatizado; validação é manual, documentada em
+Ainda não há testes E2E neste repositório (adiados para a TASK-005,
+contra um projeto Supabase real). Migrations do Supabase (TASK-001) não
+têm comando de teste automatizado; validação é manual, documentada em
 `supabase/README.md`.
 
 ## Condições de atualização

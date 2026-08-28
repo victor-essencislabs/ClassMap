@@ -61,7 +61,19 @@ export function DiagramsPage() {
         <ul className="list">
           {diagrams.map((diagram) => (
             <li key={diagram.id}>
-              {diagram.name} <span className="badge">{diagram.type}</span>
+              {diagram.type === 'classes' ? (
+                <Link to={`/orgs/${orgId}/projects/${projectId}/diagrams/${diagram.id}`}>
+                  {diagram.name}
+                </Link>
+              ) : (
+                diagram.name
+              )}{' '}
+              <span className="badge">{diagram.type}</span>
+              {diagram.type === 'objects' && (
+                <span className="badge" title="Diagrama de Objetos ainda não tem tela própria (TASK-004)">
+                  em breve
+                </span>
+              )}
             </li>
           ))}
         </ul>

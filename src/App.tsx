@@ -7,6 +7,7 @@ import { AppLayout } from './features/navigation/AppLayout'
 import { OrganizationsPage } from './features/navigation/OrganizationsPage'
 import { ProjectsPage } from './features/navigation/ProjectsPage'
 import { DiagramsPage } from './features/navigation/DiagramsPage'
+import { DiagramEditorPage } from './features/class-diagram/DiagramEditorPage'
 import { NotConfiguredPage } from './features/setup/NotConfiguredPage'
 
 function App() {
@@ -44,6 +45,16 @@ function App() {
             <RequireAuth>
               <AppLayout>
                 <DiagramsPage />
+              </AppLayout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/orgs/:orgId/projects/:projectId/diagrams/:diagramId"
+          element={
+            <RequireAuth>
+              <AppLayout>
+                <DiagramEditorPage />
               </AppLayout>
             </RequireAuth>
           }
