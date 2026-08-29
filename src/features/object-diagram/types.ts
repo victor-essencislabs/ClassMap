@@ -31,12 +31,31 @@ export interface DiagramObject {
   y: number
 }
 
+// TASK-017 (ver ADR-006) — link simples entre dois objetos, sem os 5
+// tipos UML/multiplicidade do Diagrama de Classes (não fazem sentido
+// semântico entre instâncias concretas). `controlX` segue o mesmo
+// padrão de `DiagramRelationship.controlX` em `class-diagram/types.ts`
+// (x absoluto do segmento vertical do roteamento ortogonal, arrastável)
+// — a ADR descreve o shape essencial `{ id, from, to, label? }`;
+// `controlX` é acrescentado aqui pelo mesmo motivo que lá: sem ele, o
+// ponto de controle arrastável do conector não sobreviveria a um
+// reload. Puramente interno — nunca faz parte do schema Zod de
+// import/export (RN-04, `src/features/import-export/schema.ts`).
+export interface ObjectLink {
+  id: string
+  from: string // DiagramObject.id
+  to: string // DiagramObject.id
+  label?: string
+  controlX: number
+}
+
 export interface ObjectDiagramContent {
   objects: DiagramObject[]
+  links: ObjectLink[]
 }
 
 export function emptyObjectDiagramContent(): ObjectDiagramContent {
-  return { objects: [] }
+  return { objects: [], links: [] }
 }
 
 export const OBJECT_CARD_WIDTH = 220

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramClass } from '../class-diagram/types'
 import {
+  addLink,
   addObject,
   filterObjectsByQuery,
+  removeLink,
   removeObject,
   toBoundedNode,
+  updateLink,
   updateObject,
   updateObjectValue,
 } from './contentOperations'
@@ -91,6 +94,75 @@ describe('filterObjectsByQuery (TASK-008, CA-02)', () => {
     let content = addObject(emptyObjectDiagramContent(), pedidoClass)
     content = addObject(content, pedidoClass)
     expect(filterObjectsByQuery(content.objects, '')).toEqual(content.objects)
+  })
+})
+
+describe('addLink / removeLink / updateLink (TASK-017, ver ADR-006)', () => {
+  it('cria um link entre dois objetos existentes', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addObject(content, pedidoClass)
+    const [first, second] = content.objects
+
+    content = addLink(content, first.id, second.id)
+
+    expect(content.links).toHaveLength(1)
+    expect(content.links[0]).toMatchObject({ from: first.id, to: second.id })
+  })
+
+  it('RN-01: nunca cria um link de um objeto para ele mesmo', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    const id = content.objects[0].id
+    content = addLink(content, id, id)
+    expect(content.links).toHaveLength(0)
+  })
+
+  it('não cria link para um id de objeto inexistente', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    const id = content.objects[0].id
+    content = addLink(content, id, 'nao-existe')
+    expect(content.links).toHaveLength(0)
+  })
+
+  it('updateLink edita o rótulo (opcional) sem afetar from/to', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addObject(content, pedidoClass)
+    const [first, second] = content.objects
+    content = addLink(content, first.id, second.id)
+    const linkId = content.links[0].id
+
+    content = updateLink(content, linkId, { label: 'referencia' })
+
+    expect(content.links[0]).toMatchObject({ from: first.id, to: second.id, label: 'referencia' })
+  })
+
+  it('removeLink remove só o link indicado', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addObject(content, pedidoClass)
+    content = addObject(content, pedidoClass)
+    const [first, second, third] = content.objects
+    content = addLink(content, first.id, second.id)
+    content = addLink(content, second.id, third.id)
+    const [linkA, linkB] = content.links
+
+    content = removeLink(content, linkA.id)
+
+    expect(content.links).toEqual([linkB])
+  })
+
+  it('RN-02: excluir um objeto remove em cascata todos os links que o referenciam (origem ou destino)', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addObject(content, pedidoClass)
+    content = addObject(content, pedidoClass)
+    const [first, second, third] = content.objects
+    content = addLink(content, first.id, second.id) // referencia `second` como destino
+    content = addLink(content, third.id, second.id) // referencia `second` como destino, de outro lado
+    content = addLink(content, first.id, third.id) // não referencia `second`
+
+    content = removeObject(content, second.id)
+
+    expect(content.objects).toEqual([first, third])
+    expect(content.links).toHaveLength(1)
+    expect(content.links[0]).toMatchObject({ from: first.id, to: third.id })
   })
 })
 

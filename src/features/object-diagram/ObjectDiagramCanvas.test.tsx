@@ -39,6 +39,10 @@ function objectCards() {
   return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
 }
 
+function startLinkButton() {
+  return screen.getByRole('button', { name: '🔗 Link' })
+}
+
 async function createObjectViaModal() {
   fireEvent.click(screen.getByRole('button', { name: '+ Objeto' }))
   fireEvent.change(screen.getByDisplayValue('Diagrama de classes de origem…'), {
@@ -111,10 +115,108 @@ describe('ObjectDiagramCanvas', () => {
   })
 })
 
+describe('ObjectDiagramCanvas — link entre objetos (TASK-017, ver ADR-006)', () => {
+  it('CA-01/CA-06: modo de conexão clicando origem→destino cria um link e a sidebar reflete a contagem real', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+
+    fireEvent.click(startLinkButton())
+    expect(screen.getByText('Clique no objeto de origem, depois no de destino')).toBeInTheDocument()
+
+    const [from, to] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+
+    // link criado => 1 grupo de conector no SVG
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+    // o banner de conexão fecha depois de completar
+    expect(screen.queryByText('Clique no objeto de origem, depois no de destino')).not.toBeInTheDocument()
+    // a contagem "Relações" da sidebar passa a refletir o link real (CA-06)
+    const relStat = screen.getByText('Relações').previousElementSibling
+    expect(relStat?.textContent).toBe('1')
+  })
+
+  it('CA-02: clicar duas vezes no mesmo objeto em modo de conexão não cria link (e avisa)', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+    fireEvent.click(startLinkButton())
+
+    const [from] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(from)
+
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+    expect(screen.getByText('Escolha um objeto diferente')).toBeInTheDocument()
+  })
+
+  it('RN-02: "Cancelar" no banner sai do modo de conexão sem criar link parcial', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+    fireEvent.click(startLinkButton())
+
+    const [from] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.queryByText('Clique no objeto de origem, depois no de destino')).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+  })
+
+  it('CA-03: selecionar o link permite editar o rótulo opcional e excluí-lo pelo inspector', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+    fireEvent.click(startLinkButton())
+    const [from, to] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+
+    // a relação recém-criada já fica selecionada — inspector mostra o título "Link"
+    expect(screen.getByText('Link', { selector: '.insp-title' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Rótulo (opcional)'), { target: { value: 'referencia' } })
+    expect(document.querySelector('.connectors-layer text')?.textContent).toBe('referencia')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir link' }))
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+  })
+
+  it('CA-04: excluir um objeto remove todos os links que o referenciavam, sem link órfão', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+    fireEvent.click(startLinkButton())
+    const [from, to] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+
+    fireEvent.pointerDown(from)
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir objeto' }))
+
+    expect(objectCards()).toHaveLength(1)
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+    const relStat = screen.getByText('Relações').previousElementSibling
+    expect(relStat?.textContent).toBe('0')
+  })
+
+  it('"🔗 Link" fica desabilitado com menos de 2 objetos', async () => {
+    render(<ControlledCanvas />)
+    expect(startLinkButton()).toBeDisabled()
+    await createObjectViaModal()
+    expect(startLinkButton()).toBeDisabled()
+    await createObjectViaModal()
+    expect(startLinkButton()).not.toBeDisabled()
+  })
+})
+
 describe('ObjectDiagramCanvas — visualizador (CA-05)', () => {
   it('não mostra nenhum controle de criação/edição — só navega/dá zoom/pan', () => {
     render(<ControlledCanvas readOnly />)
     expect(screen.queryByRole('button', { name: '+ Objeto' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '🔗 Link' })).not.toBeInTheDocument()
     expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
   })
 })

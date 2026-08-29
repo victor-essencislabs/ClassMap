@@ -34,7 +34,12 @@ export function ObjectDiagramPage() {
       .then(([loadedDiagram, userId, projectDiagrams]) => {
         setDiagram(loadedDiagram)
         setContent(
-          isObjectDiagramContent(loadedDiagram.content) ? loadedDiagram.content : emptyObjectDiagramContent(),
+          isObjectDiagramContent(loadedDiagram.content)
+            ? // TASK-017: diagramas salvos antes desta task não têm `links`
+              // no JSONB persistido — normaliza para `[]` em vez de deixar
+              // `undefined` (mudança aditiva, ver ADR-006).
+              { ...loadedDiagram.content, links: loadedDiagram.content.links ?? [] }
+            : emptyObjectDiagramContent(),
         )
         setClassDiagrams(projectDiagrams.filter((d) => d.type === 'classes'))
         return userId ? getMyProjectRole(projectId, userId) : null

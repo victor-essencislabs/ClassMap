@@ -1,17 +1,23 @@
-// TASK-004/008 — canvas do Diagrama de Objetos: cards de instância
-// (TASK-004), agora dentro do shell de 3 colunas da TASK-006 com o
-// zoom/pan compartilhado da TASK-007 e inspector fixo substituindo o
-// antigo painel flutuante (ADR-002). Sem modo de conexão — objetos não
-// se relacionam entre si neste modelo (fora de escopo, ver TASK-008).
+// TASK-004/008/017 — canvas do Diagrama de Objetos: cards de instância
+// (TASK-004), dentro do shell de 3 colunas da TASK-006 com o zoom/pan
+// compartilhado da TASK-007 e inspector fixo substituindo o antigo
+// painel flutuante (ADR-002). TASK-017 (ver ADR-006) acrescenta o modo
+// de conexão — link simples entre dois objetos, reaproveitando a
+// máquina de estado de `class-diagram/connectMode.ts` (genérica por
+// ids) — sem os 5 tipos UML/multiplicidade, que não fazem sentido
+// semântico entre instâncias concretas.
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { DiagramClass } from '../class-diagram/types'
+import { resolveConnectClick } from '../class-diagram/connectMode'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
+import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassPickerModal, type ClassDiagramOption } from './ClassPickerModal'
 import { ObjectCard } from './ObjectCard'
+import { ObjectLinkConnector } from './ObjectLinkConnector'
 import * as ops from './contentOperations'
-import { OBJECT_CARD_WIDTH, type DiagramObject, type ObjectDiagramContent } from './types'
+import { OBJECT_CARD_WIDTH, type DiagramObject, type ObjectDiagramContent, type ObjectLink } from './types'
 
 interface ObjectDiagramCanvasProps {
   content: ObjectDiagramContent
@@ -24,6 +30,8 @@ interface ObjectDiagramCanvasProps {
   /** Breadcrumb/título/indicador de salvamento da página (`ObjectDiagramPage`) — vai entre a marca e os botões deste componente na topbar do shell. */
   topbarCenter?: ReactNode
 }
+
+type Selection = { type: 'object'; id: string } | { type: 'link'; id: string } | null
 
 /** Um clique conta como "no fundo do canvas" (pan/deselect) quando não
  * pousa dentro de um card — mesmo critério do `ClassDiagramCanvas`. */
@@ -41,12 +49,15 @@ export function ObjectDiagramCanvas({
   loadClasses,
   topbarCenter,
 }: ObjectDiagramCanvasProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selection, setSelection] = useState<Selection>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [connectMode, setConnectMode] = useState(false)
+  const [connectFrom, setConnectFrom] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const zoomPan = useCanvasZoomPan(canvasRef)
+  const { message, showToast } = useToast()
   const didInitialFit = useRef(false)
   const clickStart = useRef<{ x: number; y: number } | null>(null)
 
@@ -57,7 +68,8 @@ export function ObjectDiagramCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const selectedObject = content.objects.find((o) => o.id === selectedId)
+  const selectedObject = selection?.type === 'object' ? content.objects.find((o) => o.id === selection.id) : undefined
+  const selectedLink = selection?.type === 'link' ? content.links.find((l) => l.id === selection.id) : undefined
 
   function handlePickClass(sourceClass: DiagramClass) {
     const rect = canvasRef.current?.getBoundingClientRect()
@@ -69,7 +81,7 @@ export function ObjectDiagramCanvas({
       : undefined
     const next = ops.addObject(content, sourceClass, origin)
     onChange(next)
-    setSelectedId(next.objects[next.objects.length - 1].id)
+    setSelection({ type: 'object', id: next.objects[next.objects.length - 1].id })
     setPickerOpen(false)
   }
 
@@ -79,11 +91,51 @@ export function ObjectDiagramCanvas({
 
   function handleRemoveObject(id: string) {
     onChange(ops.removeObject(content, id))
-    setSelectedId(null)
+    setSelection(null)
+  }
+
+  function updateLink(id: string, patch: Partial<Pick<ObjectLink, 'label' | 'controlX'>>) {
+    onChange(ops.updateLink(content, id, patch))
+  }
+
+  function handleRemoveLink(id: string) {
+    onChange(ops.removeLink(content, id))
+    setSelection(null)
+  }
+
+  function startConnectMode() {
+    setConnectMode(true)
+    setConnectFrom(null)
+  }
+
+  function endConnectMode() {
+    setConnectMode(false)
+    setConnectFrom(null)
+  }
+
+  function handleCardClick(id: string) {
+    if (!connectMode) {
+      setSelection({ type: 'object', id })
+      return
+    }
+    const result = resolveConnectClick(connectFrom, id)
+    if (result.kind === 'started') {
+      setConnectFrom(result.from)
+      return
+    }
+    if (result.kind === 'same-class') {
+      showToast('Escolha um objeto diferente')
+      return
+    }
+    const next = ops.addLink(content, result.from, result.to)
+    onChange(next)
+    endConnectMode()
+    setSelection({ type: 'link', id: next.links[next.links.length - 1].id })
+    showToast('Link criado — adicione um rótulo (opcional) no inspector')
   }
 
   function handleSidebarSelect(obj: DiagramObject) {
-    setSelectedId(obj.id)
+    setSelection({ type: 'object', id: obj.id })
     zoomPan.panToNode(ops.toBoundedNode(obj))
   }
 
@@ -99,7 +151,10 @@ export function ObjectDiagramCanvas({
     clickStart.current = null
     if (!start) return
     const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y)
-    if (moved < CLICK_MOVE_THRESHOLD_PX) setSelectedId(null)
+    if (moved < CLICK_MOVE_THRESHOLD_PX) {
+      setSelection(null)
+      if (connectMode) endConnectMode()
+    }
   }
 
   const filteredObjects = ops
@@ -112,14 +167,27 @@ export function ObjectDiagramCanvas({
       <DiagramShell
         topbarCenter={topbarCenter}
         topbarActions={
-          !readOnly && (
-            <button type="button" className="btn primary" onClick={() => setPickerOpen(true)}>
-              + Objeto
-            </button>
-          )
+          <>
+            {!readOnly && (
+              <button
+                type="button"
+                className="btn"
+                disabled={content.objects.length < 2}
+                onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
+              >
+                🔗 Link
+              </button>
+            )}
+            {!readOnly && (
+              <button type="button" className="btn primary" onClick={() => setPickerOpen(true)}>
+                + Objeto
+              </button>
+            )}
+          </>
         }
         canvasProps={{
           ref: canvasRef,
+          className: connectMode ? 'connect-mode' : undefined,
           onPointerDown: handleBackgroundPointerDown,
           onPointerMove: zoomPan.onBackgroundPointerMove,
           onPointerUp: handleBackgroundPointerUp,
@@ -128,6 +196,7 @@ export function ObjectDiagramCanvas({
           <Sidebar
             objects={content.objects}
             filteredObjects={filteredObjects}
+            linkCount={content.links.length}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             selectedId={selectedObject?.id}
@@ -136,18 +205,49 @@ export function ObjectDiagramCanvas({
         }
         canvas={
           <>
+            {connectMode && (
+              <div className="connect-banner show">
+                <span>Clique no objeto de origem, depois no de destino</span>
+                <button type="button" onClick={endConnectMode}>
+                  Cancelar
+                </button>
+              </div>
+            )}
+
             <div
               className="canvas-viewport"
               style={{ position: 'absolute', inset: 0, transformOrigin: '0 0', transform: zoomPan.transform }}
             >
+              <svg className="connectors-layer" style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+                {content.links.map((link) => {
+                  const fromObj = content.objects.find((o) => o.id === link.from)
+                  const toObj = content.objects.find((o) => o.id === link.to)
+                  if (!fromObj || !toObj) return null
+                  return (
+                    <ObjectLinkConnector
+                      key={link.id}
+                      link={link}
+                      fromObject={fromObj}
+                      toObject={toObj}
+                      selected={selection?.type === 'link' && selection.id === link.id}
+                      readOnly={readOnly}
+                      zoom={zoomPan.zoom}
+                      onSelect={(id) => setSelection({ type: 'link', id })}
+                      onDragControlPoint={(id, controlX) => updateLink(id, { controlX })}
+                    />
+                  )
+                })}
+              </svg>
+
               {content.objects.map((obj) => (
                 <ObjectCard
                   key={obj.id}
                   obj={obj}
-                  selected={obj.id === selectedId}
+                  selected={selection?.type === 'object' && selection.id === obj.id}
                   readOnly={readOnly}
                   zoom={zoomPan.zoom}
-                  onSelect={setSelectedId}
+                  connectMode={connectMode}
+                  onSelect={handleCardClick}
                   onMove={(id, x, y) => updateObject(id, { x, y })}
                 />
               ))}
@@ -183,9 +283,7 @@ export function ObjectDiagramCanvas({
           </>
         }
         inspector={
-          !selectedObject ? (
-            <div className="insp-empty">Selecione um objeto no diagrama para editar seus detalhes aqui.</div>
-          ) : (
+          selectedObject ? (
             <ObjectInspector
               obj={selectedObject}
               readOnly={readOnly}
@@ -195,6 +293,25 @@ export function ObjectDiagramCanvas({
               }
               onDelete={() => handleRemoveObject(selectedObject.id)}
             />
+          ) : selectedLink ? (
+            <LinkInspector
+              link={selectedLink}
+              fromName={
+                content.objects.find((o) => o.id === selectedLink.from)?.instanceName ??
+                content.objects.find((o) => o.id === selectedLink.from)?.className ??
+                '?'
+              }
+              toName={
+                content.objects.find((o) => o.id === selectedLink.to)?.instanceName ??
+                content.objects.find((o) => o.id === selectedLink.to)?.className ??
+                '?'
+              }
+              readOnly={readOnly}
+              onChange={(patch) => updateLink(selectedLink.id, patch)}
+              onDelete={() => handleRemoveLink(selectedLink.id)}
+            />
+          ) : (
+            <div className="insp-empty">Selecione um objeto ou link no diagrama para editar seus detalhes aqui.</div>
           )
         }
       />
@@ -207,6 +324,7 @@ export function ObjectDiagramCanvas({
           onPick={handlePickClass}
         />
       )}
+      <Toast message={message} />
     </>
   )
 }
@@ -214,6 +332,7 @@ export function ObjectDiagramCanvas({
 function Sidebar({
   objects,
   filteredObjects,
+  linkCount,
   searchQuery,
   onSearchChange,
   selectedId,
@@ -221,6 +340,7 @@ function Sidebar({
 }: {
   objects: DiagramObject[]
   filteredObjects: DiagramObject[]
+  linkCount: number
   searchQuery: string
   onSearchChange: (value: string) => void
   selectedId: string | undefined
@@ -242,7 +362,7 @@ function Sidebar({
           <span>Classes</span>
         </div>
         <div className="stat">
-          <b>0</b>
+          <b>{linkCount}</b>
           <span>Relações</span>
         </div>
         <div className="stat">
@@ -329,6 +449,53 @@ function ObjectInspector({
         <div className="insp-actions">
           <button type="button" className="btn danger" onClick={onDelete}>
             Excluir objeto
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+function LinkInspector({
+  link,
+  fromName,
+  toName,
+  readOnly,
+  onChange,
+  onDelete,
+}: {
+  link: ObjectLink
+  fromName: string
+  toName: string
+  readOnly: boolean
+  onChange: (patch: Partial<Pick<ObjectLink, 'label'>>) => void
+  onDelete: () => void
+}) {
+  return (
+    <>
+      <div className="insp-title">Link</div>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>
+        {fromName} <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>→</span> {toName}
+      </div>
+
+      <div className="field">
+        <label htmlFor="link-label-input">Rótulo (opcional)</label>
+        {readOnly ? (
+          <div className="mono">{link.label || '—'}</div>
+        ) : (
+          <input
+            id="link-label-input"
+            placeholder="ex: referencia"
+            value={link.label ?? ''}
+            onChange={(e) => onChange({ label: e.target.value || undefined })}
+          />
+        )}
+      </div>
+
+      {!readOnly && (
+        <div className="insp-actions">
+          <button type="button" className="btn danger" onClick={onDelete}>
+            Excluir link
           </button>
         </div>
       )}

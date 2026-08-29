@@ -10,6 +10,10 @@ interface ObjectCardProps {
    * necessário para converter o arraste (em pixels de tela) para
    * coordenadas do mundo corretamente. */
   zoom: number
+  /** Em modo de conexão de links (TASK-017, mesmo padrão de `ClassCard`
+   * no Diagrama de Classes), o card não é arrastável — só clicável, para
+   * completar o link (ver `ObjectDiagramCanvas`). */
+  connectMode: boolean
   onSelect: (id: string) => void
   onMove: (id: string, x: number, y: number) => void
 }
@@ -19,12 +23,12 @@ interface ObjectCardProps {
  * — sublinhado no cabeçalho, valores em `--object-accent`) para
  * diferenciar visualmente do Diagrama de Classes. Edição de
  * nome/valores acontece no inspector do shell (TASK-008), não aqui. */
-export function ObjectCard({ obj, selected, readOnly, zoom, onSelect, onMove }: ObjectCardProps) {
+export function ObjectCard({ obj, selected, readOnly, zoom, connectMode, onSelect, onMove }: ObjectCardProps) {
   const dragStart = useRef<{ clientX: number; clientY: number; origX: number; origY: number } | null>(null)
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     onSelect(obj.id)
-    if (readOnly) return
+    if (readOnly || connectMode) return
     e.currentTarget.setPointerCapture?.(e.pointerId)
     dragStart.current = { clientX: e.clientX, clientY: e.clientY, origX: obj.x, origY: obj.y }
   }
