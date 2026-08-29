@@ -1,26 +1,39 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
+  addProjectMember,
   createProject,
   deleteProject,
   getCurrentUserId,
   getMyOrganizationRole,
   getOrganization,
+  listProjectMembers,
   listProjects,
+  removeProjectMember,
+  updateProjectMemberRole,
 } from '../../lib/supabase/queries'
-import type { Organization, OrganizationRole, Project } from '../../lib/supabase/types'
+import type { Organization, OrganizationRole, Project, ProjectRole } from '../../lib/supabase/types'
+import { AccessManagementModal } from './AccessManagementModal'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
+
+const PROJECT_ROLE_OPTIONS: { value: ProjectRole; label: string }[] = [
+  { value: 'visualizador', label: 'Visualizador' },
+  { value: 'editor', label: 'Editor' },
+]
 
 export function ProjectsPage() {
   const { orgId } = useParams<{ orgId: string }>()
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [role, setRole] = useState<OrganizationRole | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
+  // TASK-013 (ADR-004): projeto cujo modal de "Gerenciar acesso" está aberto.
+  const [manageTarget, setManageTarget] = useState<Project | null>(null)
 
   function reload() {
     if (!orgId) return Promise.resolve()
@@ -29,6 +42,7 @@ export function ProjectsPage() {
       .then(([projectList, org, userId]) => {
         setProjects(projectList)
         setOrganization(org)
+        setCurrentUserId(userId)
         return userId ? getMyOrganizationRole(orgId, userId) : null
       })
       .then((organizationRole) => setRole(organizationRole))
@@ -89,17 +103,23 @@ export function ProjectsPage() {
                 <span className="entity-name">{project.name}</span>
                 <span className="chevron">→</span>
               </Link>
-              {/* RN-01 da TASK-011: só `admin` da organização dona exclui um
-                  projeto dela — mesmo papel que já controla "Criar projeto"
-                  abaixo; a garantia real continua sendo RLS (`projects_delete`). */}
+              {/* RN-01 da TASK-011 / CA-06 da TASK-013: só `admin` da organização
+                  dona vê "Gerenciar acesso"/"Excluir" de um projeto dela — mesmo
+                  papel que já controla "Criar projeto" abaixo; a garantia real
+                  continua sendo RLS (`project_members_*`/`projects_delete`). */}
               {role === 'admin' && (
-                <button
-                  type="button"
-                  className="btn danger ghost small"
-                  onClick={() => setDeleteTarget(project)}
-                >
-                  Excluir
-                </button>
+                <>
+                  <button type="button" className="btn ghost small" onClick={() => setManageTarget(project)}>
+                    Gerenciar acesso
+                  </button>
+                  <button
+                    type="button"
+                    className="btn danger ghost small"
+                    onClick={() => setDeleteTarget(project)}
+                  >
+                    Excluir
+                  </button>
+                </>
               )}
             </li>
           ))}
@@ -140,6 +160,20 @@ export function ProjectsPage() {
           warning={`Isto vai excluir definitivamente o projeto "${deleteTarget.name}" e todos os membros e diagramas dele. Esta ação não pode ser desfeita.`}
           onConfirm={handleDeleteConfirmed}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {manageTarget && (
+        <AccessManagementModal
+          title={`Gerenciar acesso — ${manageTarget.name}`}
+          roleOptions={PROJECT_ROLE_OPTIONS}
+          defaultRole="visualizador"
+          currentUserId={currentUserId}
+          listMembers={() => listProjectMembers(manageTarget.id)}
+          addMember={(userId, memberRole) => addProjectMember(manageTarget.id, userId, memberRole)}
+          updateMemberRole={updateProjectMemberRole}
+          removeMember={removeProjectMember}
+          onClose={() => setManageTarget(null)}
         />
       )}
     </section>
