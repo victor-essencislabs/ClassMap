@@ -41,7 +41,7 @@ Nenhuma nova.
 ## Critérios de aceitação
 - [x] CA-01: Criar um diagrama com um nome customizado ("Diagrama de Classes — Pedidos") persiste e aparece exatamente assim na lista de diagramas e no topo da tela do diagrama. Coberto por teste automatizado (`DiagramsPage.test.tsx`, `createEmptyDiagram` chamado com o nome digitado) — a persistência em si já era comportamento existente (`name` sempre foi passado para `createEmptyDiagram`/exibido via `diagram.name`), só a origem do valor mudou. Não validado manualmente contra o Supabase real nesta sessão (sem acesso a produção/segundo usuário aqui).
 - [x] CA-02: Deixar o campo vazio ao confirmar usa o rótulo padrão do tipo (mesmo comportamento de hoje), sem erro. Coberto por teste automatizado (campo só com espaços cai em `DIAGRAM_TYPE_LABELS[type]` via `name.trim() || DIAGRAM_TYPE_LABELS[type]`).
-- [ ] CA-03: Dois diagramas do mesmo tipo no mesmo projeto, com nomes diferentes, aparecem diferenciados na lista. Decorre diretamente de CA-01 (a lista já renderiza `diagram.name`, código inalterado) mas não foi validado manualmente contra um projeto real nesta sessão — pendência explícita abaixo.
+- [x] CA-03: Dois diagramas do mesmo tipo no mesmo projeto, com nomes diferentes, aparecem diferenciados na lista. **Fechado em 2026-08-29** (sessão de `bootstrap-complete`): teste automatizado novo em `DiagramsPage.test.tsx` mocka `listDiagrams` retornando dois diagramas `type: 'classes'` com nomes diferentes e confirma que ambos aparecem na lista renderizada — mesma ressalva das demais CAs desta onda (mock, não Supabase real).
 - [x] CA-04: `npm run build`, `npm run lint` e `npm test` limpos.
 
 ## Impacto técnico
@@ -83,14 +83,13 @@ Risco muito baixo — mudança pequena e isolada, sem tocar schema. Rollback: re
 Nenhuma — implementação seguiu exatamente o "Comportamento esperado" e o "Plano de implementação" da task.
 
 ### Pendências
-- CA-03 (dois diagramas do mesmo tipo diferenciados na lista) não foi validado manualmente contra o Supabase real nesta sessão — decorre do mesmo código já coberto por CA-01 (a lista renderiza `diagram.name`, que não mudou), mas fica como validação manual pendente para quem tiver acesso a um projeto real (mesma lacuna estrutural registrada em `.agents/context/CONTEXT.md`: esta sessão rodou num worktree isolado, sem sessão de navegador autenticada contra produção).
+- Validação manual contra o Supabase real (login de verdade, projeto real) não foi feita para nenhuma CA desta task — mesma lacuna estrutural de todas as TASK-011..017 desta rodada (ver `.agents/context/CONTEXT.md`). CA-03 já tem cobertura automatizada (ver acima, fechada em 2026-08-29), então a pendência que resta é a mesma das demais: confirmar visualmente contra produção quando houver sessão com acesso.
 
 ## Validação
 - `npm install` — ok, 130 pacotes, 0 vulnerabilidades (worktree isolado, sem `node_modules` prévio).
 - `npm run build` — ok (`tsc -b` + `vite build`, sem erros de tipo).
 - `npm run lint` — ok (`oxlint`, saída idêntica de 4 warnings pré-existentes em outros arquivos, nenhum novo).
-- `npm test` — ok, 14 arquivos / 92 testes passando (90 pré-existentes + 2 novos em `DiagramsPage.test.tsx`, cobrindo CA-01/CA-02).
-- CA-03 — não executado manualmente (ver "Pendências" acima).
+- `npm test` — ok, 15 arquivos / 93 testes passando (90 pré-existentes + 3 em `DiagramsPage.test.tsx` — CA-01/CA-02 originais + CA-03 adicionado na sessão de `bootstrap-complete`, 2026-08-29).
 
 ## Handoff
-Nenhum — task fica em `active/` (não movida para `completed/` por instrução explícita desta sessão) até CA-03 ser validado manualmente contra um projeto real.
+Nenhum — task fica em `active/` (todas as CAs fechadas por evidência automatizada, mas sem validação manual contra Supabase real — mesmo padrão de TASK-001..005/011..017 desta rodada) até essa validação acontecer.

@@ -1,7 +1,7 @@
 ---
 id: TASK-015
 title: Responsividade da sidebar (Diagrama de Objetos) e correção do desalinhamento
-status: active
+status: completed
 type: bug
 owner: frontend-diagramas
 created_at: 2026-08-29
@@ -218,6 +218,11 @@ no `.side-item` inteiro (o `onClick` está no `<div>` pai, não no
 - O achado de responsividade mobile do `DiagramShell` como um todo
   (acima) não vira task nesta rodada — decisão explícita, registrada
   em "Divergências".
+- **Sem impacto em `docs/`**: correção pontual de CSS/markup (truncamento
+  de texto num item flex), sem mudança de arquitetura, schema ou
+  contrato — nenhum documento em `docs/architecture/` descreve esse
+  nível de detalhe visual, então não há nada para atualizar (checagem
+  de `bootstrap-complete`, 2026-08-29).
 
 ### Correção adicional (2026-08-29, pós-merge — feedback do usuário)
 

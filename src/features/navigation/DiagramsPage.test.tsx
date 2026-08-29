@@ -73,4 +73,31 @@ describe('DiagramsPage', () => {
       expect(createEmptyDiagram).toHaveBeenCalledWith('project-1', 'objects', 'Diagrama de Objetos'),
     )
   })
+
+  it('CA-03: dois diagramas do mesmo tipo, com nomes diferentes, aparecem diferenciados na lista', async () => {
+    listDiagrams.mockResolvedValueOnce([
+      {
+        id: 'diagram-a',
+        project_id: 'project-1',
+        type: 'classes',
+        name: 'Diagrama de Classes — Pedidos',
+        content: {},
+        created_at: '2026-08-29T00:00:00Z',
+        updated_at: '2026-08-29T00:00:00Z',
+      },
+      {
+        id: 'diagram-b',
+        project_id: 'project-1',
+        type: 'classes',
+        name: 'Diagrama de Classes — Estoque',
+        content: {},
+        created_at: '2026-08-29T00:00:00Z',
+        updated_at: '2026-08-29T00:00:00Z',
+      },
+    ])
+    renderPage()
+
+    expect(await screen.findByText('Diagrama de Classes — Pedidos')).toBeInTheDocument()
+    expect(await screen.findByText('Diagrama de Classes — Estoque')).toBeInTheDocument()
+  })
 })
