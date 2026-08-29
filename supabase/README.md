@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: TASK-001 (.agents/tasks/active/TASK-001-schema-rls-auth-supabase.md)
-ultima-revisao: 2026-08-28
+ultima-revisao: 2026-08-29 (TASK-012 — RPC find_user_id_by_email)
 ---
 
 # Supabase — schema, RLS e autenticação (TASK-001)
@@ -27,6 +27,14 @@ como única fonte de isolamento multi-tenant (ver `.claude/rules/global.md`).
    vincula quem chamou como `admin`, atomicamente (única forma de popular
    `organizations`/`organization_members` para um usuário comum — não há
    política de `INSERT` direta para esse caso).
+7. `20260829090000_rpc_find_user_id_by_email.sql` (TASK-012, ADR-004) — RPC
+   `find_user_id_by_email(p_email text) returns uuid`, ver seção "Gestão
+   de acesso de usuários — `find_user_id_by_email`" abaixo.
+
+(Duas migrations de correção pós-deploy, `20260829060000_grants_data_api_roles.sql`
+e `20260829080000_rpc_create_project.sql`, já existem no repositório e
+foram aplicadas em produção antes desta lista ter sido atualizada — não
+tocadas por esta task, ver conteúdo de cada arquivo para o motivo.)
 
 ## Modelo de permissão
 
@@ -60,6 +68,34 @@ SQL Editor do painel Supabase.
 Auth: habilitar o provedor **Email** (usuário/senha) em
 Authentication → Providers — nenhuma migration configura isso, é
 configuração de projeto.
+
+## Gestão de acesso de usuários — `find_user_id_by_email` (TASK-012, ADR-004)
+
+Função `SECURITY DEFINER` que resolve e-mail → `user_id`, para a UI de
+gestão de acesso (TASK-013) vincular alguém já cadastrado a uma
+organização/projeto. Segue o mesmo padrão de `create_organization`
+(`language plpgsql`, `security definer`, `set search_path = public`,
+`auth.uid() is null` no início, `grant execute ... to authenticated`).
+
+```sql
+select public.find_user_id_by_email('alguem@empresa.com');
+```
+
+- Retorna o `uuid` de `auth.users.id` se o e-mail existir (comparação
+  case-insensitive, `lower(email) = lower(p_email)`); `null` se não
+  existir — sem lançar exceção nesse caso (RN-02 da TASK-012: não
+  diferenciar "e-mail não existe" de "e-mail existe mas já está
+  vinculado", para não ampliar enumeração de e-mail além do necessário).
+- Exige sessão autenticada (`auth.uid() is null` → `raise exception`);
+  chamar sem sessão sempre falha, independentemente do e-mail buscado.
+- Nunca expõe nenhum outro campo de `auth.users` — o corpo da função só
+  faz `select u.id ... into v_user_id`, nunca `select *` (confirmado por
+  inspeção de `pg_proc.prosrc`, ver "Validação já executada nesta
+  sessão" abaixo). Qualquer mudança que amplie o retorno exige revisão
+  do papel `supabase-multitenant` (poder de veto).
+- Não altera nenhuma política RLS existente: `organization_members_insert`/
+  `project_members_insert` já permitiam um `admin` inserir qualquer
+  `user_id` antes desta task — só faltava a forma de descobrir qual.
 
 ## Como validar isolamento (CA-02 a CA-04)
 
@@ -106,3 +142,31 @@ Resultado:
 **Pendente (CA-05):** cadastro/login via Supabase Auth em si (o serviço
 GoTrue e a emissão real de JWT) não foram exercidos — exigem um projeto
 Supabase real. Validar assim que o projeto for provisionado.
+
+### TASK-012 — `find_user_id_by_email` (2026-08-29)
+
+Validado contra um Postgres 16 local novo (container Docker efêmero),
+com o mesmo mock de `auth` desta sessão (schema `auth`, tabela
+`auth.users` com `id`/`email`/`raw_user_meta_data`, `auth.uid()` lendo
+`current_setting('request.jwt.claim.sub', true)`, roles `anon`/
+`authenticated`). Todas as 10 migrations de `supabase/migrations/`
+(incluindo a nova, `20260829090000_rpc_find_user_id_by_email.sql`)
+aplicaram sem erro, em ordem, num banco limpo (**CA-04**).
+
+- Autenticado (`request.jwt.claim.sub` setado para um `user_id` de
+  teste), `find_user_id_by_email('EXISTE@empresa.com')` (caixa
+  diferente do cadastro) retornou o `user_id` correto — confirma
+  comparação case-insensitive (**CA-01**).
+- No mesmo contexto autenticado, `find_user_id_by_email('naoexiste@empresa.com')`
+  retornou `null`, sem erro (**CA-02**).
+- Sem sessão (`request.jwt.claim.sub` vazio, papel `anon`), a chamada
+  lançou `authentication required` (comportamento de `auth.uid() is
+  null`, mesmo padrão de `create_organization`).
+- Corpo da função inspecionado via `select prosrc from pg_proc where
+  proname = 'find_user_id_by_email'` — só contém `select u.id ... into
+  v_user_id`, nenhum outro campo de `auth.users` é lido ou retornado
+  (**CA-03**).
+
+Não aplicado contra o projeto Supabase real de produção (`classmap`)
+nesta task — decisão explícita, ver task. Repetir esta mesma validação
+lá antes de a TASK-013 depender da função em produção.

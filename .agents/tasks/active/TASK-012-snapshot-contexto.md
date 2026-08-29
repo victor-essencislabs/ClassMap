@@ -22,7 +22,13 @@ Task: `.agents/tasks/backlog/TASK-012-rpc-buscar-usuario-por-email.md`
 
 ## Próximo passo imediato
 
-Escrever a migration nova (`supabase/migrations/<timestamp>_rpc_find_user_id_by_email.sql`) com `find_user_id_by_email(p_email text) returns uuid`, seguindo exatamente a estrutura de `create_organization`/`create_project` citadas acima, e validar manualmente contra Postgres local (CA-01/02/03 da task: e-mail existente retorna o id certo, e-mail inexistente retorna `null`, nenhum outro campo exposto).
+~~Escrever a migration nova...~~ — feito em 2026-08-29:
+`supabase/migrations/20260829090000_rpc_find_user_id_by_email.sql`,
+validada contra Postgres local (CA-01 a CA-04, ver "Validação" na task).
+Próximo passo real agora é a TASK-013 (`frontend-diagramas`), e, antes
+dela depender desta função em produção, aplicar/validar esta migration
+contra o projeto Supabase real (`classmap`) — não feito nesta task por
+instrução explícita (aplicar em produção exige revisão humana).
 
 ---
 Para retomar: abra uma sessão nova e peça para ler este arquivo antes de continuar a task `TASK-012`.

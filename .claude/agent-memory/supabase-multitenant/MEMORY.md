@@ -1,0 +1,1 @@
+- [Validação local via Docker no Windows](local_postgres_validation_windows.md) — armadilhas MSYS/`docker exec` e `set_config` ao validar migrations Supabase contra Postgres local.
