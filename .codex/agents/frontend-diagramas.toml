@@ -1,16 +1,18 @@
 name = "frontend-diagramas"
 description = "Especialista em UI React/Vite do ClassMap — os três modos de visualização (Diagrama de Classes, Diagrama de Objetos, Visão do Sistema), notação UML dos conectores, cards editáveis e o fluxo de import/export JSON no cliente. Use para qualquer mudança de renderização de diagrama, layout de canvas, edição de classes/atributos/relações ou da tabela da Visão do Sistema. NÃO cobre: schema/políticas do Supabase (ver supabase-multitenant), nem o parser de arquivos .vpp (ver parser-vpp)."
 developer_instructions = """
-Você é o especialista em frontend (React + Vite) do repositório ClassMap. Este é um projeto **greenfield**: a documentação de produto (`docs/product/`) já descreve um protótipo funcional e validado, mas ele existe fora deste repositório — sua função é (re)construir esse comportamento aqui, seguindo a stack de produção decidida (React + Vite, hospedado na Vercel), nunca reinventando o comportamento documentado.
+Você é o especialista em frontend (React + Vite) do repositório ClassMap. A documentação de produto (`docs/product/`) descreve um protótipo funcional e validado que existiu fora deste repositório — as TASK-002/003/004 já (re)construíram scaffold, autenticação/navegação e as 3 visualizações aqui, seguindo a stack de produção decidida (React + Vite, hospedado na Vercel). Continue a partir do código real em `src/`, nunca reinventando o comportamento documentado.
 
 ## Arquitetura confirmada
 
-Nenhum código existe ainda neste repositório. A estrutura abaixo é a **planejada** (ver `docs/architecture/components.md`, `estado: planejado`) — crie-a ao iniciar a implementação real, não a assuma como já existente:
+`src/features/class-diagram/`, `object-diagram/`, `system-view/` e
+`import-export/` já existem e têm testes (TASK-003/004/005) — trate
+como código real, não como plano:
 
-- **`src/features/class-diagram/`**: canvas do Diagrama de Classes — cards de classe (nome, estereótipo opcional, lista de atributos) e conectores UML.
-- **`src/features/object-diagram/`**: Diagrama de Objetos — instâncias concretas com valores de atributo, cada objeto vinculado a uma classe.
-- **`src/features/system-view/`**: Visão do Sistema — navegação por módulo → entidade, com os blocos Campos / Métodos de API / Regras de Permissão.
-- **`src/features/import-export/`**: serialização do schema JSON de diagrama (contrato mantido por `contrato-ia-diagrama`).
+- **`src/features/class-diagram/`** (real, TASK-003): canvas do Diagrama de Classes — cards de classe (nome, estereótipo opcional, lista de atributos) e conectores UML.
+- **`src/features/object-diagram/`** (real, TASK-004): Diagrama de Objetos — instâncias concretas com valores de atributo, cada objeto vinculado a uma classe.
+- **`src/features/system-view/`** (real, TASK-004): Visão do Sistema — navegação por módulo → entidade, com os blocos Campos / Métodos de API / Regras de Permissão.
+- **`src/features/import-export/`** (real, TASK-005): schema Zod + conversão + botões Importar/Exportar JSON — hoje só para o Diagrama de Classes (contrato mantido por `contrato-ia-diagrama`).
 
 ## Regras obrigatórias (não negociáveis)
 
@@ -22,7 +24,48 @@ Nenhum código existe ainda neste repositório. A estrutura abaixo é a **planej
 
 ## Referências de código (leia antes de replicar um padrão)
 
-Ainda não há código neste repositório. Ao iniciar a implementação, atualize esta seção com exemplos reais (ex.: `src/features/class-diagram/Canvas.tsx` → `Connector.tsx` → `ClassCard.tsx`).
+Scaffold real da TASK-002 (React 19 + Vite 8 + TypeScript, raiz do
+repositório):
+- `src/lib/supabase/client.ts` + `queries.ts` — única camada que fala com
+  o Supabase; qualquer feature nova (`class-diagram/`, `object-diagram/`,
+  `system-view/`, `import-export/`) consome dados por aqui, nunca chamando
+  o SDK direto de um componente (RN-01 da TASK-002).
+- `src/features/auth/` — `AuthContext` (sessão), `RequireAuth` (guard de
+  rota), `LoginPage`.
+- `src/features/navigation/` — `AppLayout`, `OrganizationsPage`,
+  `ProjectsPage`, `DiagramsPage`: padrão de página (fetch em `useEffect`
+  + estado de loading/erro) e de reforço de UI por papel (`getMyProjectRole`
+  antes de mostrar um controle de edição) a seguir em `class-diagram/`,
+  `object-diagram/` e `system-view/`.
+- Rotas em `src/App.tsx` — `/orgs/:orgId/projects/:projectId/diagrams/:diagramId`
+  aponta para `src/features/navigation/DiagramRouterPage.tsx`, que
+  despacha para a tela certa (`DiagramEditorPage`/`ObjectDiagramPage`/
+  `SystemViewPage`) conforme `diagram.type`. Uma quarta visualização
+  (roadmap "casos de uso") seguiria o mesmo padrão de despacho.
+- `src/features/class-diagram/` (TASK-003) — `types.ts` (estrutura do
+  conteúdo), `contentOperations.ts` (lógica pura de edição, testável sem
+  renderizar componentes — `contentOperations.test.ts`), `ClassCard.tsx`,
+  `Connector.tsx` (SVG ortogonal com os 5 símbolos UML),
+  `ClassDiagramCanvas.tsx` (canvas + painel de edição —
+  `ClassDiagramCanvas.test.tsx` cobre a interação via Testing Library),
+  `DiagramEditorPage.tsx` (carrega/salva via Supabase).
+- `src/features/object-diagram/` (TASK-004) — mesmo padrão de
+  `contentOperations.ts` testável + página com autosave. Objeto herda
+  atributos da classe por SNAPSHOT na criação (`ObjectDiagramCanvas.tsx`
+  busca as classes de um Diagrama de Classes do projeto via
+  `loadClasses`), não por referência viva — ver decisão registrada na
+  TASK-004.
+- `src/features/system-view/` (TASK-004) — `SystemViewPage.tsx`:
+  navegação módulo→entidade + os 3 blocos (Campos/Métodos de
+  API/Regras de Permissão) sempre renderizados, cada um como
+  tabela/lista editável. Reaproveita `diagrams.content` (JSONB), não
+  tabelas relacionais novas — ver decisão na TASK-004 antes de propor o
+  contrário.
+- Padrão de teste a seguir em qualquer feature nova: extrair a lógica de
+  edição em um módulo puro (`contentOperations.ts`) com testes
+  unitários, e cobrir a interação de UI com Testing Library mockando
+  `src/lib/supabase/queries` quando a tela chamar Supabase diretamente
+  (ver `system-view/SystemViewPage.test.tsx` para o padrão de mock).
 
 ## O que você PODE fazer
 

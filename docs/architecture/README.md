@@ -2,7 +2,7 @@
 
 Visão estrutural de ClassMap: contexto do sistema, containers, componentes, dependências permitidas/proibidas, comunicação síncrona/assíncrona, implantação, observabilidade, tolerância a falhas.
 
-**Estado misto.** `context.md`, `components.md` e `dependencies.md` já descrevem código real (as 5 tasks do MVP, ver `.agents/context/CONTEXT.md`) — `estado: real` no frontmatter de cada um. `containers.md` e `deployment.md` continuam `estado: planejado`: descrevem a topologia de implantação decidida em `ClassMap_Documentacao.pdf` (Essencislabs, Agosto 2026), ainda não real porque nenhum projeto Supabase/Vercel foi provisionado.
+**Estado: real.** Os 5 documentos (`context.md`, `containers.md`, `components.md`, `dependencies.md`, `deployment.md`) descrevem código e infraestrutura reais (`estado: real` no frontmatter de cada um) — as 5 tasks do MVP (ADR-001) e as 5 tasks do redesign (ADR-002) estão implementadas, e o projeto Supabase (`classmap`) + Vercel (`class-map`) já foram provisionados e publicados desde 2026-08-28 (ver `.agents/context/CONTEXT.md`). `containers.md`/`deployment.md` foram promovidos de `planejado` para `real` em 2026-08-29 (`bootstrap-audit` — a infraestrutura já existia desde a criação do repositório, o frontmatter só não havia sido atualizado).
 
 ## Documentos
 
@@ -10,7 +10,7 @@ Visão estrutural de ClassMap: contexto do sistema, containers, componentes, dep
 - [`containers.md`](containers.md) — processos/serviços implantáveis de forma independente, responsabilidades e comunicação
 - [`components.md`](components.md) — componentes internos relevantes por camada/módulo
 - [`dependencies.md`](dependencies.md) — direção de dependência permitida/proibida entre camadas e containers
-- [`deployment.md`](deployment.md) — topologia planejada de implantação (ambiente, variáveis de ambiente, boot)
+- [`deployment.md`](deployment.md) — topologia real de implantação (ambiente, variáveis de ambiente, boot)
 
 Diagramas visuais complementares (Mermaid/PlantUML): [`../diagrams/`](../diagrams/README.md).
 

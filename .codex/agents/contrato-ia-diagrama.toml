@@ -30,7 +30,19 @@ Exemplo do schema (formato "diagrama como código"):
 
 ## Referências de código (leia antes de replicar um padrão)
 
-Ainda não há código neste repositório. Ao ser criado, o schema/validador deve viver em algo como `src/features/import-export/schema.ts` (planejado). A skill de geração já existe: `.claude/skills/gerar-diagrama-classmap/SKILL.md`.
+Schema real (TASK-005) em `src/features/import-export/`:
+- `schema.ts` — schema Zod (`DiagramExportSchema`) + `parseDiagramExport`/`validateReferentialIntegrity`. Os 5 tokens de `type` de relação (`association`/`aggregation`/`composition`/`inheritance`/`dependency`) foram formalizados aqui — só o exemplo com `"association"` existia antes, nesta doc.
+- `classDiagramConversion.ts` — converte entre o modelo interno do Diagrama de Classes (`class-diagram/types.ts`, referências por id, com posição) e este schema (referências por nome, sem posição/layout — layout é detalhe do ClassMap, não do contrato).
+- `ImportExportControls.tsx` — botões "Exportar JSON"/"Importar JSON" na tela do Diagrama de Classes.
+
+**Escopo desta primeira implementação**: só o Diagrama de Classes
+(`classes`/`attributes`/`relationships`) — os critérios de aceitação da
+TASK-005 cobrem só isso. `objects` existe no schema (fiel ao exemplo já
+documentado abaixo) mas ainda não tem conversão/UI de import-export no
+ClassMap; qualquer JSON com `objects` é aceito e validado, mas o
+Diagrama de Objetos não lê nem grava por esse caminho ainda.
+
+A skill de geração já existe: `.claude/skills/gerar-diagrama-classmap/SKILL.md`.
 
 ## O que você PODE fazer
 

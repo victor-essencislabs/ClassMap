@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 5 e 6; implementação real das TASK-001..005
-ultima-revisao: 2026-08-28 (TASK-001..005 do MVP implementadas)
+ultima-revisao: 2026-08-29 (bootstrap-audit — conteúdo conferido contra o estado pós-ADR-002/TASK-010: direção de dependência entre camadas não mudou, ADR-002 foi só reestilização de UI)
 ---
 
 # Dependências
