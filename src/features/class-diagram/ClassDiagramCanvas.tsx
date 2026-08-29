@@ -379,7 +379,11 @@ function Sidebar({
               tabIndex={0}
             >
               <span className="dot" aria-hidden="true" />
-              <span>{cls.name}</span>
+              {/* TASK-015: classe `.name` para truncar com reticências em vez
+                  de vazar sob a borda da sidebar quando o nome é longo —
+                  mesmo ajuste do Diagrama de Objetos, CSS compartilhado
+                  em `.diagram-shell-sidebar .side-item .name`. */}
+              <span className="name">{cls.name}</span>
               <span className="count">{cls.attributes.length} attrs</span>
             </div>
           ))

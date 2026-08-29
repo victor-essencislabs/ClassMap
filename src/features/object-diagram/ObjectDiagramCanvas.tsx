@@ -265,7 +265,9 @@ function Sidebar({
               tabIndex={0}
             >
               <span className="dot" aria-hidden="true" />
-              <span>{obj.instanceName || `instância : ${obj.className}`}</span>
+              {/* TASK-015: classe `.name` para truncar com reticências em vez
+                  de vazar sob a borda da sidebar quando o nome é longo. */}
+              <span className="name">{obj.instanceName || `instância : ${obj.className}`}</span>
             </div>
           ))
         )}
