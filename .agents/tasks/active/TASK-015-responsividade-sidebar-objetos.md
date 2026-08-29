@@ -207,14 +207,43 @@ no `.side-item` inteiro (o `onClick` está no `<div>` pai, não no
   criei essa task agora por não fazer parte do pedido desta rodada.
 
 ### Pendências
-- Confirmação visual manual desta correção (screenshot real, navegador
-  fora deste sandbox) contra a aplicação rodando de fato a partir
-  deste worktree/branch — ver "Divergências" para o porquê de não ter
-  sido possível nesta sessão, e a validação alternativa já feita
-  (CSS de produção real + mecanismo padrão de flexbox, não suposição).
+- ~~Confirmação visual manual desta correção...~~ — **resolvida em
+  2026-08-29** (sessão seguinte, com acesso real ao navegador embutido
+  contra o `main` já mesclado, sem a restrição de sandbox do worktree
+  original): nome de objeto longo (`instância :
+  ClienteComNomeMuitoLongoParaTestarTruncamento`) confirmado truncando
+  com reticências, item permanecendo dentro da sidebar (`itemRight:
+  241` vs. `sidebarRight: 248`), em vez de vazar. Ver "Correção
+  adicional" abaixo para o item de stats, achado na mesma sessão.
 - O achado de responsividade mobile do `DiagramShell` como um todo
   (acima) não vira task nesta rodada — decisão explícita, registrada
   em "Divergências".
+
+### Correção adicional (2026-08-29, pós-merge — feedback do usuário)
+
+Depois desta task mesclada em `main`, o usuário reportou (com
+screenshot) que o card de stats da sidebar ("Classes"/"Relações"/
+"Objetos", `.stat-row`/`.stat`) também "estourava" — o mesmo padrão de
+bug desta task (item flex sem `min-width: 0`), só que num elemento
+diferente do que foi coberto aqui (`.stat`, não `.side-item .name`).
+
+**Causa raiz confirmada** (injeção do markup real contra o CSS de
+produção, `src/index.css`, num navegador de verdade): `.stat` tinha
+`flex: 1` mas nenhum `min-width: 0`. O rótulo mais longo ("Relações")
+força um `min-content` maior que 1/3 do espaço disponível — os 3 boxes
+não ficavam mais com a mesma largura (medido: 71.5px / 79.2px /
+71.5px, com `stat-row` de só 246px de largura útil), e o terceiro box
+("Objetos") era empurrado ~5px para fora da sidebar (`sidebarRight:
+248`, mas `right` do 3º box chegava a `253`).
+
+**Correção**: `min-width: 0` em `.stat`; rótulo (`.stat span`) com
+`display: block; white-space: nowrap; overflow: hidden; text-overflow:
+clip` em vez de permitir vazamento; reduzido `font-size` (10.5px →
+9.5px) e `letter-spacing` (0.06em → 0.02em) do rótulo, e o padding de
+`.stat`/`.stat-row` para caber sem quebrar linha. Testado com números
+de 3 dígitos (116/113/42, dataset do GeoCloudAI citado na
+documentação) e nos dois temas — 3 boxes sempre com largura igual,
+dentro da sidebar, rótulo sempre numa linha só.
 
 ## Validação
 - `npm install` — ok, dependências instaladas neste worktree antes de

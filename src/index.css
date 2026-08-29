@@ -1376,15 +1376,21 @@ button.ov-flag {
 
 .diagram-shell-sidebar .stat-row {
   display: flex;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 10px 10px;
 }
 
 .diagram-shell-sidebar .stat {
+  /* TASK-015 (correção 2, sidebar de stats): flex:1 sozinho não encolhe
+     abaixo do min-content do rótulo mais longo ("Relações") — mesma
+     causa raiz já corrigida em `.side-item .name`. Sem `min-width: 0`
+     aqui, o card de "Relações" empurra o de "Objetos" para fora da
+     sidebar (bug reportado pelo usuário: números "estourando"). */
   flex: 1;
+  min-width: 0;
   background: var(--surface-alt);
   border-radius: 9px;
-  padding: 9px 10px;
+  padding: 8px 6px;
 }
 
 .diagram-shell-sidebar .stat b {
@@ -1393,11 +1399,15 @@ button.ov-flag {
 }
 
 .diagram-shell-sidebar .stat span {
-  font-size: 10.5px;
+  display: block;
+  font-size: 9.5px;
   color: var(--text-faint);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 /* ---- canvas ---- */
