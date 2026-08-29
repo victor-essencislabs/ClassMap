@@ -14,6 +14,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="brand">
+          <span className="brand-mark" aria-hidden="true" />
           ClassMap
         </Link>
         <button type="button" onClick={handleSignOut}>

@@ -27,7 +27,7 @@ export function OrganizationsPage() {
     setError(null)
     setCreating(true)
     try {
-      await createOrganization(name)
+      await createOrganization(name.trim())
       setName('')
       await reload()
     } catch (err) {
@@ -39,35 +39,47 @@ export function OrganizationsPage() {
 
   return (
     <section>
-      <h1>Organizações</h1>
+      <div className="page-header">
+        <h1>Organizações</h1>
+      </div>
+      <p className="page-subtitle">Organizações às quais você pertence.</p>
 
       {error && <p className="error">{error}</p>}
 
       {loading ? (
         <p>Carregando organizações…</p>
       ) : organizations && organizations.length > 0 ? (
-        <ul className="list">
+        <ul className="entity-list">
           {organizations.map((org) => (
-            <li key={org.id}>
-              <Link to={`/orgs/${org.id}`}>{org.name}</Link>
+            <li key={org.id} className="entity-list-item">
+              <Link to={`/orgs/${org.id}`} className="entity-link">
+                <span className="entity-name">{org.name}</span>
+                <span className="chevron">→</span>
+              </Link>
             </li>
           ))}
         </ul>
       ) : !error ? (
-        <p>Você ainda não pertence a nenhuma organização. Crie a primeira abaixo.</p>
+        <div className="empty-state">
+          <p>Você ainda não pertence a nenhuma organização.</p>
+          <p>Crie a primeira abaixo para começar.</p>
+        </div>
       ) : null}
 
-      <form onSubmit={handleCreate}>
-        <label htmlFor="org-name">Nova organização</label>
-        <input
-          id="org-name"
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nome da organização"
-        />
-        <button type="submit" disabled={creating || name.trim().length === 0}>
+      <form className="inline-create-form" onSubmit={handleCreate}>
+        <div className="field">
+          <label htmlFor="org-name">Nova organização</label>
+          <input
+            id="org-name"
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome da organização"
+            autoComplete="off"
+          />
+        </div>
+        <button type="submit" className="primary" disabled={creating || name.trim().length === 0}>
           {creating ? 'Criando…' : 'Criar organização'}
         </button>
       </form>

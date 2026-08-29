@@ -1,7 +1,27 @@
 :root {
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --border: color-mix(in srgb, currentColor 20%, transparent);
+
+  /* Identidade ClassMap — roxo/violeta da marca (ver public/favicon.svg,
+     #863bff/#7e14ff) com acento ciano (#47bfff). Fundo bem escuro no dark
+     mode (estilo "app profissional"), claro e neutro no light mode. */
+  --bg-page: light-dark(#f5f5f8, #0c0d12);
+  --surface: light-dark(#ffffff, #15161e);
+  --surface-hover: light-dark(#f1f1f6, #1d1f29);
+  --border: light-dark(color-mix(in srgb, #0c0d12 10%, transparent), color-mix(in srgb, #ffffff 12%, transparent));
+  --border-strong: light-dark(color-mix(in srgb, #0c0d12 22%, transparent), color-mix(in srgb, #ffffff 22%, transparent));
+  --muted: light-dark(color-mix(in srgb, #0c0d12 55%, transparent), color-mix(in srgb, #ffffff 55%, transparent));
+  --text: light-dark(#14151d, #f2f2f7);
+
+  --accent: light-dark(#7c3aed, #a78bfa);
+  --accent-strong: light-dark(#6d28d9, #c4b5fd);
+  --accent-contrast: #ffffff;
+  --accent-soft: light-dark(color-mix(in srgb, #7c3aed 10%, transparent), color-mix(in srgb, #a78bfa 16%, transparent));
+  --accent-2: #47bfff;
+  --danger: light-dark(#b91c1c, #f87171);
+
+  background: var(--bg-page);
+  color: var(--text);
 }
 
 * {
@@ -11,6 +31,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--bg-page);
+  color: var(--text);
 }
 
 .app-shell {
@@ -25,12 +47,25 @@ body {
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .app-header .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-weight: 700;
+  font-size: 1.05rem;
   text-decoration: none;
   color: inherit;
+}
+
+.brand-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  flex-shrink: 0;
 }
 
 main {
@@ -50,28 +85,53 @@ main {
 
 .card {
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
+  border-radius: 0.9rem;
+  padding: 2rem;
   max-width: 360px;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: var(--surface);
+  box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.35);
+}
+
+.card h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.card h1::before {
+  content: '';
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  flex-shrink: 0;
 }
 
 .card label {
   font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
   margin-top: 0.5rem;
 }
 
 .card input {
-  padding: 0.5rem;
+  padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   font: inherit;
+  background: var(--bg-page);
+  color: inherit;
 }
 
-.card button,
+.card input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 button {
   font: inherit;
   cursor: pointer;
@@ -79,9 +139,22 @@ button {
 
 .card button[type='submit'] {
   margin-top: 1rem;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  border: 1px solid var(--border);
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.card button[type='submit']:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.card button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .list {
@@ -108,7 +181,208 @@ button {
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--danger);
+}
+
+/* ---- Navegação (Organizações/Projetos/Diagramas — TASK-002) ---- */
+
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.breadcrumb:hover {
+  color: var(--accent);
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.page-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.entity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.entity-list-item {
+  display: block;
+  border-radius: 0.75rem;
+}
+
+.entity-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.entity-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.entity-link .entity-name {
+  font-weight: 600;
+}
+
+.entity-link .entity-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.entity-link .chevron {
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+.entity-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.empty-state {
+  border: 1px dashed var(--border-strong);
+  border-radius: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+}
+
+.empty-state p:first-child {
+  color: var(--text);
+  font-weight: 600;
+  margin-top: 0;
+}
+
+.inline-create-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.inline-create-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 12rem;
+}
+
+.inline-create-form label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.inline-create-form input {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font: inherit;
+  background: var(--bg-page);
+  color: inherit;
+}
+
+.inline-create-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button.primary {
+  font: inherit;
+  cursor: pointer;
+  padding: 0.6rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.link-button {
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.app-header button {
+  padding: 0.45rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font-weight: 500;
+}
+
+.app-header button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }
 
 /* ---- Diagrama de Classes (TASK-003) ---- */

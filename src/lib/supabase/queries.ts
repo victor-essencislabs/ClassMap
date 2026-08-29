@@ -7,7 +7,14 @@
 // organização/projeto em código de aplicação (RN-02 da TASK-002 /
 // .claude/rules/global.md).
 import { supabase } from './client'
-import type { Diagram, DiagramType, Organization, Project, ProjectRole } from './types'
+import type {
+  Diagram,
+  DiagramType,
+  Organization,
+  OrganizationRole,
+  Project,
+  ProjectRole,
+} from './types'
 
 function requireClient() {
   if (!supabase) {
@@ -74,6 +81,42 @@ export async function listProjects(organizationId: string): Promise<Project[]> {
   return data as Project[]
 }
 
+/** Cria um projeto numa organização. RLS só permite se o usuário for admin dela. */
+export async function createProject(organizationId: string, name: string): Promise<Project> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('projects')
+    .insert({ organization_id: organizationId, name })
+    .select('id, organization_id, name, created_at')
+    .single()
+  if (error) throw error
+  return data as Project
+}
+
+/** Uma organização por id — usado para mostrar o nome dela em telas mais fundas na hierarquia. */
+export async function getOrganization(organizationId: string): Promise<Organization> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('organizations')
+    .select('id, name, created_at')
+    .eq('id', organizationId)
+    .single()
+  if (error) throw error
+  return data as Organization
+}
+
+/** Um projeto por id — usado para mostrar o nome dele em telas mais fundas na hierarquia. */
+export async function getProject(projectId: string): Promise<Project> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('projects')
+    .select('id, organization_id, name, created_at')
+    .eq('id', projectId)
+    .single()
+  if (error) throw error
+  return data as Project
+}
+
 /** Diagramas de um projeto — RLS já exige algum papel de projeto para retornar linha. */
 export async function listDiagrams(projectId: string): Promise<Diagram[]> {
   const client = requireClient()
@@ -84,6 +127,27 @@ export async function listDiagrams(projectId: string): Promise<Diagram[]> {
     .order('name')
   if (error) throw error
   return data as Diagram[]
+}
+
+/**
+ * Papel do usuário autenticado na organização (admin/member), ou null se
+ * não for membro. Usado só para reforço de UI (esconder/mostrar "criar
+ * projeto") — nunca como a autorização real, que é RLS (RN-01/RN-02 da
+ * TASK-002).
+ */
+export async function getMyOrganizationRole(
+  organizationId: string,
+  userId: string,
+): Promise<OrganizationRole | null> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return (data?.role as OrganizationRole | undefined) ?? null
 }
 
 /**
