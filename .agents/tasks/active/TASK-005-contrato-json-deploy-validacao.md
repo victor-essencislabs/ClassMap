@@ -44,9 +44,9 @@ Diagramas de classes e objetos existem no banco (TASK-003/004), sem forma de exp
 - RN-03: Orçamento de infraestrutura de produção não pode ultrapassar R$ 50/mês (Constituição, item 5) — validar o custo real do deploy contra esse teto antes de considerar a task concluída.
 
 ## Critérios de aceitação
-- [x] CA-01: Exportar um Diagrama de Classes real (criado na TASK-003) gera um JSON válido contra o schema documentado. Validado via teste automatizado (`classDiagramConversion.test.ts`).
-- [x] CA-02: Importar esse mesmo JSON em um diagrama vazio recria exatamente as classes e relações originais. Validado via teste de round-trip completo (exportar → importar → reexportar dá o mesmo JSON) e via teste de componente (`ImportExportControls.test.tsx`).
-- [x] CA-03: Importar um JSON malformado (ex.: tipo de relação inválido) é rejeitado com mensagem clara, sem corromper o diagrama existente. Validado (JSON inválido, schema inválido, tipo de relação inválido, relação referenciando classe inexistente — todos rejeitados com lista de erros, conteúdo atual preservado).
+- [x] CA-01: Exportar um Diagrama de Classes real (criado na TASK-003) gera um JSON válido contra o schema documentado. Validado via teste automatizado; **validado em produção em 2026-08-29** — exportado o diagrama real "Cliente"/"Pedido" (TASK-003), JSON conferido campo a campo (`classes`, `relationships` com `type: "inheritance"` e multiplicidade, `objects: []`).
+- [x] CA-02: Importar esse mesmo JSON em um diagrama vazio recria exatamente as classes e relações originais. Validado via teste de round-trip completo e via teste de componente; **validado em produção em 2026-08-29** — importado um JSON novo ("Produto"→"Categoria", associação) no modal real, substituindo o diagrama, e confirmado persistido após reload.
+- [x] CA-03: Importar um JSON malformado (ex.: tipo de relação inválido) é rejeitado com mensagem clara, sem corromper o diagrama existente. Validado via testes automatizados; **validado em produção em 2026-08-29** — texto não-JSON rejeitado dentro do modal ("JSON inválido: Unexpected token…"), diagrama existente (2 classes/1 relação) preservado no fundo, sem alteração.
 - [x] CA-04: App publicado e acessível via URL da Vercel, autenticando contra o Supabase de produção. Publicado em 2026-08-28: https://class-map-one.vercel.app (projeto `class-map`, org `victor-essencislabs`, plano Hobby, deploy do commit `e827df0` da `main`), com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` configuradas para Production+Preview apontando para o projeto Supabase real (`classmap`). Confirmado visualmente: a tela de login carrega (não cai na tela de "não configurado"), ou seja, o build está lendo as env vars corretamente.
 - [ ] CA-05: Um grupo pequeno do time (indicado pelo usuário) completa o fluxo login → navegar hierarquia → ver/editar um diagrama → exportar/importar JSON, em produção, sem erro bloqueante. **Pendente** — depende de pessoas reais testando; ninguém se cadastrou/logou ainda (o agente não cria contas nem digita senhas de autenticação).
 - [ ] CA-06: Custo de infraestrutura observado (ou projetado a partir dos limites do plano gratuito) confirmado dentro do teto de R$ 50/mês. **Pendente** — Supabase e Vercel estão nos planos gratuitos (Free/Hobby); falta observar uso real após algum tempo de operação para confirmar que fica dentro do teto.
@@ -75,7 +75,7 @@ Validação de entrada no import (evitar que um JSON malformado corrompa o diagr
 - [x] Unitários: validador do schema JSON e conversão (`schema.ts` via `classDiagramConversion.test.ts` — 6 casos: export com nomes corretos, round-trip completo, JSON malformado, tipo de relação inválido, relação para classe inexistente, entrada que não é objeto).
 - [x] Componente: `ImportExportControls.test.tsx` (4 casos) — fluxo real de seleção de arquivo via Testing Library, incluindo arquivo que não é JSON.
 - [x] Manual: CA-01 a CA-03 cobertos pelos testes automatizados acima (mais forte que só manual).
-- [ ] Integração: build + deploy real na Vercel. **Pendente**.
+- [x] Integração: build + deploy real na Vercel. **Deploy confirmado (CA-04) desde 2026-08-28**; fluxo de import/export **validado contra o Supabase real em 2026-08-29** (local, mesmo backend de produção — export/import/rejeição de erro, todos persistindo de fato).
 - [ ] E2E: CA-05, com o grupo piloto do time — é o teste de aceitação final do MVP. **Pendente**.
 
 ## Riscos e rollback
@@ -106,11 +106,16 @@ interno (ids, posição) e o contrato público (nomes, sem layout).
 - O plano original listava "Implementar exportar/importar no Diagrama de Classes e no Diagrama de Objetos" — feito só para Classes, pelo motivo em "Decisões" acima. Sinalizado aqui, não decidido silenciosamente.
 
 ### Pendências
-- **CA-05**: exige pessoas do time testando o fluxo completo em produção
-  — ninguém se cadastrou/logou ainda no app publicado.
+- **CA-05**: exige pessoas do time testando o fluxo completo em produção.
+  **2026-08-29**: o usuário (victor.sena@essencislabs.com) já logou e
+  validou o fluxo login → navegar hierarquia → editar diagrama →
+  exportar/importar JSON de ponta a ponta (ver "Validação") — falta
+  ainda a sessão com um **grupo** do time (CA-05 pede várias pessoas,
+  não uma só), não fechado nesta sessão.
 - **CA-06**: confirmar, depois de algum tempo real de uso, que o
   consumo dos planos Free (Supabase)/Hobby (Vercel) segue dentro do
-  teto de R$ 50/mês.
+  teto de R$ 50/mês. Segue pendente — precisa de tempo de operação, não
+  de uma sessão de teste.
 - Import/export do Diagrama de Objetos, se o produto pedir — hoje fora
   de escopo (ver "Decisões").
 
@@ -126,22 +131,32 @@ Vercel foi instalado no mesmo fluxo (autorização OAuth confirmada pelo
 usuário antes de prosseguir).
 
 ## Validação
-- `npm test` (`vitest run`): 44 testes, 8 arquivos — os 10 novos desta
-  task (`classDiagramConversion.test.ts`, 6; `ImportExportControls.test.tsx`, 4)
-  cobrem CA-01/02/03 diretamente. Todos passando.
+- `npm test` (`vitest run`): 44 testes (90 no total do repositório em
+  2026-08-29, incluindo ADR-002), 8 arquivos — os 10 desta task
+  (`classDiagramConversion.test.ts`, 6; `ImportExportControls.test.tsx`,
+  reescrito na TASK-010 para o fluxo de modal) cobrem CA-01/02/03
+  diretamente. Todos passando.
 - `npm run build` (`tsc -b && vite build`): sem erros de tipo.
 - `npm run lint` (`oxlint`): 0 erros (mesmos 2 avisos pré-existentes).
-- CA-04/05/06: não aplicável nesta sessão (ver "Pendências").
+- **2026-08-29, contra produção real** (usuário logado pelo navegador,
+  papel `editor`): exportado o Diagrama de Classes real (CA-01, JSON
+  conferido); colado um texto inválido no modal de importar, rejeitado
+  com erro claro sem alterar o diagrama existente (CA-03); importado um
+  JSON válido novo, substituindo o diagrama e confirmado persistido
+  após reload (CA-02). CA-05 (sessão em grupo) e CA-06 (custo ao longo
+  do tempo) seguem sem validação — ver "Pendências".
 
 ## Handoff
-App publicado e CA-04 confirmado (ver "Pendências"). Falta, para fechar
-o MVP:
-1. Alguém (usuário ou time) se cadastrar e logar de fato em
-   https://class-map-one.vercel.app, validando também CA-05 da
-   TASK-001.
-2. Agendar e conduzir a sessão com o grupo piloto do time (CA-05 desta
-   task), registrar o resultado aqui.
+App publicado, CA-01/02/03/04 confirmados (2026-08-28/29). Falta, para
+fechar o MVP:
+1. ~~Alguém se cadastrar/logar de fato~~ — **feito em 2026-08-29**
+   (victor.sena@essencislabs.com), validando também CA-05 da TASK-001.
+2. Agendar e conduzir a sessão com o **grupo** piloto do time (CA-05
+   desta task pede várias pessoas, não uma só), registrar o resultado
+   aqui.
 3. Depois de algum tempo real de uso, confirmar o custo contra o teto
    de R$ 50/mês (CA-06).
-4. Só então mover TASK-001..005 para `completed/` — fecha o MVP de
+4. Um segundo usuário real (`visualizador` e/ou de outra organização)
+   para fechar CA-04/05 da TASK-001/002 e CA-05 da TASK-003/004.
+5. Só então mover TASK-001..005 para `completed/` — fecha o MVP de
    produção (ver ADR-001).

@@ -43,11 +43,11 @@ Diagrama existe só como registro vazio no banco (resultado da TASK-002).
 - RN-03: Edição só é permitida a usuário com papel `editor` no projeto (reforço de UI; garantia real é RLS da TASK-001).
 
 ## Critérios de aceitação
-- [x] CA-01: Usuário `editor` cria uma classe com nome, estereótipo opcional e ao menos 2 atributos. Validado via teste de componente (`ClassDiagramCanvas.test.tsx`); validação manual num navegador real ainda pendente (ver "Pendências").
-- [x] CA-02: Usuário `editor` cria uma relação de cada um dos 5 tipos entre duas classes, cada uma renderizada com o símbolo correto. Validado via teste de componente; conferência visual (o símbolo geométrico *parece* certo, não só existe no DOM) ainda pendente.
-- [x] CA-03: Multiplicidade opcional é exibida corretamente nas duas pontas de um conector, quando preenchida. Validado via teste de componente.
-- [ ] CA-04: Salvar e recarregar a página preserva exatamente o estado do diagrama (classes, atributos, relações, multiplicidade, posições). A serialização em si é validada (round-trip JSON.stringify/parse, `contentOperations.test.ts`); **persistência real via Supabase pendente** (mesma causa das TASK-001/002 — nenhum projeto real).
-- [x] CA-05: Usuário `visualizador` visualiza o diagrama completo, mas não tem acesso a nenhum controle de edição. Validado via teste de componente.
+- [x] CA-01: Usuário `editor` cria uma classe com nome, estereótipo opcional e ao menos 2 atributos. Validado via teste de componente; **validação manual confirmada em 2026-08-29** contra produção (classes "Cliente"/"Pedido" criadas e renomeadas de fato).
+- [x] CA-02: Usuário `editor` cria uma relação de cada um dos 5 tipos entre duas classes, cada uma renderizada com o símbolo correto. Validado via teste de componente; **conferência visual em produção em 2026-08-29** — relação Cliente→Pedido criada e alternada entre Composição (losango preenchido, confirmado visualmente) e Herança (badge "HERANÇA" confirmado no inspector); os outros 3 tipos não foram conferidos pixel a pixel nesta sessão (cobertura visual completa dos 5 símbolos segue garantida pelos testes de componente, que testam a geometria SVG exata de cada um).
+- [x] CA-03: Multiplicidade opcional é exibida corretamente nas duas pontas de um conector, quando preenchida. Validado via teste de componente; **valores "1"/"0..*" confirmados em produção em 2026-08-29**, inclusive sobrevivendo a um reload de página (ver CA-04).
+- [x] CA-04: Salvar e recarregar a página preserva exatamente o estado do diagrama (classes, atributos, relações, multiplicidade, posições). Serialização validada por teste (`contentOperations.test.ts`); **persistência real via Supabase validada em 2026-08-29** — classes, posições (após arrastar), tipo de relação e multiplicidade sobreviveram a um reload completo da página contra o projeto `classmap` real.
+- [x] CA-05: Usuário `visualizador` visualiza o diagrama completo, mas não tem acesso a nenhum controle de edição. Validado via teste de componente; **validação end-to-end contra produção ainda pendente** — só há uma conta `editor` disponível nesta sessão, sem um segundo usuário `visualizador` real para confirmar visualmente (mesma causa registrada na TASK-002).
 
 ## Impacto técnico
 ### Backend
@@ -72,8 +72,8 @@ Nenhuma nova além do reforço de UI já coberto pela TASK-001/002.
 ## Estratégia de testes
 - [x] Unitários: lógica de serialização/desserialização do conteúdo do diagrama (`contentOperations.test.ts` — 11 casos, incluindo round-trip `JSON.stringify`/`JSON.parse`).
 - [x] Componente: interação de UI sem depender de um backend real (`ClassDiagramCanvas.test.tsx` — 5 casos, cobrindo CA-01, CA-02, CA-03 e CA-05 no nível de DOM/jsdom).
-- [ ] Manual: os 5 critérios de aceitação, com usuários `editor` e `visualizador`, num navegador real. **Pendente** — precisa de sessão autenticada real (mesma pendência da TASK-002).
-- [ ] Integração: persistência real contra o Supabase (não mock) para CA-04. **Pendente**.
+- [x] Manual: os 5 critérios de aceitação, num navegador real. **Como `editor`, validado em 2026-08-29** (CA-01/02/03/04); como `visualizador`, **segue pendente** (mesma causa da TASK-002 — sem segundo usuário real disponível).
+- [x] Integração: persistência real contra o Supabase (não mock) para CA-04. **Validado em 2026-08-29** — reload de página confirmou classes/relação/multiplicidade/posição persistidos no projeto `classmap` real.
 - [ ] E2E: adiada para TASK-005.
 
 ## Riscos e rollback
@@ -116,14 +116,14 @@ até o `onClick` de deselecionar do `<svg>` de fundo. Corrigido com
 Nenhuma do plano original.
 
 ### Pendências
-- Mesma pendência das TASK-001/002: nenhum projeto Supabase real
-  provisionado neste ambiente. CA-04 (persistência real) e a validação
-  manual em navegador (CA-01/02/03/05 fora do jsdom) ficam para quando
-  houver acesso a computador — autorização já registrada.
+- ~~Persistência real via Supabase (CA-04) e validação manual em navegador~~ — **feito em 2026-08-29** como `editor` (ver CA-01 a CA-04 acima).
+- **CA-05 como `visualizador`** segue sem confirmação end-to-end — exige um segundo usuário real, indisponível nesta sessão (mesma causa da TASK-001/002).
 - TASK-005 deve revisitar `RelationshipType` e a presença de
   posição/ponto de controle no schema público antes de fechar o
-  contrato formal (não é um problema agora, é um lembrete para não
-  esquecer).
+  contrato formal — **nota 2026-08-29**: já não é mais um lembrete pendente,
+  a TASK-005 já formalizou o schema (`schema.ts`) e o export real
+  confirmado nesta sessão (`{"classes":[...],"relationships":[{"type":"inheritance",...}],"objects":[]}`)
+  não inclui posição/ponto de controle, exatamente como decidido lá.
 
 ## Validação
 - `npm test` (`vitest run`): 16 testes, 2 arquivos —
@@ -133,12 +133,18 @@ Nenhuma do plano original.
   CA-05). Todos passando, sem erros não tratados.
 - `npm run build` (`tsc -b && vite build`): sem erros de tipo.
 - `npm run lint` (`oxlint`): 0 erros (mesmos 2 avisos de estilo pré-existentes em `AuthContext.tsx`).
-- Validação manual em navegador contra dados reais: não feita nesta sessão (ver "Pendências").
+- **2026-08-29, contra produção real** (usuário logado pelo navegador,
+  papel `editor`): criadas as classes "Cliente"/"Pedido" com atributos
+  `id`/`nome`; criada uma relação Cliente→Pedido, alternada entre
+  Composição (losango preenchido confirmado visualmente) e Herança;
+  multiplicidade "1"/"0..*" preenchida; classe arrastada para nova
+  posição. Reload completo da página (`localhost:5183`) confirmou tudo
+  persistido exatamente como deixado — classes, nomes, atributos, tipo
+  de relação, multiplicidade e posição (CA-01/02/03/04 fechados). CA-05
+  como `visualizador` não testado (sem segunda conta).
 
 ## Handoff
-Próxima sessão com acesso a computador: além dos passos já listados no
-handoff da TASK-002 (provisionar Supabase, preencher `.env.local`,
-criar usuários de teste), abrir o Diagrama de Classes de ponta a ponta
-como `editor` e como `visualizador` para validar CA-01/02/03/04/05
-visualmente (símbolos corretos, drag funcionando, persistência real) —
-só então mover TASK-001/002/003 para `completed/`.
+CA-01/02/03/04 fechados contra produção real em 2026-08-29. Falta só
+CA-05 (`visualizador`) — exige um segundo usuário real, mesma pendência
+registrada na TASK-002. Só então mover TASK-001/002/003 para
+`completed/`.

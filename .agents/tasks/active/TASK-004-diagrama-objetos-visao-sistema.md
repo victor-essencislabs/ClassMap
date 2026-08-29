@@ -45,11 +45,11 @@ Só o Diagrama de Classes existe (TASK-003).
 - RN-03: Edição só é permitida a usuário `editor` (mesmo reforço de UI das tasks anteriores).
 
 ## Critérios de aceitação
-- [x] CA-01: Usuário `editor` cria um objeto vinculado a uma classe existente e vê a lista de atributos herdada automaticamente. Validado via teste de componente (`ObjectDiagramCanvas.test.tsx`); validação manual em navegador real pendente.
-- [ ] CA-02: Preencher e salvar valores de atributo de um objeto persiste e recarrega corretamente. Lógica pronta e testada (`contentOperations.test.ts`, round-trip JSON); **persistência real via Supabase pendente** (mesma causa das tasks anteriores).
-- [x] CA-03: A Visão do Sistema lista módulos e, dentro deles, entidades navegáveis. Validado via teste de componente (`SystemViewPage.test.tsx`).
-- [x] CA-04: Selecionar uma entidade sempre exibe os 3 blocos (Campos, Métodos de API, Regras de Permissão), mesmo que algum esteja vazio. Validado via teste de componente e de lógica pura.
-- [x] CA-05: Usuário `visualizador` acessa as duas visualizações sem controles de edição. Validado via teste de componente (Diagrama de Objetos); Visão do Sistema implementa o mesmo padrão `readOnly` das demais telas (reforço de UI consistente, não testado isoladamente nesta sessão).
+- [x] CA-01: Usuário `editor` cria um objeto vinculado a uma classe existente e vê a lista de atributos herdada automaticamente. Validado via teste de componente; **validado em produção em 2026-08-29** — objeto "instância : Cliente" criado a partir da classe real "Cliente" (TASK-003), herdando `id`/`nome` automaticamente.
+- [x] CA-02: Preencher e salvar valores de atributo de um objeto persiste e recarrega corretamente. Lógica testada (`contentOperations.test.ts`, round-trip JSON); **persistência real via Supabase validada em 2026-08-29** — `id = 42`/`nome = "Maria Silva"` preenchidos e confirmados intactos após reload completo da página.
+- [x] CA-03: A Visão do Sistema lista módulos e, dentro deles, entidades navegáveis. Validado via teste de componente; **validado em produção em 2026-08-29** — módulo e entidade "Pedido" criados e navegáveis via `.ov-nav`/`.ov-entity-btn` reais (layout da TASK-009).
+- [x] CA-04: Selecionar uma entidade sempre exibe os 3 blocos (Campos, Métodos de API, Regras de Permissão), mesmo que algum esteja vazio. Validado via teste de componente e de lógica pura; **validado em produção em 2026-08-29** — os 3 blocos renderizados vazios ao criar a entidade, depois preenchidos (1 campo com badge PK, 1 método com badge de permissão, 1 regra de permissão com condição destacada) e confirmados persistidos após reload.
+- [ ] CA-05: Usuário `visualizador` acessa as duas visualizações sem controles de edição. Validado via teste de componente; **validação end-to-end contra produção ainda pendente** — mesma causa registrada nas TASK-001/002/003 (sem segundo usuário real disponível).
 
 ## Impacto técnico
 ### Backend
@@ -76,8 +76,8 @@ Nenhuma nova além do já coberto pelas tasks anteriores.
 ## Estratégia de testes
 - [x] Unitários: lógica de herança de atributos do objeto (`object-diagram/contentOperations.test.ts`, 7 casos) e lógica de módulo/entidade/campo/método/regra da Visão do Sistema (`system-view/contentOperations.test.ts`, 9 casos).
 - [x] Componente: `ObjectDiagramCanvas.test.tsx` (CA-01, CA-05) e `SystemViewPage.test.tsx` (CA-03, CA-04, com a camada Supabase mockada via `vi.mock`).
-- [ ] Manual: os 5 critérios de aceitação, num navegador real. **Pendente** — mesma causa das tasks anteriores.
-- [ ] Integração: persistência real contra o Supabase. **Pendente**.
+- [x] Manual: os 5 critérios de aceitação, num navegador real. **Como `editor`, validado em 2026-08-29** (CA-01/02/03/04); como `visualizador`, segue pendente (CA-05, sem segunda conta).
+- [x] Integração: persistência real contra o Supabase. **Validado em 2026-08-29** — objeto e Visão do Sistema, ambos persistidos e recarregados corretamente contra o projeto `classmap` real.
 - [ ] E2E: adiada para TASK-005.
 
 ## Riscos e rollback
@@ -112,10 +112,8 @@ seguindo o mesmo padrão da TASK-003.
 Nenhuma do plano original.
 
 ### Pendências
-- Mesma pendência de todas as tasks anteriores: nenhum projeto Supabase
-  real neste ambiente. CA-02 (persistência real) e a validação manual em
-  navegador ficam para quando houver acesso a computador — autorização
-  já registrada.
+- ~~Persistência real (CA-02) e validação manual em navegador~~ — **feito em 2026-08-29** como `editor` (ver CA-01 a CA-04 acima).
+- **CA-05 como `visualizador`** segue sem confirmação end-to-end — exige um segundo usuário real, indisponível nesta sessão (mesma causa das TASK-001/002/003).
 - Um Diagrama de Objetos sem nenhum Diagrama de Classes no mesmo projeto
   ainda funciona (mostra aviso "crie um Diagrama de Classes antes"), mas
   isso não foi testado com múltiplos Diagramas de Classes no mesmo
@@ -132,13 +130,22 @@ Nenhuma do plano original.
 - Migration `20260828140000_diagrams_add_system_view_type.sql` validada
   contra Postgres local: `type = 'system-view'` aceito, tipo inválido
   continua rejeitado pelo `CHECK`.
-- Validação manual em navegador contra dados reais: não feita nesta sessão.
+- **2026-08-29, contra produção real** (usuário logado pelo navegador,
+  papel `editor`): Diagrama de Objetos criado, objeto "instância :
+  Cliente" adicionado a partir da classe real "Cliente" (herança
+  automática de `id`/`nome` confirmada), valores `42`/`"Maria Silva"`
+  preenchidos e persistidos após reload. Visão do Sistema criada, módulo
+  + entidade "Pedido" adicionados, os 3 blocos preenchidos (1 campo com
+  badge PK, 1 método com badge de permissão "PEDIDO_CRIAR", 1 regra de
+  permissão com condição `user.role === 'admin'`) e confirmados
+  persistidos após reload. CA-05 (`visualizador`) não testado (sem
+  segunda conta).
 
 ## Handoff
-Próxima sessão com acesso a computador: além dos passos já listados nos
-handoffs da TASK-002/003, abrir o Diagrama de Objetos e a Visão do
-Sistema de ponta a ponta como `editor` e como `visualizador` para
-validar CA-01 a CA-05 visualmente e a persistência real — só então
-mover TASK-001/002/003/004 para `completed/`. Depois disso, a sequência
-natural do ADR-001 segue para a TASK-005 (contrato JSON de import/
-export, deploy na Vercel e validação com o time).
+CA-01/02/03/04 fechados contra produção real em 2026-08-29, para as
+duas visualizações desta task. Falta só CA-05 (`visualizador`) — exige
+um segundo usuário real, mesma pendência registrada na
+TASK-001/002/003. Só então mover TASK-001/002/003/004 para
+`completed/`. Depois disso, a sequência natural do ADR-001 segue para a
+TASK-005 (contrato JSON de import/export, deploy na Vercel e validação
+com o time).

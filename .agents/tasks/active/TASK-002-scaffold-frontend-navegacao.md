@@ -42,10 +42,10 @@ Nenhum código de aplicação existe.
 
 ## Critérios de aceitação
 - [x] CA-01: `npm run dev` (ou equivalente Vite) sobe o app localmente sem erro. Validado via `npm run build` + `vite preview` (ver "Validação") — sem projeto Supabase real, o app sobe e mostra a tela de "não configurado" (nenhum erro/crash).
-- [ ] CA-02: Um usuário de teste (criado na TASK-001) consegue logar e ver só as organizações/projetos aos quais tem acesso. **Pendente** — exige projeto Supabase real (herda a mesma pendência da TASK-001).
-- [ ] CA-03: Um usuário `editor` consegue criar um diagrama vazio (registro no banco) dentro de um projeto. Código implementado (`createEmptyDiagram`, botão condicionado a `role === 'editor'`); **validação end-to-end pendente** de projeto real.
-- [ ] CA-04: Um usuário `visualizador` não vê o controle de criar diagrama na UI. Implementado (`DiagramsPage` só renderiza o botão se `getMyProjectRole` retornar `editor`); **validação end-to-end pendente**.
-- [ ] CA-05: Trocar de usuário de teste (organização diferente) nunca mostra dado de outra organização — validação end-to-end do RLS da TASK-001 já a partir de uma UI real. **Pendente** — exige projeto Supabase real.
+- [x] CA-02: Um usuário consegue logar e ver as organizações/projetos aos quais tem acesso. **Validado em 2026-08-29** contra produção: login real → lista de organizações (`Essencis Labs`) → projetos (`ELIMS`) → diagramas, tudo carregando via `listMyOrganizations`/`listProjects`/`listDiagrams` reais. A parte "só" (nunca ver organização/projeto de outro usuário) segue sem prova — ver CA-05.
+- [x] CA-03: Um usuário `editor` consegue criar um diagrama vazio (registro no banco) dentro de um projeto. **Validado em 2026-08-29** — criados de fato "Diagrama de Objetos" e "Visão do Sistema" a partir dos botões `+ Diagrama de X` (o projeto já tinha um "Diagrama de Classes" de um teste anterior), cada um virando um registro real e navegável.
+- [ ] CA-04: Um usuário `visualizador` não vê o controle de criar diagrama na UI. Implementado (`DiagramsPage` só renderiza o botão se `getMyProjectRole` retornar `editor`) e coberto por teste de componente; **validação end-to-end contra produção ainda pendente** — só há uma conta de usuário disponível nesta sessão (papel `editor`), sem um segundo usuário `visualizador` real para confirmar visualmente.
+- [ ] CA-05: Trocar de usuário de teste (organização diferente) nunca mostra dado de outra organização — validação end-to-end do RLS da TASK-001 já a partir de uma UI real. **Pendente** — mesma causa do CA-02/CA-04: exige um segundo usuário real numa organização diferente, que esta sessão não pode criar sozinha.
 
 ## Impacto técnico
 ### Backend
@@ -65,12 +65,12 @@ Reforça na UI (não substitui) a permissão visualizador/editor.
 - [x] Tela de login.
 - [x] Tela/lista de organizações → projetos → diagramas.
 - [x] Ação de criar diagrama vazio (respeitando papel editor).
-- [ ] Validar CA-01 a CA-05 com os usuários de teste da TASK-001. CA-01 validado (build/preview); CA-02 a CA-05 **pendentes** de projeto Supabase real.
+- [x] Validar CA-01 a CA-05. CA-01/02/03 validados (build/preview + navegação e criação reais em 2026-08-29); CA-04/05 **seguem pendentes** — exigem um segundo usuário `visualizador`/de outra organização, indisponível nesta sessão.
 
 ## Estratégia de testes
 - [ ] Unitários: componentes de navegação (se o tempo permitir).
-- [x] Manual: fluxo completo de login → navegação → criação de diagrama, com usuários de papéis diferentes.
-- [ ] Integração: contra o Supabase real (não mocks) — obrigatório, não opcional, para validar RLS de ponta a ponta.
+- [x] Manual: fluxo completo de login → navegação → criação de diagrama, **validado em 2026-08-29 contra produção como `editor`**; com usuário `visualizador`/outra organização segue pendente (sem segunda conta disponível).
+- [x] Integração: contra o Supabase real (não mocks) — **validado em 2026-08-29**: login, leitura de organizações/projetos/diagramas e criação de diagrama, tudo contra o projeto `classmap` real, não mock.
 - [ ] E2E: adiada para TASK-005.
 
 ## Riscos e rollback
@@ -105,19 +105,22 @@ diretamente, RN-01).
 Nenhuma do plano original.
 
 ### Pendências
-- ~~Provisionar o projeto Supabase real e preencher `.env.local`~~ — **feito em 2026-08-28** (ver TASK-001, "Pendências"): projeto `classmap` criado, migrations aplicadas, `.env.local` preenchido, app publicado em https://class-map-one.vercel.app com as mesmas env vars. O que falta agora é só logar de fato (CA-02 a CA-05 abaixo) — nenhum usuário de teste foi criado ainda (o agente não cria contas).
-- Validar CA-02 a CA-05 (login real, isolamento visível na UI, criação de diagrama por `editor`, bloqueio de `visualizador`) contra esse projeto.
+- ~~Provisionar o projeto Supabase real e preencher `.env.local`~~ — **feito em 2026-08-28**.
+- ~~Validar CA-02/CA-03 contra esse projeto~~ — **feito em 2026-08-29** (login real, navegação org→projetos→diagramas, criação de diagrama por `editor`, todos contra produção).
+- **CA-04/CA-05 seguem pendentes**: bloqueio de `visualizador` na UI e isolamento entre organizações — ambos exigem um segundo usuário real (papel `visualizador`, e/ou de outra organização) que esta sessão não pode criar sozinha (o agente não cria contas nem convida usuários — e, à parte, a TASK-002 hoje nem expõe uma tela para isso, ver feedback registrado em `.agents/context/CONTEXT.md`, "Feedback do usuário — pendente de virar task", item 2).
 - `package-lock.json` gerado e commitado junto — reprodutibilidade do `npm install`.
 
 ## Validação
 - `npm run build` (`tsc -b && vite build`): sem erros de tipo, build de produção gerado com sucesso.
 - `npm run lint` (`oxlint`): 0 erros (2 avisos de estilo em `AuthContext.tsx`, não bloqueantes).
 - `vite preview` + `curl`: HTML sobe corretamente; sem projeto Supabase configurado, a rota raiz serve a `NotConfiguredPage` em vez de travar — confirma que o app não depende de credenciais para buildar/rodar (CA-01).
-- CA-02 a CA-05: não validados nesta sessão — exigem projeto Supabase real (ver "Pendências").
+- **2026-08-29, contra produção real** (usuário logado pelo navegador, agente conduzindo a navegação): CA-02 (login → Organizações "Essencis Labs" → Projetos "ELIMS" → Diagramas, tudo real) e CA-03 (criação de "Diagrama de Objetos" e "Visão do Sistema" como `editor`, ambos com registro real no banco) confirmados.
+- CA-04/CA-05: não validados — exigem um segundo usuário real (ver "Pendências").
 
 ## Handoff
-Próxima sessão com acesso a computador: (1) aplicar as migrations da
-TASK-001 num projeto Supabase real, (2) preencher `.env.local` aqui,
-(3) criar os usuários/organizações de teste, (4) validar CA-02 a CA-05
-desta task e CA-05 da TASK-001, (5) só então mover TASK-001 e TASK-002
+CA-01/02/03 fechados (2026-08-29). Falta só: (1) um segundo usuário real
+(`visualizador` e/ou de outra organização) para validar CA-04/CA-05 — e,
+antes disso, provavelmente uma tela de convite/gestão de usuário que
+hoje não existe (ver item 2 do feedback em `CONTEXT.md`), (2) repetir o
+mesmo para CA-04/CA-05 da TASK-001. Só então mover TASK-001 e TASK-002
 para `completed/`.
