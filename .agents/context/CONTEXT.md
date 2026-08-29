@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-08-29 (bootstrap-plan — ADR-003/004/005 e TASK-011..016 geradas a partir do feedback da sessão de validação manual)
+ultima-revisao: 2026-08-29 (bootstrap-plan — ADR-006 e TASK-017 geradas a partir de feedback de UX sobre o Diagrama de Objetos)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -84,6 +84,7 @@ Registrado em 2026-08-29, durante a sessão de validação manual das TASK-001..
 3. **Sidebar do Diagrama de Objetos com problema visual** → `TASK-015` (trivial, sem ADR — bug visual + teste de responsividade desktop/mobile pedido explicitamente pelo usuário).
 4. **Customização de cor do card de classe** → `ADR-005` (cor interna ao ClassMap, paleta fixa de 20+ cores, fora do contrato JSON público) → `TASK-014`.
 5. **Diagrama sem nome próprio ao ser criado** → `TASK-016` (trivial, sem ADR — `diagrams.name` já existe no schema, só faltava o campo na criação).
+6. **Objetos não podem ser ligados entre si no Diagrama de Objetos** (feedback de 2026-08-29, revisão da tela publicada — comportamento era deliberado desde a TASK-008, mas o usuário pediu explicitamente para habilitar) → `ADR-006` (link simples entre instâncias, sem os 5 tipos UML/multiplicidade — esses descrevem relação entre classes, não entre objetos concretos; rejeitou paridade visual total com o Diagrama de Classes por inconsistência semântica) → `TASK-017` (`frontend-diagramas`).
 
 ## Decisões recentes
 
@@ -92,6 +93,7 @@ Registrado em 2026-08-29, durante a sessão de validação manual das TASK-001..
 - **ADR-003** — Exclusão de organização/projeto: hard delete com confirmação por nome (rejeitou soft delete/arquivamento por esforço desproporcional ao pedido). Ver `.agents/decisions/README.md`.
 - **ADR-004** — Gestão de acesso de usuários: vincular usuário já cadastrado por e-mail via RPC nova, sem Edge Function/convite real nesta rodada (rejeitou introduzir a primeira infraestrutura server-side do projeto). Ver `.agents/decisions/README.md`.
 - **ADR-005** — Customização de cor do card de classe: interna ao ClassMap, fora do contrato JSON público (mesmo precedente de posição/layout, TASK-003). Ver `.agents/decisions/README.md`.
+- **ADR-006** — Diagrama de Objetos: link simples entre instâncias, sem os 5 tipos UML/multiplicidade (rejeitou paridade visual total com o Diagrama de Classes por inconsistência semântica entre instâncias concretas). Ver `.agents/decisions/README.md`.
 
 ## Riscos atuais
 

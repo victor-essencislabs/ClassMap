@@ -9,6 +9,7 @@ Mantido automaticamente por `bootstrap-audit` a cada execução — não edite e
 | ADR-003 | Exclusão de organização e projeto — hard delete com confirmação por nome | accepted | 2026-08-29 | [ADR-003-exclusao-organizacao-projeto.md](ADR-003-exclusao-organizacao-projeto.md) |
 | ADR-004 | Gestão de acesso de usuários — vincular usuário existente por e-mail | accepted | 2026-08-29 | [ADR-004-gestao-acesso-usuarios.md](ADR-004-gestao-acesso-usuarios.md) |
 | ADR-005 | Customização de cor do card de classe — interna ao ClassMap, fora do contrato JSON | accepted | 2026-08-29 | [ADR-005-customizacao-cor-card-classe.md](ADR-005-customizacao-cor-card-classe.md) |
+| ADR-006 | Diagrama de Objetos — link simples entre instâncias, sem os 5 tipos UML | accepted | 2026-08-29 | [ADR-006-link-simples-diagrama-objetos.md](ADR-006-link-simples-diagrama-objetos.md) |
 <!-- bootstrap-audit preenche uma linha por arquivo em .agents/decisions/*.md, lendo o frontmatter (id, title, status, date). Não remova este comentário — é o marcador de onde a regeneração insere as linhas. -->
 
 ## Status possíveis
