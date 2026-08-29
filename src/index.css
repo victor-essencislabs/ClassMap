@@ -1493,6 +1493,27 @@ button.ov-flag {
   box-shadow: 0 0 0 3px var(--object-soft);
 }
 
+/* Cor de card escolhida no inspector (TASK-014, ver ADR-005) — aplicada
+   como acento (borda + leve realce do cabeçalho via `color-mix`, mesma
+   técnica já usada em `var(--accent)` acima) em vez de cor de texto
+   sólida, para continuar legível nos dois temas sem precisar de um hex
+   diferente por tema. `--node-color` é setado inline por `ClassCard`
+   só quando `cls.color` existe (CA-04: sem cor, nada muda aqui). */
+.diagram-shell-canvas .node-box.has-color {
+  border-color: var(--node-color);
+}
+
+.diagram-shell-canvas .node-box.has-color.selected {
+  border-color: var(--node-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 40%, transparent);
+}
+
+.diagram-shell-canvas .node-box.has-color .node-head {
+  background: color-mix(in srgb, var(--node-color) 16%, var(--surface-raised));
+  color: var(--text);
+  border-bottom-color: var(--node-color);
+}
+
 .diagram-shell-canvas .node-head {
   background: var(--accent-soft);
   color: var(--accent-strong);
@@ -1788,6 +1809,43 @@ button.ov-flag {
   color: var(--text-faint);
   margin: -8px 0 14px;
   line-height: 1.5;
+}
+
+/* Grade de swatches de cor do card de classe (TASK-014, ver ADR-005) —
+   mesmo padrão visual de `.edge-type-grid` acima (grade de opções
+   clicáveis, opção ativa destacada), com mais colunas por não precisar
+   de rótulo de texto dentro de cada opção (só `title`/`aria-label`). */
+.diagram-shell-inspector .class-color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.diagram-shell-inspector .class-color-opt {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--swatch, var(--surface-alt));
+  cursor: pointer;
+}
+
+.diagram-shell-inspector .class-color-opt:hover {
+  border-color: var(--text-faint);
+}
+
+.diagram-shell-inspector .class-color-opt.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--swatch, var(--text)) 45%, transparent);
+}
+
+.diagram-shell-inspector .class-color-opt.none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-weight: 700;
+  font-size: 13px;
 }
 
 /* ---- modal ---- */

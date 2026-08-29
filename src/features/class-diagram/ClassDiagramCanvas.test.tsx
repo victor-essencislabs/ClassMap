@@ -152,6 +152,39 @@ describe('ClassDiagramCanvas — editor', () => {
     expect((classCards()[0] as HTMLElement).style.left).toBe(originalLeft)
   })
 
+  it('TASK-014 CA-01: escolher uma cor no inspector aplica o acento no card imediatamente', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.pointerDown(classCards()[0])
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Vermelho' }))
+
+    const [card] = classCards()
+    expect(card).toHaveClass('has-color')
+    expect((card as HTMLElement).style.getPropertyValue('--node-color')).toBe('#ef4444')
+  })
+
+  it('TASK-014 CA-04: sem cor escolhida, o card não ganha a classe/acento (aparência padrão preservada)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+
+    const [card] = classCards()
+    expect(card).not.toHaveClass('has-color')
+    expect((card as HTMLElement).style.getPropertyValue('--node-color')).toBe('')
+  })
+
+  it('TASK-014: "×" (sem cor) no seletor limpa a cor já escolhida', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.pointerDown(classCards()[0])
+    fireEvent.click(screen.getByRole('radio', { name: 'Vermelho' }))
+    expect(classCards()[0]).toHaveClass('has-color')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Sem cor (padrão)' }))
+
+    expect(classCards()[0]).not.toHaveClass('has-color')
+  })
+
   it('exclui uma classe e a relação que a referenciava junto (reforça removeClass)', () => {
     render(<ControlledCanvas />)
     fireEvent.click(addClassButton())
@@ -184,6 +217,8 @@ describe('ClassDiagramCanvas — visualizador (CA-05)', () => {
     fireEvent.pointerDown(classCards()[0])
     expect(screen.queryByRole('button', { name: 'Excluir classe' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Nome da classe')).not.toBeInTheDocument()
+    // TASK-014 RN-02: só editor escolhe a cor — visualizador não vê o seletor.
+    expect(screen.queryByRole('radiogroup', { name: 'Cor do card' })).not.toBeInTheDocument()
     // zoom/pan continuam disponíveis
     expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
   })

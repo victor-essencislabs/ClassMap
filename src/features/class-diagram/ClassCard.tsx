@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { screenDeltaToWorld } from '../diagram-shell/canvasTransform'
 import type { DiagramClass } from './types'
 
@@ -45,10 +45,16 @@ export function ClassCard({ cls, selected, readOnly, zoom, connectMode, onSelect
     dragStart.current = null
   }
 
+  const style: CSSProperties = { position: 'absolute', left: cls.x, top: cls.y, width: CARD_WIDTH }
+  // Cor escolhida no inspector (TASK-014, ver ADR-005) — vira variável
+  // CSS lida por `.node-box.has-color` em `src/index.css`. Sem `color`,
+  // nada muda (CA-04: aparência padrão preservada).
+  if (cls.color) (style as CSSProperties & { '--node-color'?: string })['--node-color'] = cls.color
+
   return (
     <div
-      className={`node-box${selected ? ' selected' : ''}`}
-      style={{ position: 'absolute', left: cls.x, top: cls.y, width: CARD_WIDTH }}
+      className={`node-box${selected ? ' selected' : ''}${cls.color ? ' has-color' : ''}`}
+      style={style}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

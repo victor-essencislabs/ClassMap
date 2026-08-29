@@ -26,6 +26,17 @@ describe('exportClassDiagram', () => {
     ])
     expect(exported.objects).toEqual([])
   })
+
+  it('TASK-014 CA-03: não inclui o campo `color`, mesmo quando a classe tem cor escolhida (ver ADR-005, RN-01)', () => {
+    let content = addClass(emptyClassDiagramContent())
+    content = updateClass(content, content.classes[0].id, { name: 'Pedido', color: '#ef4444' })
+
+    const exported = exportClassDiagram(content)
+
+    expect(exported.classes).toHaveLength(1)
+    expect(exported.classes[0]).not.toHaveProperty('color')
+    expect(JSON.stringify(exported)).not.toContain('color')
+  })
 })
 
 describe('importClassDiagram', () => {
