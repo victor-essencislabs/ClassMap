@@ -105,7 +105,7 @@ diretamente, RN-01).
 Nenhuma do plano original.
 
 ### Pendências
-- **Provisionar o projeto Supabase real** (mesma pendência da TASK-001) e preencher `.env.local` com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` — exige acesso ao painel do Supabase (computador). Autorização já registrada pelo usuário (victor.sena@essencislabs.com, 2026-08-28, nesta conversa) para integrar assim que houver acesso.
+- ~~Provisionar o projeto Supabase real e preencher `.env.local`~~ — **feito em 2026-08-28** (ver TASK-001, "Pendências"): projeto `classmap` criado, migrations aplicadas, `.env.local` preenchido, app publicado em https://class-map-one.vercel.app com as mesmas env vars. O que falta agora é só logar de fato (CA-02 a CA-05 abaixo) — nenhum usuário de teste foi criado ainda (o agente não cria contas).
 - Validar CA-02 a CA-05 (login real, isolamento visível na UI, criação de diagrama por `editor`, bloqueio de `visualizador`) contra esse projeto.
 - `package-lock.json` gerado e commitado junto — reprodutibilidade do `npm install`.
 

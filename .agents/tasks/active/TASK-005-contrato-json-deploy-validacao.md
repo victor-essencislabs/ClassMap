@@ -47,9 +47,9 @@ Diagramas de classes e objetos existem no banco (TASK-003/004), sem forma de exp
 - [x] CA-01: Exportar um Diagrama de Classes real (criado na TASK-003) gera um JSON válido contra o schema documentado. Validado via teste automatizado (`classDiagramConversion.test.ts`).
 - [x] CA-02: Importar esse mesmo JSON em um diagrama vazio recria exatamente as classes e relações originais. Validado via teste de round-trip completo (exportar → importar → reexportar dá o mesmo JSON) e via teste de componente (`ImportExportControls.test.tsx`).
 - [x] CA-03: Importar um JSON malformado (ex.: tipo de relação inválido) é rejeitado com mensagem clara, sem corromper o diagrama existente. Validado (JSON inválido, schema inválido, tipo de relação inválido, relação referenciando classe inexistente — todos rejeitados com lista de erros, conteúdo atual preservado).
-- [ ] CA-04: App publicado e acessível via URL da Vercel, autenticando contra o Supabase de produção. **Pendente** — precisa de conta Vercel + projeto Supabase real (nenhum dos dois existe neste ambiente).
-- [ ] CA-05: Um grupo pequeno do time (indicado pelo usuário) completa o fluxo login → navegar hierarquia → ver/editar um diagrama → exportar/importar JSON, em produção, sem erro bloqueante. **Pendente** — depende de CA-04 e de pessoas reais testando.
-- [ ] CA-06: Custo de infraestrutura observado (ou projetado a partir dos limites do plano gratuito) confirmado dentro do teto de R$ 50/mês. **Pendente** — depende de CA-04 existir para observar custo real (uma projeção contra os limites documentados do plano gratuito pode ser feita sem deploy, mas não foi priorizada nesta sessão).
+- [x] CA-04: App publicado e acessível via URL da Vercel, autenticando contra o Supabase de produção. Publicado em 2026-08-28: https://class-map-one.vercel.app (projeto `class-map`, org `victor-essencislabs`, plano Hobby, deploy do commit `e827df0` da `main`), com `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` configuradas para Production+Preview apontando para o projeto Supabase real (`classmap`). Confirmado visualmente: a tela de login carrega (não cai na tela de "não configurado"), ou seja, o build está lendo as env vars corretamente.
+- [ ] CA-05: Um grupo pequeno do time (indicado pelo usuário) completa o fluxo login → navegar hierarquia → ver/editar um diagrama → exportar/importar JSON, em produção, sem erro bloqueante. **Pendente** — depende de pessoas reais testando; ninguém se cadastrou/logou ainda (o agente não cria contas nem digita senhas de autenticação).
+- [ ] CA-06: Custo de infraestrutura observado (ou projetado a partir dos limites do plano gratuito) confirmado dentro do teto de R$ 50/mês. **Pendente** — Supabase e Vercel estão nos planos gratuitos (Free/Hobby); falta observar uso real após algum tempo de operação para confirmar que fica dentro do teto.
 
 ## Impacto técnico
 ### Backend
@@ -67,8 +67,8 @@ Validação de entrada no import (evitar que um JSON malformado corrompa o diagr
 - [x] Formalizar o schema JSON como validador executável (Zod, `src/features/import-export/schema.ts`) — os 5 tokens de tipo de relação já estavam documentados em `contrato-ia-diagrama.md`/na skill `gerar-diagrama-classmap`, então não foi uma mudança de contrato que exigisse ADR novo, só a primeira implementação executável do que já era acordado.
 - [x] Implementar o validador no cliente (shape via Zod + integridade referencial — relação/objeto não pode referenciar uma classe que não está em `classes`).
 - [x] Implementar exportar/importar **no Diagrama de Classes** — ver "Decisões": Diagrama de Objetos ficou fora do escopo desta rodada (nenhuma CA cobre isso).
-- [ ] Configurar o projeto na Vercel (build, variáveis de ambiente do Supabase). **Pendente** — precisa de conta Vercel.
-- [ ] Publicar e validar manualmente CA-04/CA-06. **Pendente**.
+- [x] Configurar o projeto na Vercel (build, variáveis de ambiente do Supabase). Feito em 2026-08-28 — app Vercel conectado ao GitHub (`victor-essencislabs/ClassMap`, branch `main`), framework Vite detectado automaticamente.
+- [x] Publicar e validar manualmente CA-04. Publicado; CA-06 ainda é só "dentro do plano gratuito", não uma observação de custo ao longo do tempo (ver CA-06).
 - [ ] Organizar a sessão de validação com o grupo pequeno do time (CA-05) e registrar o resultado nesta task. **Pendente**.
 
 ## Estratégia de testes
@@ -106,12 +106,24 @@ interno (ids, posição) e o contrato público (nomes, sem layout).
 - O plano original listava "Implementar exportar/importar no Diagrama de Classes e no Diagrama de Objetos" — feito só para Classes, pelo motivo em "Decisões" acima. Sinalizado aqui, não decidido silenciosamente.
 
 ### Pendências
-- **CA-04/CA-05/CA-06 inteiras**: exigem conta Vercel + projeto Supabase
-  real + pessoas do time testando — nada disso existe/é possível neste
-  ambiente de execução (sem acesso a computador/credenciais). Autorização
-  para essa integração já está registrada nas cinco tasks desta sessão.
+- **CA-05**: exige pessoas do time testando o fluxo completo em produção
+  — ninguém se cadastrou/logou ainda no app publicado.
+- **CA-06**: confirmar, depois de algum tempo real de uso, que o
+  consumo dos planos Free (Supabase)/Hobby (Vercel) segue dentro do
+  teto de R$ 50/mês.
 - Import/export do Diagrama de Objetos, se o produto pedir — hoje fora
   de escopo (ver "Decisões").
+
+**Deploy realizado em 2026-08-28** (sessão no computador, navegador
+autenticado pelo próprio usuário nas duas contas): projeto Vercel
+`class-map` criado a partir do repositório GitHub
+`victor-essencislabs/ClassMap` (branch `main`), framework Vite
+detectado automaticamente, env vars `VITE_SUPABASE_URL`/
+`VITE_SUPABASE_ANON_KEY` configuradas para Production+Preview com os
+valores reais do projeto Supabase `classmap` (ver TASK-001). URL de
+produção: https://class-map-one.vercel.app. O app do GitHub para a
+Vercel foi instalado no mesmo fluxo (autorização OAuth confirmada pelo
+usuário antes de prosseguir).
 
 ## Validação
 - `npm test` (`vitest run`): 44 testes, 8 arquivos — os 10 novos desta
@@ -122,13 +134,14 @@ interno (ids, posição) e o contrato público (nomes, sem layout).
 - CA-04/05/06: não aplicável nesta sessão (ver "Pendências").
 
 ## Handoff
-Esta é a última task da sequência do MVP (ADR-001) e a única com
-pendências que não são "só rodar as migrations" — precisa de decisões
-de conta (Vercel) e de agendar pessoas (grupo piloto), não só de
-credenciais técnicas. Próxima sessão com acesso a computador, depois de
-completar os handoffs das TASK-001..004:
-1. Criar conta/projeto na Vercel, configurar `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` como env vars de build.
-2. Publicar e confirmar CA-04.
-3. Verificar uso real (ou projetado) do plano gratuito Supabase+Vercel contra o teto de R$ 50/mês (CA-06).
-4. Agendar e conduzir a sessão com o grupo piloto do time (CA-05), registrar o resultado aqui.
-5. Só então mover TASK-001..005 para `completed/` — fecha o MVP de produção (ver ADR-001).
+App publicado e CA-04 confirmado (ver "Pendências"). Falta, para fechar
+o MVP:
+1. Alguém (usuário ou time) se cadastrar e logar de fato em
+   https://class-map-one.vercel.app, validando também CA-05 da
+   TASK-001.
+2. Agendar e conduzir a sessão com o grupo piloto do time (CA-05 desta
+   task), registrar o resultado aqui.
+3. Depois de algum tempo real de uso, confirmar o custo contra o teto
+   de R$ 50/mês (CA-06).
+4. Só então mover TASK-001..005 para `completed/` — fecha o MVP de
+   produção (ver ADR-001).

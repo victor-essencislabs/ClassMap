@@ -47,7 +47,7 @@ Nenhum — não há projeto Supabase nem schema.
 - [x] CA-02: Um teste manual (queries autenticadas como dois usuários de duas organizações diferentes) confirma que o usuário A nunca vê linhas de dados da organização de B, em nenhuma das tabelas multi-tenant. Validado localmente (ver "Validação"); repetir contra o projeto Supabase real quando existir.
 - [x] CA-03: Um usuário com papel `visualizador` num projeto consegue `SELECT` mas tem `INSERT`/`UPDATE`/`DELETE` de diagrama bloqueados por RLS (não só pela UI, que ainda não existe). Validado localmente.
 - [x] CA-04: Um usuário com papel `editor` consegue `INSERT`/`UPDATE`/`DELETE` de diagrama dentro do seu projeto. Validado localmente.
-- [ ] CA-05: Cadastro e login via Supabase Auth funcionam (validado via cliente de teste ou painel do Supabase). **Pendente** — exige um projeto Supabase real (nenhum provisionado neste ambiente); o trigger que cria `profiles` no cadastro foi validado localmente simulando `auth.users`, mas o serviço de Auth (GoTrue) em si ainda não foi exercitado.
+- [ ] CA-05: Cadastro e login via Supabase Auth funcionam (validado via cliente de teste ou painel do Supabase). **Parcialmente pendente** — projeto real provisionado (`classmap`, org Essencislabs, região São Paulo) em 2026-08-28, as 7 migrations aplicadas com sucesso via SQL Editor (6 tabelas criadas), provedor Email/senha confirmado habilitado (`Enabled` em Authentication → Providers) e "Allow new users to sign up" ativo. Falta só o teste de ponta a ponta com uma conta real (cadastro/login pelo usuário) — não executado aqui porque criar contas/digitar senhas de autenticação está fora do que o agente pode fazer.
 
 ## Impacto técnico
 ### Backend
@@ -62,10 +62,10 @@ Configuração do projeto Supabase (Auth + Postgres).
 Toda a superfície de risco desta task — RLS é a única garantia de isolamento multi-tenant (ver `docs/security/README.md`, item 1). Revisão obrigatória pelo papel `supabase-multitenant` antes de considerar concluída.
 
 ## Plano de implementação
-- [ ] Criar/configurar o projeto Supabase (dentro do teto de R$ 50/mês — plano gratuito nesta fase). **Pendente** — nenhum projeto Supabase real provisionado neste ambiente (sem credenciais).
+- [x] Criar/configurar o projeto Supabase (dentro do teto de R$ 50/mês — plano gratuito nesta fase). Projeto `classmap` criado em 2026-08-28 (org Essencislabs, plano Free, região `sa-east-1`/São Paulo).
 - [x] Desenhar e escrever a primeira migration: tabelas de organização, usuário, vínculo usuário-organização, projeto, vínculo usuário-projeto (com papel), diagrama.
 - [x] Escrever as políticas RLS para cada tabela multi-tenant.
-- [ ] Configurar Supabase Auth. **Pendente** — depende do projeto real existir; habilitar provedor Email/senha no painel (nenhuma migration configura isso).
+- [x] Configurar Supabase Auth. Provedor Email/senha já vem habilitado por padrão em projeto novo — confirmado em Authentication → Providers (`Enabled`).
 - [x] Popular dados de teste (2 organizações fictícias, usuários com papéis diferentes) para validar isolamento.
 - [x] Rodar e documentar os testes manuais de isolamento (CA-02 a CA-04).
 
@@ -123,25 +123,27 @@ direto).
 Nenhuma do plano original.
 
 ### Pendências
-- Provisionar o projeto Supabase real (nenhuma credencial disponível
-  neste ambiente de execução) e aplicar as migrations nele
-  (`supabase db push` ou SQL Editor, na ordem listada em
-  `supabase/README.md`).
-- Habilitar o provedor Email/senha em Authentication → Providers no
-  painel do projeto real.
 - Repetir a validação de isolamento (CA-02 a CA-04) e validar CA-05
-  (cadastro/login reais) contra esse projeto — o que foi feito nesta
-  sessão foi contra um Postgres local simulando `auth.users`/`auth.uid()`
-  (ver "Validação" abaixo), não o Supabase gerenciado.
+  (cadastro/login reais) contra o projeto Supabase real — o que foi
+  feito nesta sessão continua sendo contra um Postgres local simulando
+  `auth.users`/`auth.uid()` (ver "Validação" abaixo); o schema já está
+  aplicado no projeto real, mas ninguém se cadastrou/logou nele ainda.
 
 **Autorização registrada**: em 2026-08-28, o usuário (victor.sena@essencislabs.com,
 pelo celular, sem acesso a computador no momento) pediu para adiantar
 tudo o que fosse possível sem integração externa e autorizou
 explicitamente que a integração real com o Supabase (provisionar o
 projeto, aplicar as migrations, configurar Auth, preencher
-`.env.local`/variáveis da Vercel) seja feita assim que houver acesso a
-computador — nesta sessão ou em outra. Nenhuma dessas ações foi
-executada aqui por falta de credenciais, não por falta de autorização.
+`.env.local`/variáveis da Vercel) fosse feita assim que houver acesso a
+computador. Em 2026-08-28 (mesmo dia, sessão seguinte, no computador,
+via navegador autenticado pelo próprio usuário), essa integração foi
+executada: projeto `classmap` criado na org Essencislabs (Free,
+`sa-east-1`), as 7 migrations de `supabase/migrations/` aplicadas via
+SQL Editor (6 tabelas confirmadas), provedor Email/senha confirmado
+habilitado, e `.env.local` preenchido com a URL/anon key reais (nunca
+commitado — coberto por `.gitignore`). O agente não criou nenhuma conta
+de usuário nem digitou senha de autenticação — isso segue pendente de o
+usuário (ou o time) fazer.
 
 ## Validação
 Nenhum comando de projeto (`package.json`/build/test) existe ainda neste
@@ -176,7 +178,8 @@ Todos os passos e resultados detalhados estão reproduzidos em
 `supabase/README.md`, seção "Validação já executada nesta sessão".
 
 ## Handoff
-Nenhum ainda — próxima sessão deve: (1) provisionar o projeto Supabase
-real e aplicar as migrations, (2) validar CA-05 (Auth real) e repetir
-CA-02/03/04 contra ele, (3) só então mover esta task para `completed/`.
-Ver seção "Pendências" acima.
+Projeto Supabase real provisionado e migrations aplicadas (ver
+"Pendências"). Falta: (1) o usuário (ou alguém do time) se cadastrar e
+logar de verdade no app publicado, validando CA-05, (2) idealmente
+repetir CA-02/03/04 contra dados reais (não só a simulação local), (3)
+só então mover esta task para `completed/`.
