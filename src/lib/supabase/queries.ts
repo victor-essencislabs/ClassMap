@@ -81,14 +81,19 @@ export async function listProjects(organizationId: string): Promise<Project[]> {
   return data as Project[]
 }
 
-/** Cria um projeto numa organização. RLS só permite se o usuário for admin dela. */
+/**
+ * Cria um projeto numa organização e já vincula o usuário autenticado
+ * como `editor` dele, atomicamente (RPC `create_project` — mesmo padrão
+ * de `create_organization`). Sem isso, o criador ficaria sem papel de
+ * *projeto* (é só admin da *organização*, um nível acima) e não veria
+ * nenhum controle de edição — bug real encontrado no primeiro uso.
+ */
 export async function createProject(organizationId: string, name: string): Promise<Project> {
   const client = requireClient()
-  const { data, error } = await client
-    .from('projects')
-    .insert({ organization_id: organizationId, name })
-    .select('id, organization_id, name, created_at')
-    .single()
+  const { data, error } = await client.rpc('create_project', {
+    p_organization_id: organizationId,
+    p_name: name,
+  })
   if (error) throw error
   return data as Project
 }
