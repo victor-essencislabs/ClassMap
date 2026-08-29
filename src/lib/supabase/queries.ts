@@ -11,8 +11,10 @@ import type {
   Diagram,
   DiagramType,
   Organization,
+  OrganizationMember,
   OrganizationRole,
   Project,
+  ProjectMember,
   ProjectRole,
 } from './types'
 
@@ -240,4 +242,145 @@ export async function createEmptyDiagram(
     .single()
   if (error) throw error
   return data as Diagram
+}
+
+// ---------------------------------------------------------------------------
+// TASK-013 (ADR-004) — gestão de acesso: vincular usuário já cadastrado por
+// e-mail a uma organização/projeto e gerenciar o papel dele. Reaproveita
+// 100% das políticas RLS de INSERT/UPDATE/DELETE de `organization_members`/
+// `project_members`, já corretas desde a TASK-001 — nenhuma delas é
+// alterada aqui.
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve o `user_id` de uma pessoa a partir do e-mail dela, via a RPC
+ * `find_user_id_by_email` (TASK-012, `SECURITY DEFINER`). Retorna `null`
+ * quando não há usuário cadastrado com esse e-mail — nunca lança erro
+ * nesse caso (RN-02 da ADR-004: não diferenciar "não existe" de "existe
+ * mas já vinculado" nesta etapa).
+ */
+export async function findUserIdByEmail(email: string): Promise<string | null> {
+  const client = requireClient()
+  const { data, error } = await client.rpc('find_user_id_by_email', { p_email: email })
+  if (error) throw error
+  return (data as string | null) ?? null
+}
+
+/**
+ * Busca `full_name` (via `profiles`) para um conjunto de `user_id`,
+ * devolvendo um mapa `user_id -> full_name | null`. `profiles_select`
+ * (TASK-001) só mostra perfil de quem já divide uma organização com o
+ * usuário atual — suficiente aqui, pois só chamamos isto para gente que
+ * já está em `organization_members`/`project_members` da mesma
+ * organização. Sem FK direta entre `organization_members`/`project_members`
+ * e `profiles` (ambas só referenciam `auth.users`), então o embed
+ * automático do PostgREST não se aplica — busca à parte, em memória.
+ */
+async function loadProfileNames(userIds: string[]): Promise<Map<string, string | null>> {
+  if (userIds.length === 0) return new Map()
+  const client = requireClient()
+  const { data, error } = await client.from('profiles').select('id, full_name').in('id', userIds)
+  if (error) throw error
+  return new Map((data as { id: string; full_name: string | null }[]).map((p) => [p.id, p.full_name]))
+}
+
+/** Código de erro do Postgres para violação de `unique constraint`. */
+const UNIQUE_VIOLATION = '23505'
+
+/** Membros de uma organização (papel `admin`/`member`), com nome de exibição resolvido. */
+export async function listOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('organization_members')
+    .select('id, organization_id, user_id, role')
+    .eq('organization_id', organizationId)
+    .order('created_at')
+  if (error) throw error
+  const rows = data as Omit<OrganizationMember, 'full_name'>[]
+  const names = await loadProfileNames(rows.map((row) => row.user_id))
+  return rows.map((row) => ({ ...row, full_name: names.get(row.user_id) ?? null }))
+}
+
+/**
+ * Vincula um usuário já cadastrado (`userId`, resolvido via
+ * `findUserIdByEmail`) a uma organização com o papel escolhido. RLS
+ * (`organization_members_insert`) já exige que quem chama seja `admin`
+ * da organização.
+ */
+export async function addOrganizationMember(
+  organizationId: string,
+  userId: string,
+  role: OrganizationRole,
+): Promise<void> {
+  const client = requireClient()
+  const { error } = await client
+    .from('organization_members')
+    .insert({ organization_id: organizationId, user_id: userId, role })
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) throw new Error('Esta pessoa já tem acesso a esta organização.')
+    throw error
+  }
+}
+
+/** Muda o papel de um membro já vinculado (RLS exige `admin` da organização). */
+export async function updateOrganizationMemberRole(
+  memberId: string,
+  role: OrganizationRole,
+): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('organization_members').update({ role }).eq('id', memberId)
+  if (error) throw error
+}
+
+/** Revoga o vínculo de um membro com a organização (RLS exige `admin` da organização). */
+export async function removeOrganizationMember(memberId: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('organization_members').delete().eq('id', memberId)
+  if (error) throw error
+}
+
+/** Membros de um projeto (papel `visualizador`/`editor`), com nome de exibição resolvido. */
+export async function listProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('project_members')
+    .select('id, project_id, user_id, role')
+    .eq('project_id', projectId)
+    .order('created_at')
+  if (error) throw error
+  const rows = data as Omit<ProjectMember, 'full_name'>[]
+  const names = await loadProfileNames(rows.map((row) => row.user_id))
+  return rows.map((row) => ({ ...row, full_name: names.get(row.user_id) ?? null }))
+}
+
+/**
+ * Vincula um usuário já cadastrado a um projeto com o papel escolhido.
+ * RLS (`project_members_insert`) já exige que quem chama seja `admin` da
+ * organização dona do projeto (`is_project_org_admin`).
+ */
+export async function addProjectMember(
+  projectId: string,
+  userId: string,
+  role: ProjectRole,
+): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('project_members').insert({ project_id: projectId, user_id: userId, role })
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) throw new Error('Esta pessoa já tem acesso a este projeto.')
+    throw error
+  }
+}
+
+/** Muda o papel de um membro já vinculado (RLS exige `admin` da organização dona do projeto). */
+export async function updateProjectMemberRole(memberId: string, role: ProjectRole): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('project_members').update({ role }).eq('id', memberId)
+  if (error) throw error
+}
+
+/** Revoga o vínculo de um membro com o projeto (RLS exige `admin` da organização dona do projeto). */
+export async function removeProjectMember(memberId: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('project_members').delete().eq('id', memberId)
+  if (error) throw error
 }

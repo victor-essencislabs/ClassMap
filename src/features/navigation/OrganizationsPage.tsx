@@ -1,14 +1,24 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  addOrganizationMember,
   createOrganization,
   deleteOrganization,
   getCurrentUserId,
   getMyOrganizationRole,
   listMyOrganizations,
+  listOrganizationMembers,
+  removeOrganizationMember,
+  updateOrganizationMemberRole,
 } from '../../lib/supabase/queries'
-import type { Organization } from '../../lib/supabase/types'
+import type { Organization, OrganizationRole } from '../../lib/supabase/types'
+import { AccessManagementModal } from './AccessManagementModal'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
+
+const ORGANIZATION_ROLE_OPTIONS: { value: OrganizationRole; label: string }[] = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'member', label: 'Membro' },
+]
 
 export function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[] | null>(null)
@@ -16,11 +26,14 @@ export function OrganizationsPage() {
   // reforço de UI das demais telas, a garantia real continua sendo RLS
   // (`organizations_delete` exige `is_org_admin`).
   const [adminOrgIds, setAdminOrgIds] = useState<Set<string>>(new Set())
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null)
+  // TASK-013 (ADR-004): organização cujo modal de "Gerenciar acesso" está aberto.
+  const [manageTarget, setManageTarget] = useState<Organization | null>(null)
 
   async function reload() {
     setError(null)
@@ -28,6 +41,7 @@ export function OrganizationsPage() {
       const orgs = await listMyOrganizations()
       setOrganizations(orgs)
       const userId = await getCurrentUserId()
+      setCurrentUserId(userId)
       if (userId) {
         const roles = await Promise.all(orgs.map((org) => getMyOrganizationRole(org.id, userId)))
         setAdminOrgIds(new Set(orgs.filter((_, i) => roles[i] === 'admin').map((org) => org.id)))
@@ -88,13 +102,21 @@ export function OrganizationsPage() {
                   <span className="chevron">→</span>
                 </Link>
                 {canDelete && (
-                  <button
-                    type="button"
-                    className="btn danger ghost small"
-                    onClick={() => setDeleteTarget(org)}
-                  >
-                    Excluir
-                  </button>
+                  <>
+                    {/* RN-01/CA-06 da TASK-013: só quem é `admin` da organização vê
+                        este link — a garantia real continua sendo RLS
+                        (`organization_members_insert`/`_update`/`_delete`). */}
+                    <button type="button" className="btn ghost small" onClick={() => setManageTarget(org)}>
+                      Gerenciar acesso
+                    </button>
+                    <button
+                      type="button"
+                      className="btn danger ghost small"
+                      onClick={() => setDeleteTarget(org)}
+                    >
+                      Excluir
+                    </button>
+                  </>
                 )}
               </li>
             )
@@ -132,6 +154,20 @@ export function OrganizationsPage() {
           warning={`Isto vai excluir definitivamente a organização "${deleteTarget.name}" e todos os projetos, membros e diagramas dela. Esta ação não pode ser desfeita.`}
           onConfirm={handleDeleteConfirmed}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {manageTarget && (
+        <AccessManagementModal
+          title={`Gerenciar acesso — ${manageTarget.name}`}
+          roleOptions={ORGANIZATION_ROLE_OPTIONS}
+          defaultRole="member"
+          currentUserId={currentUserId}
+          listMembers={() => listOrganizationMembers(manageTarget.id)}
+          addMember={(userId, role) => addOrganizationMember(manageTarget.id, userId, role)}
+          updateMemberRole={updateOrganizationMemberRole}
+          removeMember={removeOrganizationMember}
+          onClose={() => setManageTarget(null)}
         />
       )}
     </section>

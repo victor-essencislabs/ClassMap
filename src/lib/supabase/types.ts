@@ -33,3 +33,25 @@ export interface Diagram {
   created_at: string
   updated_at: string
 }
+
+// TASK-013 (ADR-004) — vínculo usuário-organização/projeto já com o nome
+// de exibição resolvido (via `profiles`, TASK-001/`profiles_select`).
+// `full_name` vem null quando a pessoa nunca preencheu o perfil — a UI
+// mostra o próprio `user_id` como último recurso (nunca o e-mail: não há
+// política de SELECT que exponha e-mail de outro usuário, só o
+// `find_user_id_by_email` da TASK-012, que só devolve `id`).
+export interface OrganizationMember {
+  id: string
+  organization_id: string
+  user_id: string
+  role: OrganizationRole
+  full_name: string | null
+}
+
+export interface ProjectMember {
+  id: string
+  project_id: string
+  user_id: string
+  role: ProjectRole
+  full_name: string | null
+}
