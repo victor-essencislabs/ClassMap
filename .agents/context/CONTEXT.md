@@ -67,11 +67,13 @@ o time (TASK-005, CA-05/06). Ver os papéis em
 
 - **Schema aplicado e app publicado, mas sem login real ainda** — o código (schema/RLS, frontend, testes) foi validado contra um Postgres local e testes automatizados; o schema já está aplicado no Supabase real e o app já está publicado na Vercel, mas ninguém se cadastrou/logou de fato ainda. Essa é a única lacuna de validação restante antes de fechar o MVP — ver as pendências de cada TASK-001..005.
 - Import/export (TASK-005) cobre só o Diagrama de Classes — Diagrama de Objetos ficou fora do escopo desta rodada (decisão registrada na task).
-- O protótipo funcional descrito na documentação (três abas, extração de 116 classes/113 relações de um `.vpp` real do GeoCloudAI) existe fora deste repositório; precisa ser (re)construído aqui seguindo a stack de produção decidida — o parser `.vpp` em si ainda não foi iniciado (fora do escopo das 5 tasks do MVP, avança em paralelo per `.claude/agents/parser-vpp.md`).
+- O protótipo funcional descrito na documentação (três abas, extração de 116 classes/113 relações de um `.vpp` real do GeoCloudAI) **foi localizado** em 2026-08-29 — é um Artifact publicado pelo usuário (`https://claude.ai/code/artifact/4f3aa122-e526-4577-8d62-b4bf916453dc`, título "ClassMap"), HTML/CSS/JS single-file com o design/UX de referência completo (shell de 3 colunas, tokens dark/light, zoom/pan, modo de conexão, Visão do Sistema com tabelas). Ver ADR-002 — o parser `.vpp` em si continua não iniciado (fora de escopo de ADR-001/002, avança em paralelo per `.claude/agents/parser-vpp.md`).
+- **Redesign das telas de diagrama para bater com o artefato** (ADR-002, 2026-08-29): o usuário testou o app publicado (TASK-001..005 em produção) e apontou que Diagrama de Classes/Objetos/Visão do Sistema estão muito abaixo do artefato-protótipo válido. Decisão: reimplementação idiomática em React (mantém `ClassDiagramContent`/`ObjectDiagramContent`/`SystemViewContent` e a persistência via Supabase já testados, reconstrói só o shell/interações). 5 tasks em `.agents/tasks/backlog/`: **TASK-006** (design system + shell de 3 colunas, fundação) → **TASK-007** (Diagrama de Classes: zoom/pan, modo de conexão, busca+stats, inspector) → **TASK-008** (Diagrama de Objetos, reaproveita infra da TASK-007) → **TASK-009** (Visão do Sistema: layout nav+tabelas do artefato) → **TASK-010** (modais de import/export). Nenhuma dessas tasks foi iniciada ainda.
 
 ## Decisões recentes
 
 - **ADR-001** — Fatiamento do MVP de produção por camada técnica (dados → frontend → integração). Ver `.agents/decisions/README.md`.
+- **ADR-002** — Reimplementação idiomática em React do design/UX validado no artefato-protótipo ClassMap (rejeitou vendorizar o motor vanilla JS do artefato e rejeitou um rollout "tokens primeiro" sem as tasks seguintes já definidas). Ver `.agents/decisions/README.md`.
 
 ## Riscos atuais
 
