@@ -1,25 +1,47 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { createOrganization, listMyOrganizations } from '../../lib/supabase/queries'
+import {
+  createOrganization,
+  deleteOrganization,
+  getCurrentUserId,
+  getMyOrganizationRole,
+  listMyOrganizations,
+} from '../../lib/supabase/queries'
 import type { Organization } from '../../lib/supabase/types'
+import { DeleteConfirmModal } from './DeleteConfirmModal'
 
 export function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[] | null>(null)
+  // RN-01 da TASK-011: só quem é `admin` da organização vê "Excluir" — mesmo
+  // reforço de UI das demais telas, a garantia real continua sendo RLS
+  // (`organizations_delete` exige `is_org_admin`).
+  const [adminOrgIds, setAdminOrgIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null)
 
-  function reload() {
+  async function reload() {
     setError(null)
-    return listMyOrganizations()
-      .then(setOrganizations)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar organizações.'))
-      .finally(() => setLoading(false))
+    try {
+      const orgs = await listMyOrganizations()
+      setOrganizations(orgs)
+      const userId = await getCurrentUserId()
+      if (userId) {
+        const roles = await Promise.all(orgs.map((org) => getMyOrganizationRole(org.id, userId)))
+        setAdminOrgIds(new Set(orgs.filter((_, i) => roles[i] === 'admin').map((org) => org.id)))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar organizações.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleCreate(e: FormEvent) {
@@ -37,6 +59,13 @@ export function OrganizationsPage() {
     }
   }
 
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return
+    await deleteOrganization(deleteTarget.id)
+    setDeleteTarget(null)
+    await reload()
+  }
+
   return (
     <section>
       <div className="page-header">
@@ -50,14 +79,26 @@ export function OrganizationsPage() {
         <p>Carregando organizações…</p>
       ) : organizations && organizations.length > 0 ? (
         <ul className="entity-list">
-          {organizations.map((org) => (
-            <li key={org.id} className="entity-list-item">
-              <Link to={`/orgs/${org.id}`} className="entity-link">
-                <span className="entity-name">{org.name}</span>
-                <span className="chevron">→</span>
-              </Link>
-            </li>
-          ))}
+          {organizations.map((org) => {
+            const canDelete = adminOrgIds.has(org.id)
+            return (
+              <li key={org.id} className={canDelete ? 'entity-list-item with-actions' : 'entity-list-item'}>
+                <Link to={`/orgs/${org.id}`} className="entity-link">
+                  <span className="entity-name">{org.name}</span>
+                  <span className="chevron">→</span>
+                </Link>
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="btn danger ghost small"
+                    onClick={() => setDeleteTarget(org)}
+                  >
+                    Excluir
+                  </button>
+                )}
+              </li>
+            )
+          })}
         </ul>
       ) : !error ? (
         <div className="empty-state">
@@ -83,6 +124,16 @@ export function OrganizationsPage() {
           {creating ? 'Criando…' : 'Criar organização'}
         </button>
       </form>
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title="Excluir organização"
+          name={deleteTarget.name}
+          warning={`Isto vai excluir definitivamente a organização "${deleteTarget.name}" e todos os projetos, membros e diagramas dela. Esta ação não pode ser desfeita.`}
+          onConfirm={handleDeleteConfirmed}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </section>
   )
 }

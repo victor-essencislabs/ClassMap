@@ -349,6 +349,24 @@ button {
   white-space: nowrap;
 }
 
+/* TASK-011 — linha com botão "Excluir" ao lado do link (Organizações/
+   Projetos), só para quem a RLS já autoriza a excluir. `.entity-link`
+   continua com `display:flex` (fill do próprio conteúdo); aqui só o `li`
+   vira uma linha com o link e o botão lado a lado. */
+.entity-list-item.with-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.entity-list-item.with-actions .entity-link {
+  flex: 1;
+}
+
+.entity-list-item.with-actions > .btn {
+  align-self: center;
+}
+
 .empty-state {
   border: 1px dashed var(--border);
   border-radius: 0.75rem;
@@ -1918,6 +1936,36 @@ button.ov-flag {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
   padding: 10px;
+}
+
+/* TASK-011 — campo de confirmação por nome (`DeleteConfirmModal`), mesmo
+   padrão visual do `.inline-create-form .field` usado nas telas de
+   criação (Organizações/Projetos), reaproveitado dentro de um modal. */
+.modal-body .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 10px;
+}
+
+.modal-body .field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.modal-body .field input {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font: inherit;
+  background: var(--bg);
+  color: inherit;
+}
+
+.modal-body .field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ---- ações dentro de um modal (TASK-010) — genérico, para não repetir
