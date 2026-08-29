@@ -1,4 +1,5 @@
 import { useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { screenDeltaToWorld } from '../diagram-shell/canvasTransform'
 import { CLASS_CARD_WIDTH, estimateClassCardHeight, type DiagramClass, type DiagramRelationship } from './types'
 
 interface ConnectorProps {
@@ -7,6 +8,10 @@ interface ConnectorProps {
   toClass: DiagramClass
   selected: boolean
   readOnly: boolean
+  /** Zoom atual do canvas (TASK-007) — necessário para converter o
+   * arraste do ponto de controle (em pixels de tela) para coordenadas
+   * do mundo corretamente. */
+  zoom: number
   onSelect: (id: string) => void
   onDragControlPoint: (id: string, controlX: number) => void
 }
@@ -37,10 +42,11 @@ export function Connector({
   toClass,
   selected,
   readOnly,
+  zoom,
   onSelect,
   onDragControlPoint,
 }: ConnectorProps) {
-  const dragging = useRef(false)
+  const dragStart = useRef<{ clientX: number; origControlX: number } | null>(null)
 
   const toIsRight = toClass.x + CLASS_CARD_WIDTH / 2 >= fromClass.x + CLASS_CARD_WIDTH / 2
   const fromSide: 'left' | 'right' = toIsRight ? 'right' : 'left'
@@ -74,20 +80,24 @@ export function Connector({
     onSelect(relationship.id)
     // setPointerCapture não existe em todo ambiente (ex.: jsdom nos testes).
     e.currentTarget.setPointerCapture?.(e.pointerId)
-    dragging.current = true
+    dragStart.current = { clientX: e.clientX, origControlX: relationship.controlX }
   }
 
   function handleHandlePointerMove(e: ReactPointerEvent<SVGCircleElement>) {
-    if (!dragging.current) return
-    onDragControlPoint(relationship.id, e.clientX)
+    const start = dragStart.current
+    if (!start) return
+    const delta = screenDeltaToWorld(e.clientX - start.clientX, 0, zoom)
+    onDragControlPoint(relationship.id, start.origControlX + delta.x)
   }
 
   function handleHandlePointerUp() {
-    dragging.current = false
+    dragStart.current = null
   }
 
   const strokeWidth = selected ? 2.5 : 1.5
-  const stroke = selected ? '#2563eb' : 'currentColor'
+  // TASK-007 — antes hardcoded `#2563eb`; agora usa o token de acento do
+  // design system (mesmo azul-violeta usado em `.node-box.selected`).
+  const stroke = selected ? 'var(--accent)' : 'currentColor'
 
   function handleSelect(e: ReactMouseEvent<SVGGElement>) {
     // Sem isto, o clique borbulha até o <svg> (que deseleciona ao clicar
@@ -111,7 +121,7 @@ export function Connector({
       {hasFromDiamond && (
         <polygon
           points={`${fromAnchor.x},${fromAnchor.y} ${fromAnchor.x + fromDir * (DIAMOND_LENGTH / 2)},${fromAnchor.y - DIAMOND_HALF_HEIGHT} ${fromAnchor.x + fromDir * DIAMOND_LENGTH},${fromAnchor.y} ${fromAnchor.x + fromDir * (DIAMOND_LENGTH / 2)},${fromAnchor.y + DIAMOND_HALF_HEIGHT}`}
-          fill={relationship.type === 'composition' ? stroke : 'var(--diagram-bg, #fff)'}
+          fill={relationship.type === 'composition' ? stroke : 'var(--surface-raised)'}
           stroke={stroke}
           strokeWidth={strokeWidth}
         />
@@ -120,7 +130,7 @@ export function Connector({
       {hasToTriangle && (
         <polygon
           points={`${toAnchor.x},${toAnchor.y} ${toAnchor.x + toDir * TRIANGLE_LENGTH},${toAnchor.y - TRIANGLE_HALF_HEIGHT} ${toAnchor.x + toDir * TRIANGLE_LENGTH},${toAnchor.y + TRIANGLE_HALF_HEIGHT}`}
-          fill="var(--diagram-bg, #fff)"
+          fill="var(--surface-raised)"
           stroke={stroke}
           strokeWidth={strokeWidth}
         />
@@ -163,7 +173,7 @@ export function Connector({
           cx={controlX}
           cy={midY}
           r={5}
-          fill={selected ? '#2563eb' : 'currentColor'}
+          fill={selected ? 'var(--accent)' : 'currentColor'}
           opacity={selected ? 1 : 0.35}
           onPointerDown={handleHandlePointerDown}
           onPointerMove={handleHandlePointerMove}

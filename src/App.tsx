@@ -52,10 +52,13 @@ function App() {
         <Route
           path="/orgs/:orgId/projects/:projectId/diagrams/:diagramId"
           element={
+            // TASK-007/ADR-002: sem `AppLayout` aqui — o Diagrama de
+            // Classes já é full-bleed com seu próprio shell de 3
+            // colunas; `DiagramRouterPage` decide, por tipo, quem ainda
+            // precisa do `AppLayout` (Objetos/Visão do Sistema, até
+            // TASK-008/009).
             <RequireAuth>
-              <AppLayout>
-                <DiagramRouterPage />
-              </AppLayout>
+              <DiagramRouterPage />
             </RequireAuth>
           }
         />

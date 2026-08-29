@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest'
 import {
   addClass,
   addRelationship,
+  filterClassesByQuery,
   removeClass,
   removeRelationship,
+  toBoundedNode,
   updateClass,
   updateRelationship,
 } from './contentOperations'
@@ -117,6 +119,38 @@ describe('removeRelationship', () => {
 
     content = removeRelationship(content, first.id)
     expect(content.relationships).toEqual([second])
+  })
+})
+
+describe('filterClassesByQuery (TASK-007, CA-03)', () => {
+  it('substring do nome, sem diferenciar maiúsculas/minúsculas', () => {
+    let content = withTwoClasses()
+    content = updateClass(content, content.classes[0].id, { name: 'Usuario' })
+    content = updateClass(content, content.classes[1].id, { name: 'Pedido' })
+
+    expect(filterClassesByQuery(content.classes, 'usu').map((c) => c.name)).toEqual(['Usuario'])
+    expect(filterClassesByQuery(content.classes, 'USUARIO').map((c) => c.name)).toEqual(['Usuario'])
+  })
+
+  it('query vazia devolve todas as classes', () => {
+    const content = withTwoClasses()
+    expect(filterClassesByQuery(content.classes, '')).toEqual(content.classes)
+    expect(filterClassesByQuery(content.classes, '   ')).toEqual(content.classes)
+  })
+
+  it('sem nenhuma classe correspondente, devolve lista vazia', () => {
+    const content = withTwoClasses()
+    expect(filterClassesByQuery(content.classes, 'não existe')).toEqual([])
+  })
+})
+
+describe('toBoundedNode', () => {
+  it('usa a largura fixa do card e estima a altura pelos atributos', () => {
+    const content = addClass(emptyClassDiagramContent())
+    const node = toBoundedNode(content.classes[0])
+    expect(node).toMatchObject({ x: content.classes[0].x, y: content.classes[0].y })
+    expect(node.w).toBeGreaterThan(0)
+    expect(node.h).toBeGreaterThan(0)
   })
 })
 

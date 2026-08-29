@@ -1,4 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+// TASK-004/008 — testes de componente do canvas do Diagrama de Objetos.
+// Reescrito na TASK-008 para as novas interações (shell/inspector
+// fixo/modal de criação) — ver "Estratégia de testes" e CA-01..CA-07.
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { DiagramClass } from '../class-diagram/types'
@@ -13,39 +16,105 @@ const pedidoClass: DiagramClass = {
   y: 0,
 }
 
-function ControlledCanvas({ readOnly = false }: { readOnly?: boolean }) {
+function ControlledCanvas({
+  readOnly = false,
+  classDiagrams = [{ id: 'diagram-classes-1', name: 'Diagrama de Classes' }],
+}: {
+  readOnly?: boolean
+  classDiagrams?: { id: string; name: string }[]
+}) {
   const [content, setContent] = useState<ObjectDiagramContent>(emptyObjectDiagramContent())
   return (
     <ObjectDiagramCanvas
       content={content}
       readOnly={readOnly}
       onChange={setContent}
-      classDiagrams={[{ id: 'diagram-classes-1', name: 'Diagrama de Classes' }]}
+      classDiagrams={classDiagrams}
       loadClasses={async () => [pedidoClass]}
     />
   )
 }
 
+function objectCards() {
+  return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
+}
+
+async function createObjectViaModal() {
+  fireEvent.click(screen.getByRole('button', { name: '+ Objeto' }))
+  fireEvent.change(screen.getByDisplayValue('Diagrama de classes de origem…'), {
+    target: { value: 'diagram-classes-1' },
+  })
+  await waitFor(() => expect(screen.getByText('Pedido')).toBeInTheDocument())
+  fireEvent.change(screen.getByDisplayValue('Classe…'), { target: { value: 'class-pedido' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Adicionar objeto' }))
+}
+
 describe('ObjectDiagramCanvas', () => {
-  it('CA-01: cria um objeto vinculado a uma classe existente, herdando seus atributos', async () => {
+  it('CA-01/CA-04: "+ Objeto" abre o modal; escolher diagrama+classe cria um objeto herdando os atributos, dentro do shell (zoom/pan funcionam)', async () => {
     render(<ControlledCanvas />)
+    await createObjectViaModal()
 
-    fireEvent.change(screen.getByDisplayValue('Diagrama de classes de origem…'), {
-      target: { value: 'diagram-classes-1' },
-    })
+    const [card] = objectCards()
+    expect(within(card as HTMLElement).getByText(/instância : Pedido/)).toBeInTheDocument()
+    expect(card.querySelector('.node-row')?.textContent).toMatch(/^id/)
+    // o modal fecha depois de criar
+    expect(screen.queryByText('Nova instância — escolha a classe')).not.toBeInTheDocument()
 
-    await waitFor(() => expect(screen.getByText('Pedido')).toBeInTheDocument())
-    fireEvent.change(screen.getByDisplayValue('Classe…'), { target: { value: 'class-pedido' } })
-    fireEvent.click(screen.getByText('+ Adicionar objeto'))
-
-    expect(screen.getByText(/instância : Pedido/)).toBeInTheDocument()
-    // atributo herdado aparece no card com valor vazio
-    expect(screen.getByText(/id =/)).toBeInTheDocument()
+    // zoom/pan não quebra o posicionamento absoluto do card (CA-01)
+    const originalLeft = (card as HTMLElement).style.left
+    fireEvent.click(screen.getByTitle('Aproximar'))
+    expect((objectCards()[0] as HTMLElement).style.left).toBe(originalLeft)
   })
 
-  it('CA-05: visualizador não vê nenhum controle de criação', () => {
+  it('CA-04: sem nenhum Diagrama de Classes no projeto, o modal mostra o aviso em vez do formulário', () => {
+    render(<ControlledCanvas classDiagrams={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: '+ Objeto' }))
+    expect(
+      screen.getByText('Crie um Diagrama de Classes neste projeto antes de adicionar objetos.'),
+    ).toBeInTheDocument()
+  })
+
+  it('CA-02: busca filtra a lista da sidebar por nome da instância ou da classe (case-insensitive)', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.pointerDown(objectCards()[0])
+    fireEvent.change(screen.getByLabelText('Nome da instância (opcional)'), { target: { value: 'pedido1' } })
+
+    const sideList = document.querySelector('.side-list') as HTMLElement
+    fireEvent.change(screen.getByPlaceholderText('Buscar objeto ou classe...'), { target: { value: 'PED' } })
+    expect(within(sideList).getByText('pedido1')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText('Buscar objeto ou classe...'), { target: { value: 'zzz' } })
+    expect(within(sideList).queryByText('pedido1')).not.toBeInTheDocument()
+    expect(within(sideList).getByText('Nenhum objeto encontrado.')).toBeInTheDocument()
+  })
+
+  it('CA-03: inspector edita nome da instância e valores dos atributos (paridade com o painel antigo)', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.pointerDown(objectCards()[0])
+
+    fireEvent.change(screen.getByLabelText('Nome da instância (opcional)'), { target: { value: 'pedido1' } })
+    fireEvent.change(screen.getByLabelText('id (long)'), { target: { value: '42' } })
+
+    const [card] = objectCards()
+    expect(within(card as HTMLElement).getByText(/pedido1 : Pedido/)).toBeInTheDocument()
+    expect(within(card as HTMLElement).getByText('42')).toBeInTheDocument()
+  })
+
+  it('exclui um objeto', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.pointerDown(objectCards()[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir objeto' }))
+    expect(objectCards()).toHaveLength(0)
+  })
+})
+
+describe('ObjectDiagramCanvas — visualizador (CA-05)', () => {
+  it('não mostra nenhum controle de criação/edição — só navega/dá zoom/pan', () => {
     render(<ControlledCanvas readOnly />)
-    expect(screen.queryByText('+ Adicionar objeto')).not.toBeInTheDocument()
-    expect(screen.queryByText('Diagrama de classes de origem…')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '+ Objeto' })).not.toBeInTheDocument()
+    expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
   })
 })

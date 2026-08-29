@@ -38,3 +38,16 @@ export interface ObjectDiagramContent {
 export function emptyObjectDiagramContent(): ObjectDiagramContent {
   return { objects: [] }
 }
+
+export const OBJECT_CARD_WIDTH = 220
+
+/** Estimativa da altura renderizada do card (TASK-008, mesmo espírito de
+ * `estimateClassCardHeight` em `class-diagram/types.ts`) — usada para o
+ * enquadramento do zoom/pan. O cabeçalho do objeto sempre tem 2 linhas
+ * (rótulo "objeto" + "instância : Classe", ver `.node-head .stereo` no
+ * artefato), diferente da classe onde o estereótipo é opcional. */
+export function estimateObjectCardHeight(obj: DiagramObject): number {
+  const headerHeight = 52
+  const valuesHeight = Math.max(obj.values.length, 1) * 20
+  return headerHeight + valuesHeight
+}

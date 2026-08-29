@@ -60,24 +60,30 @@ export function DiagramEditorPage() {
   const readOnly = role !== 'editor'
 
   return (
-    <section className="diagram-editor-page">
-      <p>
-        <Link to={`/orgs/${orgId}/projects/${projectId}`}>← Diagramas</Link>
-      </p>
-      <div className="diagram-editor-header">
-        <h1>{diagram.name}</h1>
-        {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
-      </div>
-
-      <ImportExportControls
-        content={content}
-        fileName={diagram.name}
-        canImport={!readOnly}
-        onImport={handleChange}
-      />
-
-      <ClassDiagramCanvas content={content} readOnly={readOnly} onChange={handleChange} />
-    </section>
+    <ClassDiagramCanvas
+      content={content}
+      readOnly={readOnly}
+      onChange={handleChange}
+      topbarCenter={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+          <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>
+            ← Diagramas
+          </Link>
+          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {diagram.name}
+          </strong>
+          {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
+        </div>
+      }
+      topbarActions={
+        <ImportExportControls
+          content={content}
+          fileName={diagram.name}
+          canImport={!readOnly}
+          onImport={handleChange}
+        />
+      }
+    />
   )
 }
 

@@ -1,11 +1,48 @@
+// TASK-004 (lógica) / TASK-009 (layout do artefato, ADR-002): Visão do
+// Sistema — navegação por módulo→entidade na lateral (`.ov-nav`) e
+// detalhe da entidade (`.ov-detail`) com breadcrumb, pills de resumo,
+// tabela de campos com badges de restrição, métodos de API e regras de
+// permissão, igual ao artefato-protótipo. Full-bleed com topbar própria
+// (mesmo padrão visual de `DiagramEditorPage`/`ObjectDiagramPage`, sem
+// `AppLayout`) — só não usa `DiagramShell`/canvas/inspector porque esta
+// tela não é um canvas (ver decisão na TASK-009).
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getCurrentUserId, getDiagram, getMyProjectRole, updateDiagramContent } from '../../lib/supabase/queries'
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import * as ops from './contentOperations'
-import { emptySystemViewContent, isSystemViewContent, type SystemViewContent, type SystemViewEntity } from './types'
+import {
+  emptySystemViewContent,
+  isSystemViewContent,
+  type SystemViewContent,
+  type SystemViewEntity,
+  type SystemViewField,
+  type SystemViewModule,
+} from './types'
 
 const AUTOSAVE_DELAY_MS = 800
+
+/** Os 5 booleanos de restrição do campo, na ordem exibida como badges —
+ * `variant` vazio usa o estilo neutro genérico de `.ov-flag` (o artefato
+ * só definiu cor própria para PK/FK/NN; AI/UQ não têm equivalente lá,
+ * mas não podem ser perdidos — CA-02). */
+const FIELD_FLAGS: {
+  key: keyof Pick<SystemViewField, 'isPrimaryKey' | 'isForeignKey' | 'isRequired' | 'isAutoIncrement' | 'isUnique'>
+  label: string
+  variant: string
+  title: string
+}[] = [
+  { key: 'isPrimaryKey', label: 'PK', variant: 'pk', title: 'Chave primária' },
+  { key: 'isForeignKey', label: 'FK', variant: 'fk', title: 'Chave estrangeira' },
+  { key: 'isRequired', label: 'NN', variant: 'nn', title: 'Obrigatório (not null)' },
+  { key: 'isAutoIncrement', label: 'AI', variant: '', title: 'Auto-incremento' },
+  { key: 'isUnique', label: 'UQ', variant: '', title: 'Único' },
+]
+
+function flagClassName(active: boolean, variant: string): string {
+  if (!active) return 'ov-flag'
+  return variant ? `ov-flag ${variant}` : 'ov-flag active'
+}
 
 export function SystemViewPage() {
   const { orgId, projectId, diagramId } = useParams<{
@@ -58,63 +95,71 @@ export function SystemViewPage() {
   const selectedEntity = selectedModule?.entities.find((e) => e.id === selectedEntityId)
 
   return (
-    <section className="system-view-page">
-      <p>
-        <Link to={`/orgs/${orgId}/projects/${projectId}`}>← Diagramas</Link>
-      </p>
-      <div className="diagram-editor-header">
-        <h1>{diagram.name}</h1>
-        {!readOnly && (
-          <span className="save-indicator">
-            {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : saveState === 'error' ? 'Falha ao salvar' : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="system-view-layout">
-        <nav className="system-view-nav">
-          {content.modules.map((module) => (
-            <div key={module.id} className="system-view-module">
-              <strong>{module.name}</strong>
-              <ul>
-                {module.entities.map((entity) => (
-                  <li key={entity.id}>
-                    <button
-                      type="button"
-                      className={entity.id === selectedEntityId ? 'nav-active' : ''}
-                      onClick={() => {
-                        setSelectedModuleId(module.id)
-                        setSelectedEntityId(entity.id)
-                      }}
-                    >
-                      {entity.name}
-                    </button>
-                  </li>
-                ))}
-                {!readOnly && (
-                  <li>
-                    <button type="button" onClick={() => handleChange(ops.addEntity(content, module.id))}>
-                      + Entidade
-                    </button>
-                  </li>
-                )}
-              </ul>
-            </div>
-          ))}
+    <div className="system-view-shell">
+      <div className="diagram-shell-topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-name">ClassMap</span>
+        </div>
+        <span className="divider-v" aria-hidden="true" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+          <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>
+            ← Diagramas
+          </Link>
+          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {diagram.name}
+          </strong>
+          {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
+        </div>
+        <div className="topbar-actions">
           {!readOnly && (
-            <button type="button" onClick={() => handleChange(ops.addModule(content))}>
+            <button type="button" className="btn primary" onClick={() => handleChange(ops.addModule(content))}>
               + Módulo
             </button>
           )}
+        </div>
+      </div>
+
+      <div className="ov-body">
+        <nav className="ov-nav">
+          {content.modules.map((module) => (
+            <div key={module.id} className="ov-module">
+              <div className="ov-module-title">{module.name}</div>
+              {module.entities.map((entity) => (
+                <button
+                  key={entity.id}
+                  type="button"
+                  className={`ov-entity-btn${entity.id === selectedEntityId ? ' active' : ''}`}
+                  onClick={() => {
+                    setSelectedModuleId(module.id)
+                    setSelectedEntityId(entity.id)
+                  }}
+                >
+                  <span className="ov-entity-dot" aria-hidden="true" />
+                  {entity.name}
+                </button>
+              ))}
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="ov-nav-add"
+                  onClick={() => handleChange(ops.addEntity(content, module.id))}
+                >
+                  + Entidade
+                </button>
+              )}
+            </div>
+          ))}
+          {content.modules.length === 0 && <p className="ov-section-empty">Nenhum módulo cadastrado.</p>}
         </nav>
 
-        <div className="system-view-detail">
+        <div className="ov-detail">
           {!selectedModule || !selectedEntity ? (
-            <p>Selecione uma entidade para ver seus detalhes.</p>
+            <div className="ov-empty">Selecione uma entidade para ver seus detalhes.</div>
           ) : (
             <EntityDetail
               content={content}
-              moduleId={selectedModule.id}
+              module={selectedModule}
               entity={selectedEntity}
               readOnly={readOnly}
               onChange={handleChange}
@@ -122,53 +167,75 @@ export function SystemViewPage() {
           )}
         </div>
       </div>
-    </section>
+    </div>
   )
+}
+
+function saveIndicatorLabel(state: 'idle' | 'saving' | 'saved' | 'error'): string {
+  switch (state) {
+    case 'saving':
+      return 'Salvando…'
+    case 'saved':
+      return 'Salvo'
+    case 'error':
+      return 'Falha ao salvar'
+    default:
+      return ''
+  }
 }
 
 function EntityDetail({
   content,
-  moduleId,
+  module,
   entity,
   readOnly,
   onChange,
 }: {
   content: SystemViewContent
-  moduleId: string
+  module: SystemViewModule
   entity: SystemViewEntity
   readOnly: boolean
   onChange: (content: SystemViewContent) => void
 }) {
+  const moduleId = module.id
+
   return (
-    <div>
-      {readOnly ? (
-        <h2>{entity.name}</h2>
-      ) : (
-        <input
-          className="entity-name-input"
-          value={entity.name}
-          onChange={(e) => onChange(ops.updateEntity(content, moduleId, entity.id, { name: e.target.value }))}
-        />
-      )}
+    <>
+      <div className="ov-header">
+        <div className="ov-breadcrumb">{module.name}</div>
+        {readOnly ? (
+          <div className="ov-entity-name">{entity.name}</div>
+        ) : (
+          <input
+            className="ov-entity-name-input"
+            value={entity.name}
+            onChange={(e) => onChange(ops.updateEntity(content, moduleId, entity.id, { name: e.target.value }))}
+          />
+        )}
+        <div className="ov-summary-row">
+          <span className="ov-pill">{entity.fields.length} campos</span>
+          <span className="ov-pill">{entity.apiMethods.length} métodos de API</span>
+          <span className="ov-pill">{entity.permissionRules.length} regras de permissão</span>
+        </div>
+      </div>
 
       {/* Os 3 blocos abaixo são sempre renderizados, mesmo vazios — RN-02. */}
-      <section>
-        <h3>Campos</h3>
-        <div className="table-scroll">
-          <table>
+      <section className="ov-section">
+        <div className="ov-section-title">
+          <span>Campos</span>
+          <span className="count">Banco → Model → DTO → Front</span>
+        </div>
+        <div className="ov-table-wrap">
+          <table className="ov-table">
             <thead>
               <tr>
-                <th>Coluna</th>
-                <th>Tipo DB</th>
-                <th>PK</th>
-                <th>FK</th>
-                <th>Auto</th>
-                <th>Obrig.</th>
-                <th>Único</th>
-                <th>Tipo model</th>
-                <th>Tipo DTO</th>
+                <th>Campo</th>
+                <th>Tipo BD</th>
+                <th>Restrições</th>
+                <th>Model</th>
+                <th>DTO</th>
                 <th>Validação</th>
-                <th>Tipo frontend</th>
+                <th>Frontend</th>
                 {!readOnly && <th />}
               </tr>
             </thead>
@@ -177,13 +244,17 @@ function EntityDetail({
                 <tr key={field.id}>
                   {readOnly ? (
                     <>
-                      <td>{field.dbColumn}</td>
+                      <td className="fname">{field.dbColumn}</td>
                       <td>{field.dbType}</td>
-                      <td>{field.isPrimaryKey ? '✓' : ''}</td>
-                      <td>{field.isForeignKey ? '✓' : ''}</td>
-                      <td>{field.isAutoIncrement ? '✓' : ''}</td>
-                      <td>{field.isRequired ? '✓' : ''}</td>
-                      <td>{field.isUnique ? '✓' : ''}</td>
+                      <td>
+                        <div className="ov-flags">
+                          {FIELD_FLAGS.filter((f) => field[f.key]).map((f) => (
+                            <span key={f.label} className={flagClassName(true, f.variant)} title={f.title}>
+                              {f.label}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                       <td>{field.modelType}</td>
                       <td>{field.dtoType}</td>
                       <td>{field.validationRule}</td>
@@ -193,12 +264,13 @@ function EntityDetail({
                     <>
                       {(
                         [
-                          ['dbColumn', 'text'],
-                          ['dbType', 'text'],
+                          ['dbColumn', 'Coluna'],
+                          ['dbType', 'Tipo BD'],
                         ] as const
-                      ).map(([key]) => (
+                      ).map(([key, label]) => (
                         <td key={key}>
                           <input
+                            aria-label={label}
                             value={field[key]}
                             onChange={(e) =>
                               onChange(
@@ -208,26 +280,38 @@ function EntityDetail({
                           />
                         </td>
                       ))}
-                      {(['isPrimaryKey', 'isForeignKey', 'isAutoIncrement', 'isRequired', 'isUnique'] as const).map(
-                        (key) => (
-                          <td key={key}>
-                            <input
-                              type="checkbox"
-                              checked={field[key]}
-                              onChange={(e) =>
+                      <td>
+                        <div className="ov-flags">
+                          {FIELD_FLAGS.map((f) => (
+                            <button
+                              key={f.label}
+                              type="button"
+                              className={flagClassName(field[f.key], f.variant)}
+                              title={f.title}
+                              onClick={() =>
                                 onChange(
                                   ops.updateField(content, moduleId, entity.id, field.id, {
-                                    [key]: e.target.checked,
+                                    [f.key]: !field[f.key],
                                   }),
                                 )
                               }
-                            />
-                          </td>
-                        ),
-                      )}
-                      {(['modelType', 'dtoType', 'validationRule', 'frontendType'] as const).map((key) => (
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                      {(
+                        [
+                          ['modelType', 'Tipo model'],
+                          ['dtoType', 'Tipo DTO'],
+                          ['validationRule', 'Validação'],
+                          ['frontendType', 'Tipo frontend'],
+                        ] as const
+                      ).map(([key, label]) => (
                         <td key={key}>
                           <input
+                            aria-label={label}
                             value={field[key]}
                             onChange={(e) =>
                               onChange(
@@ -240,6 +324,7 @@ function EntityDetail({
                       <td>
                         <button
                           type="button"
+                          className="ov-row-remove"
                           onClick={() => onChange(ops.removeField(content, moduleId, entity.id, field.id))}
                         >
                           ×
@@ -252,53 +337,51 @@ function EntityDetail({
             </tbody>
           </table>
         </div>
-        {entity.fields.length === 0 && <p>Nenhum campo cadastrado.</p>}
+        {entity.fields.length === 0 && <p className="ov-section-empty">Nenhum campo cadastrado.</p>}
         {!readOnly && (
-          <button type="button" onClick={() => onChange(ops.addField(content, moduleId, entity.id))}>
+          <button
+            type="button"
+            className="ov-nav-add"
+            onClick={() => onChange(ops.addField(content, moduleId, entity.id))}
+          >
             + Campo
           </button>
         )}
       </section>
 
-      <section>
-        <h3>Métodos de API</h3>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Controller</th>
-                <th>Service</th>
-                <th>Repository</th>
-                <th>Código de permissão</th>
-                {!readOnly && <th />}
-              </tr>
-            </thead>
-            <tbody>
-              {entity.apiMethods.map((method) => (
-                <tr key={method.id}>
-                  {(['controller', 'service', 'repository'] as const).map((key) => (
-                    <td key={key}>
-                      {readOnly ? (
-                        method[key]
-                      ) : (
-                        <input
-                          value={method[key]}
-                          onChange={(e) =>
-                            onChange(
-                              ops.updateApiMethod(content, moduleId, entity.id, method.id, {
-                                [key]: e.target.value,
-                              }),
-                            )
-                          }
-                        />
-                      )}
-                    </td>
-                  ))}
-                  <td>
-                    {readOnly ? (
-                      method.permissionCode
-                    ) : (
+      <section className="ov-section">
+        <div className="ov-section-title">
+          <span>Métodos de API</span>
+          <span className="count">Controller · Service · Repository</span>
+        </div>
+        <div className="ov-table-wrap">
+          {entity.apiMethods.map((method) => (
+            <div key={method.id} className="ov-method-row">
+              <div className="ov-method-body">
+                <div className="ov-method-line">
+                  {readOnly ? (
+                    <>
+                      {method.controller}
+                      {method.permissionCode && <span className="ov-perm-badge">{method.permissionCode}</span>}
+                    </>
+                  ) : (
+                    <>
                       <input
+                        aria-label="Controller"
+                        placeholder="Controller"
+                        value={method.controller}
+                        onChange={(e) =>
+                          onChange(
+                            ops.updateApiMethod(content, moduleId, entity.id, method.id, {
+                              controller: e.target.value,
+                            }),
+                          )
+                        }
+                      />
+                      <input
+                        aria-label="Código de permissão"
+                        placeholder="Código de permissão"
+                        style={{ flex: '0 0 40%' }}
                         value={method.permissionCode ?? ''}
                         onChange={(e) =>
                           onChange(
@@ -308,82 +391,130 @@ function EntityDetail({
                           )
                         }
                       />
-                    )}
-                  </td>
-                  {!readOnly && (
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => onChange(ops.removeApiMethod(content, moduleId, entity.id, method.id))}
-                      >
-                        ×
-                      </button>
-                    </td>
+                    </>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </div>
+                {(!readOnly || method.service) && (
+                  <div className="ov-method-sub">
+                    <span className="ov-method-sub-label">service</span>
+                    {readOnly ? (
+                      method.service
+                    ) : (
+                      <input
+                        aria-label="Service"
+                        value={method.service}
+                        onChange={(e) =>
+                          onChange(
+                            ops.updateApiMethod(content, moduleId, entity.id, method.id, { service: e.target.value }),
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+                {(!readOnly || method.repository) && (
+                  <div className="ov-method-sub">
+                    <span className="ov-method-sub-label">repo</span>
+                    {readOnly ? (
+                      method.repository
+                    ) : (
+                      <input
+                        aria-label="Repository"
+                        value={method.repository}
+                        onChange={(e) =>
+                          onChange(
+                            ops.updateApiMethod(content, moduleId, entity.id, method.id, {
+                              repository: e.target.value,
+                            }),
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="ov-row-remove"
+                  onClick={() => onChange(ops.removeApiMethod(content, moduleId, entity.id, method.id))}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
         </div>
-        {entity.apiMethods.length === 0 && <p>Nenhum método de API cadastrado.</p>}
+        {entity.apiMethods.length === 0 && <p className="ov-section-empty">Nenhum método de API cadastrado.</p>}
         {!readOnly && (
-          <button type="button" onClick={() => onChange(ops.addApiMethod(content, moduleId, entity.id))}>
+          <button
+            type="button"
+            className="ov-nav-add"
+            onClick={() => onChange(ops.addApiMethod(content, moduleId, entity.id))}
+          >
             + Método
           </button>
         )}
       </section>
 
-      <section>
-        <h3>Regras de Permissão</h3>
-        <ul className="list">
-          {entity.permissionRules.map((rule) => (
-            <li key={rule.id}>
-              {readOnly ? (
-                <>
-                  <strong>{rule.description}</strong> — <code>{rule.codeCondition}</code>
-                </>
-              ) : (
-                <div className="permission-rule-row">
-                  <input
-                    placeholder="Descrição"
-                    value={rule.description}
-                    onChange={(e) =>
-                      onChange(
-                        ops.updatePermissionRule(content, moduleId, entity.id, rule.id, {
-                          description: e.target.value,
-                        }),
-                      )
-                    }
-                  />
-                  <input
-                    placeholder="Condição de código"
-                    value={rule.codeCondition}
-                    onChange={(e) =>
-                      onChange(
-                        ops.updatePermissionRule(content, moduleId, entity.id, rule.id, {
-                          codeCondition: e.target.value,
-                        }),
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => onChange(ops.removePermissionRule(content, moduleId, entity.id, rule.id))}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-        {entity.permissionRules.length === 0 && <p>Nenhuma regra de permissão cadastrada.</p>}
+      <section className="ov-section">
+        <div className="ov-section-title">Regras de Permissão</div>
+        {entity.permissionRules.map((rule) => (
+          <div key={rule.id} className="ov-perm-card">
+            {!readOnly && (
+              <button
+                type="button"
+                className="ov-row-remove ov-perm-remove"
+                onClick={() => onChange(ops.removePermissionRule(content, moduleId, entity.id, rule.id))}
+              >
+                ×
+              </button>
+            )}
+            {readOnly ? (
+              <div className="ov-perm-title">{rule.description || 'Sem descrição'}</div>
+            ) : (
+              <input
+                className="ov-perm-title-input"
+                aria-label="Descrição"
+                placeholder="Descrição"
+                value={rule.description}
+                onChange={(e) =>
+                  onChange(
+                    ops.updatePermissionRule(content, moduleId, entity.id, rule.id, { description: e.target.value }),
+                  )
+                }
+              />
+            )}
+            {readOnly ? (
+              rule.codeCondition && <div className="ov-perm-cond">{rule.codeCondition}</div>
+            ) : (
+              <input
+                className="ov-perm-cond-input"
+                aria-label="Condição de código"
+                placeholder="Condição de código"
+                value={rule.codeCondition}
+                onChange={(e) =>
+                  onChange(
+                    ops.updatePermissionRule(content, moduleId, entity.id, rule.id, {
+                      codeCondition: e.target.value,
+                    }),
+                  )
+                }
+              />
+            )}
+          </div>
+        ))}
+        {entity.permissionRules.length === 0 && <p className="ov-section-empty">Nenhuma regra de permissão cadastrada.</p>}
         {!readOnly && (
-          <button type="button" onClick={() => onChange(ops.addPermissionRule(content, moduleId, entity.id))}>
+          <button
+            type="button"
+            className="ov-nav-add"
+            onClick={() => onChange(ops.addPermissionRule(content, moduleId, entity.id))}
+          >
             + Regra
           </button>
         )}
       </section>
-    </div>
+    </>
   )
 }

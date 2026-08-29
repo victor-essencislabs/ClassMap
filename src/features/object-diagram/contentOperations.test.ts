@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { DiagramClass } from '../class-diagram/types'
-import { addObject, removeObject, updateObject, updateObjectValue } from './contentOperations'
+import {
+  addObject,
+  filterObjectsByQuery,
+  removeObject,
+  toBoundedNode,
+  updateObject,
+  updateObjectValue,
+} from './contentOperations'
 import { emptyObjectDiagramContent } from './types'
 
 const pedidoClass: DiagramClass = {
@@ -64,6 +71,36 @@ describe('updateObject / removeObject', () => {
     const [first, second] = content.objects
     content = removeObject(content, first.id)
     expect(content.objects).toEqual([second])
+  })
+})
+
+describe('filterObjectsByQuery (TASK-008, CA-02)', () => {
+  it('substring do nome da instância, sem diferenciar maiúsculas/minúsculas', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = updateObject(content, content.objects[0].id, { instanceName: 'pedido1' })
+    expect(filterObjectsByQuery(content.objects, 'PEDIDO1')).toEqual(content.objects)
+    expect(filterObjectsByQuery(content.objects, 'não existe')).toEqual([])
+  })
+
+  it('também casa pelo nome da classe de origem', () => {
+    const content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    expect(filterObjectsByQuery(content.objects, 'ped')).toEqual(content.objects)
+  })
+
+  it('query vazia devolve todos os objetos', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addObject(content, pedidoClass)
+    expect(filterObjectsByQuery(content.objects, '')).toEqual(content.objects)
+  })
+})
+
+describe('toBoundedNode', () => {
+  it('usa a largura fixa do card e estima a altura pelos valores', () => {
+    const content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    const node = toBoundedNode(content.objects[0])
+    expect(node).toMatchObject({ x: content.objects[0].x, y: content.objects[0].y })
+    expect(node.w).toBeGreaterThan(0)
+    expect(node.h).toBeGreaterThan(0)
   })
 })
 

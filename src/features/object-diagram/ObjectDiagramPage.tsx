@@ -72,27 +72,28 @@ export function ObjectDiagramPage() {
   const readOnly = role !== 'editor'
 
   return (
-    <section className="diagram-editor-page">
-      <p>
-        <Link to={`/orgs/${orgId}/projects/${projectId}`}>← Diagramas</Link>
-      </p>
-      <div className="diagram-editor-header">
-        <h1>{diagram.name}</h1>
-        {!readOnly && (
-          <span className="save-indicator">
-            {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : saveState === 'error' ? 'Falha ao salvar' : ''}
-          </span>
-        )}
-      </div>
-
-      <ObjectDiagramCanvas
-        content={content}
-        readOnly={readOnly}
-        onChange={handleChange}
-        classDiagrams={classDiagrams}
-        loadClasses={loadClasses}
-      />
-    </section>
+    <ObjectDiagramCanvas
+      content={content}
+      readOnly={readOnly}
+      onChange={handleChange}
+      classDiagrams={classDiagrams}
+      loadClasses={loadClasses}
+      topbarCenter={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+          <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>
+            ← Diagramas
+          </Link>
+          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {diagram.name}
+          </strong>
+          {!readOnly && (
+            <span className="save-indicator">
+              {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : saveState === 'error' ? 'Falha ao salvar' : ''}
+            </span>
+          )}
+        </div>
+      }
+    />
   )
 }
 

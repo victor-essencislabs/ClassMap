@@ -1,9 +1,9 @@
-// TASK-003 — testes de componente do canvas do Diagrama de Classes.
+// TASK-003/007 — testes de componente do canvas do Diagrama de Classes.
 // Rodam em jsdom, sem depender de um projeto Supabase real (o
-// componente só recebe `content`/`onChange` via props) — cobrem CA-01,
-// CA-02, CA-03 e CA-05 no nível de UI, complementando os testes de
-// lógica pura em contentOperations.test.ts.
-import { fireEvent, render, screen } from '@testing-library/react'
+// componente só recebe `content`/`onChange` via props). Reescrito na
+// TASK-007 para as novas interações (shell/inspector fixo/modo de
+// conexão) — ver "Estratégia de testes" e CA-01..CA-07 da task.
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { ClassDiagramCanvas } from './ClassDiagramCanvas'
@@ -21,87 +21,170 @@ function ControlledCanvas({
   return <ClassDiagramCanvas content={content} readOnly={readOnly} onChange={setContent} />
 }
 
+function classCards() {
+  return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
+}
+
+function addClassButton() {
+  return screen.getByRole('button', { name: '+ Classe' })
+}
+
+function startConnectButton() {
+  return screen.getByRole('button', { name: '🔗 Relação' })
+}
+
 describe('ClassDiagramCanvas — editor', () => {
-  it('CA-01: "Adicionar classe" cria um card com nome e atributos', () => {
+  it('"+ Classe" cria um card com nome e atributos', () => {
     render(<ControlledCanvas />)
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
-    expect(screen.getByText('NovaClasse')).toBeInTheDocument()
-    expect(screen.getByText(/id: long/)).toBeInTheDocument()
+    fireEvent.click(addClassButton())
+    const [card] = classCards()
+    expect(within(card as HTMLElement).getByText('NovaClasse')).toBeInTheDocument()
+    expect(within(card as HTMLElement).getByText(/id/)).toBeInTheDocument()
   })
 
-  it('CA-02: cria uma relação de cada um dos 5 tipos entre duas classes', () => {
+  it('CA-02: criar uma relação clicando origem→destino no canvas produz um DiagramRelationship com from/to/type — mesmo resultado do formulário antigo', () => {
     render(<ControlledCanvas />)
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
 
-    const types = ['Associação', 'Agregação', 'Composição', 'Herança', 'Dependência']
-    for (const label of types) {
-      const [fromSelect, typeSelect, toSelect] = screen.getAllByRole('combobox')
-      fireEvent.change(fromSelect, { target: { value: (fromSelect as HTMLSelectElement).options[1].value } })
-      // seleciona o tipo de relação pelo texto da option (mais estável que o value)
-      fireEvent.change(typeSelect, {
-        target: {
-          value: Array.from((typeSelect as HTMLSelectElement).options).find((o) => o.text === label)!.value,
-        },
-      })
-      fireEvent.change(toSelect, { target: { value: (toSelect as HTMLSelectElement).options[2].value } })
-      fireEvent.click(screen.getByText('Criar relação'))
-    }
+    fireEvent.click(startConnectButton())
+    expect(screen.getByText('Clique na classe de origem, depois na de destino')).toBeInTheDocument()
 
-    // 5 relações criadas => 5 grupos de conector no SVG
-    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(5)
+    const [from, to] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+
+    // relação criada com tipo padrão (association) => 1 grupo de conector no SVG
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+    // o banner de conexão fecha depois de completar
+    expect(screen.queryByText('Clique na classe de origem, depois na de destino')).not.toBeInTheDocument()
+    // a relação recém-criada já fica selecionada — inspector mostra o título "Relação"
+    expect(screen.getByText('Relação', { selector: '.insp-title' })).toBeInTheDocument()
   })
 
-  it('CA-03: multiplicidade preenchida aparece nas duas pontas do conector', () => {
+  it('RN-02: clicar duas vezes na mesma classe em modo de conexão não cria relação (e avisa)', () => {
     render(<ControlledCanvas />)
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(startConnectButton())
 
-    const [fromSelect, , toSelect] = screen.getAllByRole('combobox')
-    fireEvent.change(fromSelect, { target: { value: (fromSelect as HTMLSelectElement).options[1].value } })
-    fireEvent.change(toSelect, { target: { value: (toSelect as HTMLSelectElement).options[2].value } })
-    fireEvent.click(screen.getByText('Criar relação'))
-    // criar a relação já a seleciona automaticamente — o painel de edição já está aberto.
+    const [from] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(from)
 
-    const [fromMultiplicity, toMultiplicity] = screen.getAllByPlaceholderText('1, 0..*, n')
-    fireEvent.change(fromMultiplicity, { target: { value: '1' } })
-    fireEvent.change(toMultiplicity, { target: { value: '0..*' } })
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+    expect(screen.getByText('Escolha uma classe diferente')).toBeInTheDocument()
+  })
 
-    expect(screen.getByText('1')).toBeInTheDocument()
+  it('RN-02: "Cancelar" no banner sai do modo de conexão sem criar relação parcial', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(startConnectButton())
+
+    const [from] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.queryByText('Clique na classe de origem, depois na de destino')).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+  })
+
+  it('CA-03: busca na sidebar filtra a lista por substring do nome (case-insensitive)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    const [card] = classCards()
+    fireEvent.pointerDown(card)
+    fireEvent.change(screen.getByLabelText('Nome da classe'), { target: { value: 'Usuario' } })
+
+    const sideList = document.querySelector('.side-list') as HTMLElement
+    fireEvent.change(screen.getByPlaceholderText('Buscar classe...'), { target: { value: 'usu' } })
+
+    expect(within(sideList).getByText('Usuario')).toBeInTheDocument()
+    expect(within(sideList).queryByText('NovaClasse')).not.toBeInTheDocument()
+  })
+
+  it('CA-04: inspector edita nome/estereótipo/atributos de uma classe (paridade com o painel antigo)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.pointerDown(classCards()[0])
+
+    fireEvent.change(screen.getByLabelText('Nome da classe'), { target: { value: 'Pedido' } })
+    fireEvent.change(screen.getByPlaceholderText('ex: entity, table'), { target: { value: 'entity' } })
+    fireEvent.click(screen.getByRole('button', { name: '+ atributo' }))
+
+    const [card] = classCards()
+    expect(within(card as HTMLElement).getByText('Pedido')).toBeInTheDocument()
+    expect(screen.getAllByPlaceholderText('nome')).toHaveLength(3) // id, nome, novoAtributo
+  })
+
+  it('CA-04: inspector edita tipo/multiplicidade de uma relação (paridade com o painel antigo)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(startConnectButton())
+    const [from, to] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Herança' }))
+    const [fromMult, toMult] = screen.getAllByPlaceholderText(/ex: (1|n)/)
+    fireEvent.change(fromMult, { target: { value: '1' } })
+    fireEvent.change(toMult, { target: { value: '0..*' } })
+
+    // os valores de multiplicidade aparecem no próprio conector (SVG), não só no formulário.
+    expect(document.querySelector('.connectors-layer text')?.textContent).toBe('1')
     expect(screen.getByText('0..*')).toBeInTheDocument()
+  })
+
+  it('CA-01: zoom (+/−/ajustar à tela) não quebra o posicionamento absoluto dos cards', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    const [card] = classCards()
+    const originalLeft = (card as HTMLElement).style.left
+
+    fireEvent.click(screen.getByTitle('Aproximar'))
+    fireEvent.click(screen.getByTitle('Afastar'))
+    fireEvent.click(screen.getByTitle('Ajustar à tela'))
+
+    // zoom/pan só afeta o `transform` do viewport — a posição do card (coordenadas do mundo) não muda.
+    expect((classCards()[0] as HTMLElement).style.left).toBe(originalLeft)
   })
 
   it('exclui uma classe e a relação que a referenciava junto (reforça removeClass)', () => {
     render(<ControlledCanvas />)
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
-    fireEvent.click(screen.getByText('+ Adicionar classe'))
-    const [fromSelect, , toSelect] = screen.getAllByRole('combobox')
-    fireEvent.change(fromSelect, { target: { value: (fromSelect as HTMLSelectElement).options[1].value } })
-    fireEvent.change(toSelect, { target: { value: (toSelect as HTMLSelectElement).options[2].value } })
-    fireEvent.click(screen.getByText('Criar relação'))
-
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(startConnectButton())
+    const [from, to] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
     expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
 
-    // clica no card em si (não no texto — "NovaClasse" também aparece nas <option>
-    // dos selects "De…"/"Para…", já que as duas classes têm o mesmo nome).
-    fireEvent.pointerDown(document.querySelectorAll('.class-card')[0])
-    fireEvent.click(screen.getByText('Excluir classe'))
+    fireEvent.pointerDown(classCards()[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir classe' }))
 
     expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
   })
 })
 
 describe('ClassDiagramCanvas — visualizador (CA-05)', () => {
-  it('não mostra nenhum controle de edição', () => {
-    let content = emptyClassDiagramContent()
-    content = {
+  it('não mostra nenhum controle de criação/edição — só navega/dá zoom/pan', () => {
+    const content: ClassDiagramContent = {
       classes: [{ id: 'c1', name: 'Pedido', attributes: [{ id: 'a1', name: 'id', type: 'long' }], x: 0, y: 0 }],
       relationships: [],
     }
     render(<ControlledCanvas initial={content} readOnly />)
 
-    expect(screen.getByText('Pedido')).toBeInTheDocument()
-    expect(screen.queryByText('+ Adicionar classe')).not.toBeInTheDocument()
-    expect(screen.queryByText('Criar relação')).not.toBeInTheDocument()
+    expect(within(classCards()[0] as HTMLElement).getByText('Pedido')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '+ Classe' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '🔗 Relação' })).not.toBeInTheDocument()
+
+    fireEvent.pointerDown(classCards()[0])
+    expect(screen.queryByRole('button', { name: 'Excluir classe' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Nome da classe')).not.toBeInTheDocument()
+    // zoom/pan continuam disponíveis
+    expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
   })
 })

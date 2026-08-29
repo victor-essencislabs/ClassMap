@@ -1,27 +1,93 @@
 :root {
   color-scheme: light dark;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* Identidade ClassMap — roxo/violeta da marca (ver public/favicon.svg,
-     #863bff/#7e14ff) com acento ciano (#47bfff). Fundo bem escuro no dark
-     mode (estilo "app profissional"), claro e neutro no light mode. */
-  --bg-page: light-dark(#f5f5f8, #0c0d12);
-  --surface: light-dark(#ffffff, #15161e);
-  --surface-hover: light-dark(#f1f1f6, #1d1f29);
-  --border: light-dark(color-mix(in srgb, #0c0d12 10%, transparent), color-mix(in srgb, #ffffff 12%, transparent));
-  --border-strong: light-dark(color-mix(in srgb, #0c0d12 22%, transparent), color-mix(in srgb, #ffffff 22%, transparent));
-  --muted: light-dark(color-mix(in srgb, #0c0d12 55%, transparent), color-mix(in srgb, #ffffff 55%, transparent));
-  --text: light-dark(#14151d, #f2f2f7);
-
-  --accent: light-dark(#7c3aed, #a78bfa);
-  --accent-strong: light-dark(#6d28d9, #c4b5fd);
+  /* Tokens extraídos literalmente do artefato-protótipo validado pelo
+     usuário (ADR-002/TASK-006 — ver
+     .agents/decisions/ADR-002-redesign-telas-diagrama-artefato.md).
+     Substituem a aproximação genérica (roxo #7c3aed) criada em
+     2026-08-29 antes de o artefato real ter sido localizado.
+     Compartilhados por toda a navegação e pelas 3 telas de diagrama
+     (class-diagram/object-diagram/system-view). Dark/light via
+     `prefers-color-scheme` com override manual por `[data-theme]`,
+     igual ao artefato — não via `light-dark()` como na versão anterior,
+     para deixar pronta uma futura alternância manual de tema. */
+  --bg: #f3f4f8;
+  --surface: #ffffff;
+  --surface-alt: #eceef4;
+  --surface-raised: #ffffff;
+  --border: #d9dce5;
+  --border-soft: #e6e8f0;
+  --text: #1b1e27;
+  --text-muted: #5c6274;
+  --text-faint: #9198ab;
+  --accent: #4a4fe0;
+  --accent-strong: #3538c2;
   --accent-contrast: #ffffff;
-  --accent-soft: light-dark(color-mix(in srgb, #7c3aed 10%, transparent), color-mix(in srgb, #a78bfa 16%, transparent));
-  --accent-2: #47bfff;
-  --danger: light-dark(#b91c1c, #f87171);
+  --accent-soft: #eceeff;
+  --accent-soft-border: #c9ccff;
+  --object-accent: #0e9c8f;
+  --object-soft: #e2f7f4;
+  --danger: #d1436b;
+  --shadow: 0 1px 2px rgba(20, 22, 40, 0.04), 0 8px 24px rgba(20, 22, 40, 0.06);
+  --canvas-dot: #d6d9e4;
+  --canvas-bg: #eaecf3;
 
-  background: var(--bg-page);
+  font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--bg);
   color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #12131a;
+    --surface: #1a1c26;
+    --surface-alt: #20222e;
+    --surface-raised: #242733;
+    --border: #333648;
+    --border-soft: #2a2d3c;
+    --text: #e8e9f2;
+    --text-muted: #9a9fb5;
+    --text-faint: #6c7188;
+    --accent: #8489ff;
+    --accent-strong: #a1a5ff;
+    --accent-soft: #242849;
+    --accent-soft-border: #3d4180;
+    --object-accent: #3fd6c5;
+    --object-soft: #173330;
+    --danger: #f0728f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --canvas-dot: #2a2d3c;
+    --canvas-bg: #16171f;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #12131a;
+  --surface: #1a1c26;
+  --surface-alt: #20222e;
+  --surface-raised: #242733;
+  --border: #333648;
+  --border-soft: #2a2d3c;
+  --text: #e8e9f2;
+  --text-muted: #9a9fb5;
+  --text-faint: #6c7188;
+  --accent: #8489ff;
+  --accent-strong: #a1a5ff;
+  --accent-soft: #242849;
+  --accent-soft-border: #3d4180;
+  --object-accent: #3fd6c5;
+  --object-soft: #173330;
+  --danger: #f0728f;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --canvas-dot: #2a2d3c;
+  --canvas-bg: #16171f;
+}
+
+/* Manrope para UI, IBM Plex Mono (classe `.mono`) para nomes de
+   atributos/código — mesmo par de fontes do artefato (ver <link> em
+   index.html). */
+.mono {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 * {
@@ -31,7 +97,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg-page);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -64,7 +130,7 @@ body {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.5rem;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  background: linear-gradient(135deg, var(--accent), var(--object-accent));
   flex-shrink: 0;
 }
 
@@ -107,14 +173,14 @@ main {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.5rem;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  background: linear-gradient(135deg, var(--accent), var(--object-accent));
   flex-shrink: 0;
 }
 
 .card label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text-muted);
   margin-top: 0.5rem;
 }
 
@@ -123,7 +189,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   font: inherit;
-  background: var(--bg-page);
+  background: var(--bg);
   color: inherit;
 }
 
@@ -191,7 +257,7 @@ button {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--text-muted);
   text-decoration: none;
   margin-bottom: 1rem;
 }
@@ -213,7 +279,7 @@ button {
 }
 
 .page-subtitle {
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin: 0 0 1.5rem;
 }
@@ -262,7 +328,7 @@ button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
@@ -279,16 +345,16 @@ button {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.2rem 0.65rem;
-  color: var(--muted);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
 .empty-state {
-  border: 1px dashed var(--border-strong);
+  border: 1px dashed var(--border);
   border-radius: 0.75rem;
   padding: 2.5rem 1.5rem;
   text-align: center;
-  color: var(--muted);
+  color: var(--text-muted);
   margin-bottom: 1.5rem;
   background: var(--surface);
 }
@@ -321,7 +387,7 @@ button {
 .inline-create-form label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .inline-create-form input {
@@ -329,7 +395,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   font: inherit;
-  background: var(--bg-page);
+  background: var(--bg);
   color: inherit;
 }
 
@@ -367,7 +433,7 @@ button.link-button {
   background: none;
   border: none;
   padding: 0;
-  color: var(--muted);
+  color: var(--text-muted);
   text-decoration: underline;
 }
 
@@ -381,8 +447,8 @@ button.link-button {
 }
 
 .app-header button:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
+  border-color: var(--border);
+  background: var(--surface-alt);
 }
 
 /* ---- Diagrama de Classes (TASK-003) ---- */
@@ -524,107 +590,492 @@ button.link-button {
   text-decoration-thickness: 1px;
 }
 
-/* ---- Visão do Sistema (TASK-004) ---- */
+/* ---- Visão do Sistema (TASK-004/009 — layout do artefato, ADR-002) ----
+   Shell próprio full-bleed (topbar 56px + corpo 280px/1fr) — reaproveita
+   a topbar visual de `.diagram-shell-topbar` (TASK-006) e os tokens de
+   cor/tipografia, mas NÃO o grid de sidebar/canvas/inspector de
+   `.diagram-shell`: Visão do Sistema é navegação módulo→entidade +
+   detalhe, não um canvas (decisão da TASK-009). Nomes de classe `.ov-*`
+   iguais aos do artefato-protótipo (ver ADR-002). */
 
-.system-view-page {
-  max-width: none;
+.system-view-shell {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas:
+    'topbar'
+    'body';
+  height: 100vh;
+  width: 100%;
 }
 
-.system-view-layout {
+.system-view-shell > .diagram-shell-topbar {
+  grid-area: topbar;
+}
+
+.ov-body {
+  grid-area: body;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.ov-nav {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 14px 10px;
+}
+
+.ov-module {
+  margin-bottom: 16px;
+}
+
+.ov-module-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 4px 8px 8px;
+}
+
+.ov-entity-btn {
   display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-}
-
-.system-view-nav {
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.system-view-module ul {
-  list-style: none;
-  padding: 0;
-  margin: 0.25rem 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.system-view-module button {
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid transparent;
-  background: none;
-  border-radius: 0.25rem;
-}
-
-.system-view-module button.nav-active {
-  border-color: var(--border);
-  font-weight: 600;
-}
-
-.system-view-detail {
-  flex: 1;
-  min-width: 0;
-}
-
-.system-view-detail section {
-  margin-top: 1.5rem;
-}
-
-.entity-name-input {
-  font: inherit;
-  font-size: 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 0.25rem;
+  padding: 8px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ov-entity-btn:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.ov-entity-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.ov-entity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--object-accent);
+  flex: none;
+}
+
+.ov-nav-add {
+  width: 100%;
+  padding: 7px;
+  border-radius: 7px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.ov-nav-add:hover {
+  border-color: var(--accent-soft-border);
+  color: var(--accent-strong);
+}
+
+.ov-detail {
+  overflow-y: auto;
+  padding: 26px 34px 60px;
+}
+
+.ov-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 80px;
+  line-height: 1.7;
+}
+
+.ov-section-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 10px 2px;
+}
+
+.ov-header {
+  margin-bottom: 22px;
+}
+
+.ov-breadcrumb {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.ov-entity-name,
+.ov-entity-name-input {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.ov-entity-name-input {
+  display: block;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  padding: 2px 6px;
+  margin-left: -6px;
+}
+
+.ov-entity-name-input:hover {
+  border-color: var(--border);
+}
+
+.ov-entity-name-input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
+.ov-summary-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.ov-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  margin-bottom: 0.5rem;
+  border-radius: 20px;
+  padding: 4px 12px;
 }
 
-.table-scroll {
+.ov-section {
+  margin-bottom: 28px;
+}
+
+.ov-section-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-section-title .count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  background: var(--surface-alt);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
+.ov-table-wrap {
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
 }
 
-.table-scroll table {
+table.ov-table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.85rem;
+  font-size: 11.5px;
 }
 
-.table-scroll th,
-.table-scroll td {
-  border: 1px solid var(--border);
-  padding: 0.3rem 0.4rem;
+table.ov-table th {
   text-align: left;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--surface-alt);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
-.table-scroll input {
+table.ov-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  vertical-align: middle;
+}
+
+table.ov-table tr:last-child td {
+  border-bottom: none;
+}
+
+table.ov-table td.fname {
+  color: var(--text);
+  font-weight: 700;
+}
+
+table.ov-table input {
   font: inherit;
-  font-size: 0.85rem;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: inherit;
   width: 100%;
-  min-width: 4rem;
+  min-width: 6rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  padding: 3px 5px;
+}
+
+table.ov-table input:hover {
+  border-color: var(--border);
+}
+
+table.ov-table input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
+.ov-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.ov-flag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+button.ov-flag {
+  cursor: pointer;
+}
+
+.ov-flag.pk {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+  color: var(--accent-strong);
+}
+
+.ov-flag.fk {
+  background: var(--object-soft);
+  border-color: var(--object-accent);
+  color: var(--object-accent);
+}
+
+.ov-flag.nn {
+  color: var(--text-muted);
+}
+
+.ov-flag.active {
+  color: var(--text);
+  border-color: var(--text-faint);
+  background: var(--surface);
+}
+
+.ov-row-remove {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   border: none;
   background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
 }
 
-.table-scroll input[type='checkbox'] {
-  width: auto;
-  min-width: 0;
+.ov-row-remove:hover {
+  color: var(--danger);
+  background: var(--surface-alt);
 }
 
-.permission-rule-row {
+.ov-method-row {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
   display: flex;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-.permission-rule-row input {
+.ov-method-row:last-child {
+  border-bottom: none;
+}
+
+.ov-method-body {
   flex: 1;
   min-width: 0;
+}
+
+.ov-method-line {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ov-method-sub {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 3px;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ov-method-sub-label {
+  flex: none;
+  width: 44px;
+}
+
+.ov-method-line input,
+.ov-method-sub input {
+  font: inherit;
+  font-family: inherit;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  padding: 2px 5px;
+}
+
+.ov-method-line input:hover,
+.ov-method-sub input:hover {
+  border-color: var(--border);
+}
+
+.ov-method-line input:focus,
+.ov-method-sub input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
+.ov-perm-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-border);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.ov-perm-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.ov-perm-title {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 800;
+  color: var(--accent-strong);
+  font-size: 12px;
+}
+
+.ov-perm-title-input {
+  display: block;
+  width: calc(100% - 26px);
+  font: inherit;
+  font-family: inherit;
+  font-weight: 800;
+  color: var(--accent-strong);
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  padding: 2px 4px;
+  margin: -2px 0 6px -4px;
+}
+
+.ov-perm-title-input:hover {
+  border-color: var(--border);
+}
+
+.ov-perm-title-input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
+.ov-perm-cond {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--object-accent);
+  background: var(--object-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin-top: 6px;
+}
+
+.ov-perm-cond-input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--object-accent);
+  background: var(--object-soft);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+
+.ov-perm-cond-input:focus {
+  outline: none;
+  border-color: var(--object-accent);
+}
+
+.ov-perm-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 /* ---- Import/Export JSON (TASK-005) ---- */
@@ -641,4 +1092,816 @@ button.link-button {
   margin: 0;
   padding-left: 1.25rem;
   font-size: 0.85rem;
+}
+
+/* ---- Diagram shell — fundação de design system (TASK-006/ADR-002) ----
+   Grid de 3 colunas (topbar/sidebar/canvas/inspector) e os componentes
+   reutilizados pelas 3 telas de diagrama, extraídos literalmente do
+   artefato-protótipo validado (ver ADR-002). Nomes de classe iguais aos
+   do artefato, exceto onde colidiam com uma classe global já usada pela
+   navegação (`.field`) — nesse caso a regra fica escopada sob a área do
+   shell (`.diagram-shell-inspector .field`) em vez de global, para não
+   afetar `.inline-create-form .field` (Organizações/Projetos, fora do
+   escopo desta ADR). Ainda sem nenhuma página migrada para o shell —
+   isso é TASK-007/008/009. */
+
+.diagram-shell {
+  display: grid;
+  grid-template-columns: 248px 1fr 292px;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas:
+    'topbar topbar topbar'
+    'sidebar canvas inspector';
+  height: 100vh;
+  width: 100%;
+}
+
+/* ---- topbar ---- */
+.diagram-shell-topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 5;
+}
+
+.diagram-shell-topbar .brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.diagram-shell-topbar .brand-name {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
+.diagram-shell-topbar .divider-v {
+  width: 1px;
+  height: 26px;
+  background: var(--border);
+  flex: none;
+}
+
+.diagram-shell-topbar .view-switch {
+  display: flex;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.diagram-shell-topbar .view-switch button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.diagram-shell-topbar .view-switch button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.diagram-shell-topbar .view-switch button.active[data-view='objects'] {
+  color: var(--object-accent);
+}
+
+.diagram-shell-topbar .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: var(--accent-soft-border);
+  color: var(--accent-strong);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.btn.ghost {
+  background: transparent;
+}
+
+.btn.small {
+  padding: 5px 9px;
+  font-size: 11.5px;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn.danger {
+  color: var(--danger);
+}
+
+.btn.danger:hover {
+  border-color: var(--danger);
+}
+
+/* ---- sidebar ---- */
+.diagram-shell-sidebar {
+  grid-area: sidebar;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.diagram-shell-sidebar .side-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.diagram-shell-sidebar .side-search {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.diagram-shell-sidebar .side-search:focus {
+  outline: 2px solid var(--accent-soft-border);
+  outline-offset: 0;
+}
+
+.diagram-shell-sidebar .side-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 2px 0 8px;
+}
+
+.diagram-shell-sidebar .side-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  min-height: 0;
+}
+
+.diagram-shell-sidebar .side-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.diagram-shell-sidebar .side-item:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.diagram-shell-sidebar .side-item.selected {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.diagram-shell-sidebar .side-item .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+
+.diagram-shell-sidebar .side-item.obj .dot {
+  background: var(--object-accent);
+}
+
+.diagram-shell-sidebar .side-item .count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.diagram-shell-sidebar .side-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 8px;
+  line-height: 1.5;
+}
+
+.diagram-shell-sidebar .stat-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.diagram-shell-sidebar .stat {
+  flex: 1;
+  background: var(--surface-alt);
+  border-radius: 9px;
+  padding: 9px 10px;
+}
+
+.diagram-shell-sidebar .stat b {
+  display: block;
+  font-size: 17px;
+}
+
+.diagram-shell-sidebar .stat span {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- canvas ---- */
+.diagram-shell-canvas {
+  grid-area: canvas;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(var(--canvas-dot) 1px, transparent 1px) 0 0 / 22px 22px, var(--canvas-bg);
+}
+
+.diagram-shell-canvas.connect-mode {
+  cursor: crosshair;
+}
+
+.diagram-shell-canvas .zoom-controls {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: var(--shadow);
+}
+
+.diagram-shell-canvas .zoom-controls button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.diagram-shell-canvas .zoom-controls button:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.diagram-shell-canvas .connect-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.diagram-shell-canvas .connect-banner.show {
+  display: flex;
+}
+
+.diagram-shell-canvas .connect-banner button {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.diagram-shell-canvas .empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.diagram-shell-canvas .empty-hint-card {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 22px 28px;
+  max-width: 340px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.diagram-shell-canvas .empty-hint-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.diagram-shell-canvas .empty-hint-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* nós do diagrama (renderizados dentro do canvas, conteúdo de
+   TASK-007/008 — classes já preparadas aqui por serem parte do design
+   system compartilhado) */
+.diagram-shell-canvas .node-box {
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.diagram-shell-canvas .node-box.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.diagram-shell-canvas .node-box.object.selected {
+  border-color: var(--object-accent);
+  box-shadow: 0 0 0 3px var(--object-soft);
+}
+
+.diagram-shell-canvas .node-head {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 800;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border-bottom: 1.5px solid var(--border);
+  text-align: center;
+}
+
+.diagram-shell-canvas .node-box.object .node-head {
+  background: var(--object-soft);
+  color: var(--object-accent);
+  text-decoration: underline;
+}
+
+.diagram-shell-canvas .node-head .stereo {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: none;
+  text-decoration: none;
+  margin-bottom: 1px;
+}
+
+.diagram-shell-canvas .node-body {
+  padding: 4px 0;
+}
+
+.diagram-shell-canvas .node-row {
+  padding: 2.5px 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.diagram-shell-canvas .node-row .attr-type {
+  color: var(--text-faint);
+}
+
+.diagram-shell-canvas .node-row .attr-val {
+  color: var(--object-accent);
+}
+
+.diagram-shell-canvas .node-empty-row {
+  padding: 5px 10px;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-style: italic;
+  font-family: 'Manrope';
+}
+
+.diagram-shell-canvas .node-methods {
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ---- inspector ---- */
+.diagram-shell-inspector {
+  grid-area: inspector;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.diagram-shell-inspector .insp-empty {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin-top: 40px;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.diagram-shell-inspector .insp-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.diagram-shell-inspector .field {
+  margin-bottom: 14px;
+}
+
+.diagram-shell-inspector .field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.diagram-shell-inspector .field input,
+.diagram-shell-inspector .field select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.diagram-shell-inspector .field input:focus,
+.diagram-shell-inspector .field select:focus {
+  outline: 2px solid var(--accent-soft-border);
+}
+
+.diagram-shell-inspector .attr-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.diagram-shell-inspector .attr-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11.5px;
+}
+
+.diagram-shell-inspector .attr-row input.val {
+  color: var(--object-accent);
+}
+
+.diagram-shell-inspector .attr-row button {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.diagram-shell-inspector .attr-row button:hover {
+  color: var(--danger);
+  background: var(--surface-alt);
+}
+
+.diagram-shell-inspector .add-row-btn {
+  width: 100%;
+  padding: 7px;
+  border-radius: 7px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.diagram-shell-inspector .add-row-btn:hover {
+  border-color: var(--accent-soft-border);
+  color: var(--accent-strong);
+}
+
+.diagram-shell-inspector .insp-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.diagram-shell-inspector .insp-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diagram-shell-inspector .insp-actions .btn {
+  justify-content: center;
+}
+
+.diagram-shell-inspector .rel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.diagram-shell-inspector .rel-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+
+.diagram-shell-inspector .rel-chip:hover {
+  border-color: var(--accent-soft-border);
+}
+
+.diagram-shell-inspector .rel-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.diagram-shell-inspector .rel-chip .arrow {
+  color: var(--text-faint);
+}
+
+.diagram-shell-inspector .rel-chip b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.diagram-shell-inspector .rel-chip .rel-kind {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex: none;
+}
+
+.diagram-shell-inspector .mult-row {
+  display: flex;
+  gap: 8px;
+}
+
+.diagram-shell-inspector .mult-row .field {
+  flex: 1;
+}
+
+.diagram-shell-inspector .edge-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.diagram-shell-inspector .edge-type-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  cursor: pointer;
+  background: var(--surface-alt);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.diagram-shell-inspector .edge-type-opt:hover {
+  border-color: var(--accent-soft-border);
+}
+
+.diagram-shell-inspector .edge-type-opt.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.diagram-shell-inspector .edge-type-opt svg {
+  width: 34px;
+  height: 16px;
+}
+
+.diagram-shell-inspector .endpoint-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: -8px 0 14px;
+  line-height: 1.5;
+}
+
+/* ---- modal ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 18, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: min(560px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.modal-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.modal-head button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.modal-body p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.modal-body textarea {
+  width: 100%;
+  height: 280px;
+  resize: vertical;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 10px;
+}
+
+/* ---- ações dentro de um modal (TASK-010) — genérico, para não repetir
+   o erro de `ClassPickerModal` (TASK-008), que usava `.insp-actions`
+   (classe escopada só sob `.diagram-shell-inspector`, sem efeito ali). */
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.modal-actions .btn {
+  justify-content: center;
+}
+
+/* ---- toast ---- */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
 }
