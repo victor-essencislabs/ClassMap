@@ -2,12 +2,14 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   createProject,
+  deleteProject,
   getCurrentUserId,
   getMyOrganizationRole,
   getOrganization,
   listProjects,
 } from '../../lib/supabase/queries'
 import type { Organization, OrganizationRole, Project } from '../../lib/supabase/types'
+import { DeleteConfirmModal } from './DeleteConfirmModal'
 
 export function ProjectsPage() {
   const { orgId } = useParams<{ orgId: string }>()
@@ -18,6 +20,7 @@ export function ProjectsPage() {
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
 
   function reload() {
     if (!orgId) return Promise.resolve()
@@ -54,6 +57,13 @@ export function ProjectsPage() {
     }
   }
 
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return
+    await deleteProject(deleteTarget.id)
+    setDeleteTarget(null)
+    await reload()
+  }
+
   return (
     <section>
       <Link to="/" className="breadcrumb">
@@ -74,11 +84,23 @@ export function ProjectsPage() {
       ) : projects && projects.length > 0 ? (
         <ul className="entity-list">
           {projects.map((project) => (
-            <li key={project.id} className="entity-list-item">
+            <li key={project.id} className={role === 'admin' ? 'entity-list-item with-actions' : 'entity-list-item'}>
               <Link to={`/orgs/${orgId}/projects/${project.id}`} className="entity-link">
                 <span className="entity-name">{project.name}</span>
                 <span className="chevron">→</span>
               </Link>
+              {/* RN-01 da TASK-011: só `admin` da organização dona exclui um
+                  projeto dela — mesmo papel que já controla "Criar projeto"
+                  abaixo; a garantia real continua sendo RLS (`projects_delete`). */}
+              {role === 'admin' && (
+                <button
+                  type="button"
+                  className="btn danger ghost small"
+                  onClick={() => setDeleteTarget(project)}
+                >
+                  Excluir
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -109,6 +131,16 @@ export function ProjectsPage() {
             {creating ? 'Criando…' : 'Criar projeto'}
           </button>
         </form>
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title="Excluir projeto"
+          name={deleteTarget.name}
+          warning={`Isto vai excluir definitivamente o projeto "${deleteTarget.name}" e todos os membros e diagramas dele. Esta ação não pode ser desfeita.`}
+          onConfirm={handleDeleteConfirmed}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </section>
   )

@@ -98,6 +98,21 @@ export async function createProject(organizationId: string, name: string): Promi
   return data as Project
 }
 
+/**
+ * Exclui definitivamente uma organização (TASK-011, ADR-003). Nenhuma RPC
+ * nova — a política RLS `organizations_delete` já exige `is_org_admin(id)`
+ * desde a TASK-001, e todas as FKs dependentes (`organization_members`,
+ * `projects` e, por sua vez, `project_members`/`diagrams`) já têm `on
+ * delete cascade`, então o Postgres remove tudo que dependia dela. Hard
+ * delete, sem soft delete/arquivamento (Alternativa C rejeitada na
+ * ADR-003) — não há como recuperar depois de confirmado.
+ */
+export async function deleteOrganization(organizationId: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('organizations').delete().eq('id', organizationId)
+  if (error) throw error
+}
+
 /** Uma organização por id — usado para mostrar o nome dela em telas mais fundas na hierarquia. */
 export async function getOrganization(organizationId: string): Promise<Organization> {
   const client = requireClient()
@@ -120,6 +135,19 @@ export async function getProject(projectId: string): Promise<Project> {
     .single()
   if (error) throw error
   return data as Project
+}
+
+/**
+ * Exclui definitivamente um projeto (TASK-011, ADR-003). Mesmo padrão de
+ * `deleteOrganization`: nenhuma RPC nova — `projects_delete` já exige
+ * `is_org_admin(organization_id)` desde a TASK-001, e `project_members`/
+ * `diagrams` já têm `on delete cascade` a partir de `projects.id`. Hard
+ * delete — irreversível.
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('projects').delete().eq('id', projectId)
+  if (error) throw error
 }
 
 /** Diagramas de um projeto — RLS já exige algum papel de projeto para retornar linha. */
