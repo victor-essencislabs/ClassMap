@@ -5,14 +5,17 @@ import type { Organization } from '../../lib/supabase/types'
 
 export function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[] | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
 
   function reload() {
+    setError(null)
     return listMyOrganizations()
       .then(setOrganizations)
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar organizações.'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => {
@@ -40,11 +43,9 @@ export function OrganizationsPage() {
 
       {error && <p className="error">{error}</p>}
 
-      {organizations === null ? (
+      {loading ? (
         <p>Carregando organizações…</p>
-      ) : organizations.length === 0 ? (
-        <p>Você ainda não pertence a nenhuma organização. Crie a primeira abaixo.</p>
-      ) : (
+      ) : organizations && organizations.length > 0 ? (
         <ul className="list">
           {organizations.map((org) => (
             <li key={org.id}>
@@ -52,7 +53,9 @@ export function OrganizationsPage() {
             </li>
           ))}
         </ul>
-      )}
+      ) : !error ? (
+        <p>Você ainda não pertence a nenhuma organização. Crie a primeira abaixo.</p>
+      ) : null}
 
       <form onSubmit={handleCreate}>
         <label htmlFor="org-name">Nova organização</label>
