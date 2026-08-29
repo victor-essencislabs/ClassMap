@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Modal } from '../diagram-shell/Modal'
 import {
   createEmptyDiagram,
   getCurrentUserId,
@@ -21,6 +22,11 @@ export function DiagramsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState<DiagramType | null>(null)
+  // TASK-016: antes de criar, pergunta o nome — pré-preenchido com o
+  // rótulo do tipo (mesmo valor que `createEmptyDiagram` usava sozinho),
+  // editável. `namingType` guarda qual botão abriu o modal.
+  const [namingType, setNamingType] = useState<DiagramType | null>(null)
+  const [nameInput, setNameInput] = useState('')
 
   async function reload() {
     if (!projectId) return
@@ -41,12 +47,24 @@ export function DiagramsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
-  async function handleCreateDiagram(type: DiagramType) {
+  function openNamingModal(type: DiagramType) {
+    setNameInput(DIAGRAM_TYPE_LABELS[type])
+    setNamingType(type)
+  }
+
+  function closeNamingModal() {
+    setNamingType(null)
+  }
+
+  async function handleCreateDiagram(type: DiagramType, name: string) {
     if (!projectId) return
     setCreating(type)
     setError(null)
     try {
-      await createEmptyDiagram(projectId, type, DIAGRAM_TYPE_LABELS[type])
+      // Campo vazio (ou só espaços) cai de volta no rótulo padrão do tipo —
+      // a coluna `diagrams.name` é `not null` (CA-02).
+      await createEmptyDiagram(projectId, type, name.trim() || DIAGRAM_TYPE_LABELS[type])
+      closeNamingModal()
       await reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar diagrama.')
@@ -102,13 +120,40 @@ export function DiagramsPage() {
               key={type}
               type="button"
               className="primary"
-              onClick={() => handleCreateDiagram(type)}
+              onClick={() => openNamingModal(type)}
               disabled={creating !== null}
             >
               {creating === type ? 'Criando…' : `+ ${DIAGRAM_TYPE_LABELS[type]}`}
             </button>
           ))}
         </div>
+      )}
+
+      {namingType && (
+        <Modal title={`Novo — ${DIAGRAM_TYPE_LABELS[namingType]}`} onClose={closeNamingModal}>
+          <label htmlFor="diagram-name-input">Nome do diagrama</label>
+          <input
+            id="diagram-name-input"
+            type="text"
+            style={{ display: 'block', width: '100%', marginTop: 6 }}
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCreateDiagram(namingType, nameInput)
+            }}
+          />
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="btn primary"
+              disabled={creating !== null}
+              onClick={() => handleCreateDiagram(namingType, nameInput)}
+            >
+              {creating === namingType ? 'Criando…' : 'Criar diagrama'}
+            </button>
+          </div>
+        </Modal>
       )}
     </section>
   )
