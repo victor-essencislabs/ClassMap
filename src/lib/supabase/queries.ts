@@ -49,6 +49,19 @@ export async function listMyOrganizations(): Promise<Organization[]> {
   return data as Organization[]
 }
 
+/**
+ * Cria uma organização e já vincula o usuário autenticado como admin
+ * dela, atomicamente (RPC `create_organization` da TASK-001 —
+ * `SECURITY DEFINER`, único caminho para popular `organizations`/
+ * `organization_members` fora de acesso administrativo direto).
+ */
+export async function createOrganization(name: string): Promise<Organization> {
+  const client = requireClient()
+  const { data, error } = await client.rpc('create_organization', { p_name: name })
+  if (error) throw error
+  return data as Organization
+}
+
 /** Projetos de uma organização que o usuário autenticado tem acesso. */
 export async function listProjects(organizationId: string): Promise<Project[]> {
   const client = requireClient()
