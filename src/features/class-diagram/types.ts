@@ -37,6 +37,15 @@ export interface DiagramClass {
   attributes: DiagramAttribute[]
   x: number
   y: number
+  /** Cor de acabamento do card, escolhida no inspector (TASK-014, ver
+   * ADR-005) — sempre um dos hex de `CLASS_COLORS` abaixo (paleta
+   * fechada, nunca RGB/hex arbitrário). `undefined` mantém a aparência
+   * padrão (`--accent`), sem nenhuma mudança visual — comportamento
+   * inalterado para diagramas já existentes (CA-04). Puramente interno
+   * ao ClassMap: NUNCA entra no schema Zod de import/export
+   * (`src/features/import-export/schema.ts`, RN-01 da ADR-005) — mesmo
+   * precedente já usado para posição/layout (`x`/`y` acima). */
+  color?: string
 }
 
 export interface DiagramRelationship {
@@ -77,6 +86,46 @@ export const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   inheritance: 'Herança',
   dependency: 'Dependência',
 }
+
+/** Paleta fixa de cores para o card de classe (TASK-014, ver ADR-005) —
+ * pelo menos 20 opções (CA-01), nunca um color-picker de RGB/hex livre.
+ * Cada hex é aplicado como acento (borda + leve realce do cabeçalho do
+ * card via `color-mix`, ver `.node-box.has-color` no `src/index.css`) —
+ * nunca como cor de texto sólida — para continuar legível tanto contra
+ * `--surface-raised` claro quanto escuro sem precisar de um hex
+ * diferente por tema (mesma técnica já usada nos tokens de acento
+ * existentes do design system, ex. `color-mix(in srgb, var(--accent)
+ * 45%, transparent)` em `src/index.css`). */
+export interface ClassColorOption {
+  id: string
+  label: string
+  hex: string
+}
+
+export const CLASS_COLORS: ClassColorOption[] = [
+  { id: 'red', label: 'Vermelho', hex: '#ef4444' },
+  { id: 'orange', label: 'Laranja', hex: '#f97316' },
+  { id: 'amber', label: 'Âmbar', hex: '#f59e0b' },
+  { id: 'yellow', label: 'Amarelo', hex: '#eab308' },
+  { id: 'lime', label: 'Lima', hex: '#84cc16' },
+  { id: 'green', label: 'Verde', hex: '#22c55e' },
+  { id: 'emerald', label: 'Esmeralda', hex: '#10b981' },
+  { id: 'teal', label: 'Verde-azulado', hex: '#14b8a6' },
+  { id: 'cyan', label: 'Ciano', hex: '#06b6d4' },
+  { id: 'sky', label: 'Azul-celeste', hex: '#0ea5e9' },
+  { id: 'blue', label: 'Azul', hex: '#3b82f6' },
+  { id: 'indigo', label: 'Índigo', hex: '#6366f1' },
+  { id: 'violet', label: 'Violeta', hex: '#8b5cf6' },
+  { id: 'purple', label: 'Roxo', hex: '#a855f7' },
+  { id: 'fuchsia', label: 'Fúcsia', hex: '#d946ef' },
+  { id: 'pink', label: 'Rosa', hex: '#ec4899' },
+  { id: 'rose', label: 'Rosa-choque', hex: '#f43f5e' },
+  { id: 'brown', label: 'Marrom', hex: '#a16207' },
+  { id: 'slate', label: 'Ardósia', hex: '#64748b' },
+  { id: 'gray', label: 'Cinza', hex: '#6b7280' },
+  { id: 'stone', label: 'Pedra', hex: '#78716c' },
+  { id: 'graphite', label: 'Grafite', hex: '#3f3f46' },
+]
 
 export const CLASS_CARD_WIDTH = 200
 

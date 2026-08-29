@@ -10,6 +10,7 @@ import { DiagramShell } from '../diagram-shell/DiagramShell'
 import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassCard } from './ClassCard'
+import { ClassColorGrid } from './ClassColorGrid'
 import { resolveConnectClick } from './connectMode'
 import * as ops from './contentOperations'
 import { EdgeTypeGrid } from './EdgeTypeGrid'
@@ -378,7 +379,7 @@ function Sidebar({
               role="button"
               tabIndex={0}
             >
-              <span className="dot" aria-hidden="true" />
+              <span className="dot" aria-hidden="true" style={cls.color ? { background: cls.color } : undefined} />
               <span>{cls.name}</span>
               <span className="count">{cls.attributes.length} attrs</span>
             </div>
@@ -451,6 +452,15 @@ function ClassInspector({
           />
         )}
       </div>
+
+      <div className="insp-title">Cor do card (opcional)</div>
+      {readOnly ? (
+        <div className="mono" style={{ marginBottom: 14 }}>
+          {cls.color ?? 'Padrão'}
+        </div>
+      ) : (
+        <ClassColorGrid value={cls.color} onChange={(color) => onChange({ color })} />
+      )}
 
       <div className="insp-title" style={{ marginTop: 16 }}>
         Atributos

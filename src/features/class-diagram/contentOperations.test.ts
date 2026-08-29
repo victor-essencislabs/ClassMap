@@ -109,6 +109,40 @@ describe('updateClass / updateRelationship', () => {
   })
 })
 
+describe('cor do card de classe (TASK-014, ver ADR-005)', () => {
+  it('addClass não define cor (padrão do design system, CA-04)', () => {
+    const content = addClass(emptyClassDiagramContent())
+    expect(content.classes[0].color).toBeUndefined()
+  })
+
+  it('updateClass grava a cor escolhida, sem afetar outros campos (CA-01)', () => {
+    let content = withTwoClasses()
+    const [a, b] = content.classes
+    content = updateClass(content, a.id, { color: '#ef4444' })
+
+    expect(content.classes.find((c) => c.id === a.id)?.color).toBe('#ef4444')
+    expect(content.classes.find((c) => c.id === b.id)?.color).toBeUndefined()
+  })
+
+  it('updateClass com color: undefined volta ao padrão (limpar a cor)', () => {
+    let content = withTwoClasses()
+    const [a] = content.classes
+    content = updateClass(content, a.id, { color: '#3b82f6' })
+    content = updateClass(content, a.id, { color: undefined })
+
+    expect(content.classes.find((c) => c.id === a.id)?.color).toBeUndefined()
+  })
+
+  it('sobrevive a JSON.stringify/JSON.parse (CA-02 — salvar/recarregar preserva a cor)', () => {
+    let content = withTwoClasses()
+    content = updateClass(content, content.classes[0].id, { color: '#10b981' })
+
+    const roundTripped = JSON.parse(JSON.stringify(content)) as ClassDiagramContent
+    expect(roundTripped.classes[0].color).toBe('#10b981')
+    expect(roundTripped).toEqual(content)
+  })
+})
+
 describe('removeRelationship', () => {
   it('remove só a relação indicada', () => {
     let content = withTwoClasses()
