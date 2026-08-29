@@ -1339,7 +1339,28 @@ button.ov-flag {
   background: var(--object-accent);
 }
 
+/* TASK-015 — o texto do item (nome do objeto/classe) é, por padrão, um
+   item flex que não encolhe abaixo da própria largura de conteúdo
+   (min-width: auto do flexbox) — um nome de instância longo (ex.:
+   "instância : Cliente" no Diagrama de Objetos não tem o badge
+   `.count` para "empurrar" o texto, e nomes gerados automaticamente
+   podem ser bem mais longos que um nome de classe típico) então
+   ultrapassa a largura da sidebar e visualmente encosta/vaza sob a
+   borda direita (`.diagram-shell-sidebar`), em vez de truncar com
+   reticências como os demais itens. `min-width: 0` + `text-overflow:
+   ellipsis` resolvem isso para QUALQUER item da lista (classe ou
+   objeto), sem mudar o comportamento funcional (clique/seleção
+   continuam no `.side-item` inteiro). */
+.diagram-shell-sidebar .side-item .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .diagram-shell-sidebar .side-item .count {
+  flex: none;
   margin-left: auto;
   color: var(--text-faint);
   font-size: 11px;
