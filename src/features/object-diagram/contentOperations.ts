@@ -3,7 +3,7 @@
 import type { DiagramClass } from '../class-diagram/types'
 import type { BoundedNode } from '../diagram-shell/canvasTransform'
 import { estimateObjectCardHeight, OBJECT_CARD_WIDTH } from './types'
-import type { DiagramObject, ObjectAttributeValue, ObjectDiagramContent } from './types'
+import type { DiagramObject, ObjectAttributeValue, ObjectDiagramContent, ObjectLink } from './types'
 
 export function newId(): string {
   return crypto.randomUUID()
@@ -35,7 +35,7 @@ export function addObject(
     y: origin ? origin.y : 40 + ((content.objects.length * 60) % 240),
   }
 
-  return { objects: [...content.objects, obj] }
+  return { ...content, objects: [...content.objects, obj] }
 }
 
 export function updateObject(
@@ -43,7 +43,7 @@ export function updateObject(
   id: string,
   patch: Partial<Pick<DiagramObject, 'instanceName' | 'x' | 'y'>>,
 ): ObjectDiagramContent {
-  return { objects: content.objects.map((o) => (o.id === id ? { ...o, ...patch } : o)) }
+  return { ...content, objects: content.objects.map((o) => (o.id === id ? { ...o, ...patch } : o)) }
 }
 
 export function updateObjectValue(
@@ -53,6 +53,7 @@ export function updateObjectValue(
   value: string,
 ): ObjectDiagramContent {
   return {
+    ...content,
     objects: content.objects.map((o) =>
       o.id !== objectId
         ? o
@@ -61,8 +62,45 @@ export function updateObjectValue(
   }
 }
 
+/** Remove o objeto e, com ele, qualquer link que o referencie (RN-02 da
+ * TASK-017) — mesmo precedente de `removeClass` em
+ * `class-diagram/contentOperations.ts`: nunca deixa um link "solto"
+ * apontando para um objeto inexistente. */
 export function removeObject(content: ObjectDiagramContent, id: string): ObjectDiagramContent {
-  return { objects: content.objects.filter((o) => o.id !== id) }
+  return {
+    objects: content.objects.filter((o) => o.id !== id),
+    links: content.links.filter((l) => l.from !== id && l.to !== id),
+  }
+}
+
+/** Cria um link simples entre dois objetos já existentes (TASK-017, ver
+ * ADR-006). Retorna o content inalterado se `from`/`to` não existirem ou
+ * forem o mesmo objeto (RN-01 — nunca um laço para si mesmo). */
+export function addLink(content: ObjectDiagramContent, from: string, to: string): ObjectDiagramContent {
+  if (!from || !to || from === to) return content
+  const fromObj = content.objects.find((o) => o.id === from)
+  const toObj = content.objects.find((o) => o.id === to)
+  if (!fromObj || !toObj) return content
+
+  const link: ObjectLink = {
+    id: newId(),
+    from,
+    to,
+    controlX: (fromObj.x + toObj.x) / 2 + 100,
+  }
+  return { ...content, links: [...content.links, link] }
+}
+
+export function updateLink(
+  content: ObjectDiagramContent,
+  id: string,
+  patch: Partial<Pick<ObjectLink, 'label' | 'controlX'>>,
+): ObjectDiagramContent {
+  return { ...content, links: content.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) }
+}
+
+export function removeLink(content: ObjectDiagramContent, id: string): ObjectDiagramContent {
+  return { ...content, links: content.links.filter((l) => l.id !== id) }
 }
 
 /** Filtro da busca da sidebar (TASK-008, CA-02) — substring do nome da
