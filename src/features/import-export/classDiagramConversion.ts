@@ -6,7 +6,14 @@
 // só o Diagrama de Classes (CA-01/02/03); import/export do Diagrama de
 // Objetos fica para uma iteração futura, quando fizer sentido resolver
 // o cruzamento "objeto referencia classe de outro arquivo/diagrama".
-import type { ClassDiagramContent, DiagramClass, DiagramRelationship, RelationshipType } from '../class-diagram/types'
+import {
+  CLASS_CARD_WIDTH,
+  estimateClassCardHeight,
+  type ClassDiagramContent,
+  type DiagramClass,
+  type DiagramRelationship,
+  type RelationshipType,
+} from '../class-diagram/types'
 import { newId } from '../class-diagram/contentOperations'
 import { parseDiagramExport, validateReferentialIntegrity, type DiagramExportFile } from './schema'
 
@@ -31,8 +38,8 @@ export function exportClassDiagram(content: ClassDiagramContent): DiagramExportF
 }
 
 const IMPORT_GRID_COLUMNS = 4
-const IMPORT_GRID_CELL_WIDTH = 260
-const IMPORT_GRID_CELL_HEIGHT = 200
+const IMPORT_GRID_GAP_X = 60
+const IMPORT_GRID_GAP_Y = 40
 const IMPORT_GRID_MARGIN = 40
 
 export interface ImportResult {
@@ -55,18 +62,37 @@ export function importClassDiagram(json: unknown): ImportResult {
     return { ok: false, errors: referentialErrors }
   }
 
+  // Empacotamento tipo masonry (colunas de altura independente), não uma
+  // grade de linhas de altura fixa: um JSON importado costuma ter classes
+  // com contagens de atributos bem diferentes (ex.: uma entidade de
+  // detalhe com 30+ campos ao lado de uma tabela de lookup com 2), e uma
+  // grade de altura fixa faz o card mais alto invadir a linha seguinte —
+  // cards "colados"/sobrepostos, o bug relatado. Cada classe entra na
+  // coluna mais curta no momento (mesma estimativa de altura usada para
+  // ancorar conectores, `estimateClassCardHeight`), então nenhum card
+  // sobrepõe outro. O layout continua 100% livre depois — o usuário
+  // arrasta os cards à vontade; isto só evita a sobreposição inicial.
   const idByName = new Map<string, string>()
-  const classes: DiagramClass[] = parsed.data.classes.map((c, index) => {
+  const columnHeights = new Array(IMPORT_GRID_COLUMNS).fill(IMPORT_GRID_MARGIN)
+  const classes: DiagramClass[] = parsed.data.classes.map((c) => {
     const id = newId()
     idByName.set(c.name, id)
-    return {
+
+    let col = 0
+    for (let i = 1; i < IMPORT_GRID_COLUMNS; i++) {
+      if (columnHeights[i] < columnHeights[col]) col = i
+    }
+
+    const cls: DiagramClass = {
       id,
       name: c.name,
       stereotype: c.stereotype,
       attributes: c.attributes.map((a) => ({ id: newId(), name: a.name, type: a.type })),
-      x: IMPORT_GRID_MARGIN + (index % IMPORT_GRID_COLUMNS) * IMPORT_GRID_CELL_WIDTH,
-      y: IMPORT_GRID_MARGIN + Math.floor(index / IMPORT_GRID_COLUMNS) * IMPORT_GRID_CELL_HEIGHT,
+      x: IMPORT_GRID_MARGIN + col * (CLASS_CARD_WIDTH + IMPORT_GRID_GAP_X),
+      y: columnHeights[col],
     }
+    columnHeights[col] += estimateClassCardHeight(cls) + IMPORT_GRID_GAP_Y
+    return cls
   })
   const classById = new Map(classes.map((c) => [c.id, c]))
 
