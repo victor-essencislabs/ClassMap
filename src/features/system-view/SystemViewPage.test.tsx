@@ -1,12 +1,12 @@
 // Testa a página inteira (navegação módulo→entidade + os 3 blocos)
 // mockando a camada de Supabase — sem isso, `getDiagram`/`getMyProjectRole`
 // lançariam por não haver client configurado no ambiente de teste.
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SystemViewPage } from './SystemViewPage'
 import { emptySystemViewContent } from './types'
-import type { Diagram } from '../../lib/supabase/types'
+import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 
 const diagram: Diagram = {
   id: 'diagram-1',
@@ -18,11 +18,14 @@ const diagram: Diagram = {
   updated_at: '2026-08-28T00:00:00Z',
 }
 
+const getMyProjectRole = vi.fn(async (): Promise<ProjectRole> => 'editor')
+const updateDiagramContent = vi.fn(async () => undefined)
+
 vi.mock('../../lib/supabase/queries', () => ({
   getDiagram: vi.fn(async () => diagram),
   getCurrentUserId: vi.fn(async () => 'user-1'),
-  getMyProjectRole: vi.fn(async () => 'editor'),
-  updateDiagramContent: vi.fn(async () => undefined),
+  getMyProjectRole: () => getMyProjectRole(),
+  updateDiagramContent: (...args: Parameters<typeof updateDiagramContent>) => updateDiagramContent(...args),
 }))
 
 function renderPage() {
@@ -35,11 +38,28 @@ function renderPage() {
   )
 }
 
+/** Abre o modal de "+ Módulo", digita (ou não) um nome e confirma —
+ * mesma interação do usuário nos testes abaixo (TASK-018). */
+async function createModule(name?: string) {
+  fireEvent.click(await screen.findByText('+ Módulo'))
+  if (name !== undefined) {
+    const input = (await screen.findByLabelText('Nome do módulo')) as HTMLInputElement
+    fireEvent.change(input, { target: { value: name } })
+  }
+  fireEvent.click(screen.getByText('Criar módulo'))
+}
+
 describe('SystemViewPage', () => {
+  beforeEach(() => {
+    getMyProjectRole.mockClear()
+    getMyProjectRole.mockResolvedValue('editor')
+    updateDiagramContent.mockClear()
+  })
+
   it('RN-02: uma entidade recém-criada mostra os 3 blocos, mesmo vazios', async () => {
     renderPage()
 
-    fireEvent.click(await screen.findByText('+ Módulo'))
+    await createModule('Account')
     fireEvent.click(await screen.findByText('+ Entidade'))
     fireEvent.click(screen.getByText('NovaEntidade'))
 
@@ -54,12 +74,57 @@ describe('SystemViewPage', () => {
   it('adiciona um campo e o exibe na tabela', async () => {
     renderPage()
 
-    fireEvent.click(await screen.findByText('+ Módulo'))
+    await createModule('Account')
     fireEvent.click(await screen.findByText('+ Entidade'))
     fireEvent.click(screen.getByText('NovaEntidade'))
     fireEvent.click(screen.getByText('+ Campo'))
 
     expect(screen.queryByText('Nenhum campo cadastrado.')).not.toBeInTheDocument()
     expect(screen.getByDisplayValue('coluna')).toBeInTheDocument()
+  })
+
+  describe('TASK-018 — nome do módulo', () => {
+    it('CA-01: cria o módulo com o nome digitado no modal', async () => {
+      renderPage()
+
+      await createModule('Account')
+
+      expect(await screen.findByDisplayValue('Account')).toBeInTheDocument()
+    })
+
+    it('CA-02: confirmar com o campo vazio cai no padrão "Novo módulo"', async () => {
+      renderPage()
+
+      await createModule('   ')
+
+      expect(await screen.findByDisplayValue('Novo módulo')).toBeInTheDocument()
+    })
+
+    it('CA-03: renomear um módulo existente pela sidebar persiste o novo nome', async () => {
+      renderPage()
+
+      await createModule('Account')
+      const input = await screen.findByDisplayValue('Account')
+      fireEvent.change(input, { target: { value: 'Company' } })
+
+      expect(await screen.findByDisplayValue('Company')).toBeInTheDocument()
+      await waitFor(() =>
+        expect(updateDiagramContent).toHaveBeenCalledWith(
+          'diagram-1',
+          expect.objectContaining({
+            modules: [expect.objectContaining({ name: 'Company' })],
+          }),
+        ),
+      )
+    })
+
+    it('CA-04: em modo visualizador, não mostra "+ Módulo" nem input de nome', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+
+      await waitFor(() => expect(getMyProjectRole).toHaveBeenCalled())
+      expect(screen.queryByText('+ Módulo')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Nome do módulo')).not.toBeInTheDocument()
+    })
   })
 })

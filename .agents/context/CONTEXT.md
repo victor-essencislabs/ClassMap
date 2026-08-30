@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-08-29 (bootstrap-plan — ADR-006 e TASK-017 geradas a partir de feedback de UX sobre o Diagrama de Objetos)
+ultima-revisao: 2026-08-29 (bootstrap-plan+bootstrap-complete — TASK-018 gerada e implementada a partir de feedback de UX sobre nome de módulo na Visão do Sistema)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -85,6 +85,7 @@ Registrado em 2026-08-29, durante a sessão de validação manual das TASK-001..
 4. **Customização de cor do card de classe** → `ADR-005` (cor interna ao ClassMap, paleta fixa de 20+ cores, fora do contrato JSON público) → `TASK-014` — **implementada**: paleta de 22 cores (`ClassColorGrid`, mesmo padrão do `EdgeTypeGrid`), `color?` em `DiagramClass`, teste explícito confirmando que o JSON exportado nunca inclui `color`.
 5. **Diagrama sem nome próprio ao ser criado** → `TASK-016` (trivial, sem ADR) — **implementada**: modal pede o nome antes de `createEmptyDiagram`, com fallback para o label do tipo se vazio.
 6. **Objetos não podem ser ligados entre si no Diagrama de Objetos** (feedback de 2026-08-29, revisão da tela publicada — comportamento era deliberado desde a TASK-008, mas o usuário pediu explicitamente para habilitar) → `ADR-006` (link simples entre instâncias, sem os 5 tipos UML/multiplicidade — esses descrevem relação entre classes, não entre objetos concretos; rejeitou paridade visual total com o Diagrama de Classes por inconsistência semântica) → `TASK-017` (`frontend-diagramas`) — **implementada**: `ObjectLink` (from/to/label?/controlX) reaproveitando `connectMode.ts`, `ObjectLinkConnector` novo (linha reta ortogonal, sem símbolos UML), remoção em cascata ao excluir objeto, contagem real de "Relações" na sidebar; teste explícito confirma que `links` nunca entra no schema Zod público de import/export (RN-04).
+7. **Módulo sem nome próprio ao ser criado na Visão do Sistema** (feedback de 2026-08-29: "quando eu adiciono um módulo, seria interessante que eu pudesse adicionar o nome dele... ao invés de ficar 'novo módulo'") → `TASK-018` (`frontend-diagramas`, trivial, sem ADR — mesmo padrão da TASK-016) — **implementada**: modal pede o nome antes de `addModule`, com fallback para "Novo módulo" se vazio; `.ov-module-title` também passou a ser editável inline (`updateModule`, existente desde a TASK-004 mas nunca chamado por nenhum componente até aqui).
 
 ### Backlog inteiro (TASK-011..017) via subagentes paralelos, em 2 ondas (2026-08-29)
 

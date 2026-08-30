@@ -8,6 +8,7 @@
 // tela não é um canvas (ver decisão na TASK-009).
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Modal } from '../diagram-shell/Modal'
 import { getCurrentUserId, getDiagram, getMyProjectRole, updateDiagramContent } from '../../lib/supabase/queries'
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import * as ops from './contentOperations'
@@ -58,6 +59,11 @@ export function SystemViewPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // TASK-018: "+ Módulo" pergunta o nome antes de criar (mesmo padrão do
+  // modal de nome de diagrama, TASK-016) — campo vazio cai no padrão
+  // "Novo módulo" (`ops.addModule`).
+  const [creatingModule, setCreatingModule] = useState(false)
+  const [moduleNameInput, setModuleNameInput] = useState('')
 
   useEffect(() => {
     if (!diagramId || !projectId) return
@@ -87,6 +93,17 @@ export function SystemViewPage() {
     }, AUTOSAVE_DELAY_MS)
   }
 
+  function openCreateModuleModal() {
+    setModuleNameInput('')
+    setCreatingModule(true)
+  }
+
+  function handleAddModule(name: string) {
+    if (!content) return
+    handleChange(ops.addModule(content, name))
+    setCreatingModule(false)
+  }
+
   if (error) return <p className="error">{error}</p>
   if (!diagram || !content) return <p>Carregando…</p>
 
@@ -113,7 +130,7 @@ export function SystemViewPage() {
         </div>
         <div className="topbar-actions">
           {!readOnly && (
-            <button type="button" className="btn primary" onClick={() => handleChange(ops.addModule(content))}>
+            <button type="button" className="btn primary" onClick={openCreateModuleModal}>
               + Módulo
             </button>
           )}
@@ -124,7 +141,16 @@ export function SystemViewPage() {
         <nav className="ov-nav">
           {content.modules.map((module) => (
             <div key={module.id} className="ov-module">
-              <div className="ov-module-title">{module.name}</div>
+              {readOnly ? (
+                <div className="ov-module-title">{module.name}</div>
+              ) : (
+                <input
+                  className="ov-module-title-input"
+                  aria-label="Nome do módulo"
+                  value={module.name}
+                  onChange={(e) => handleChange(ops.updateModule(content, module.id, { name: e.target.value }))}
+                />
+              )}
               {module.entities.map((entity) => (
                 <button
                   key={entity.id}
@@ -167,6 +193,29 @@ export function SystemViewPage() {
           )}
         </div>
       </div>
+
+      {creatingModule && (
+        <Modal title="Novo módulo" onClose={() => setCreatingModule(false)}>
+          <label htmlFor="module-name-input">Nome do módulo</label>
+          <input
+            id="module-name-input"
+            type="text"
+            placeholder="ex.: Account, Company"
+            style={{ display: 'block', width: '100%', marginTop: 6 }}
+            value={moduleNameInput}
+            onChange={(e) => setModuleNameInput(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAddModule(moduleNameInput)
+            }}
+          />
+          <div className="modal-actions">
+            <button type="button" className="btn primary" onClick={() => handleAddModule(moduleNameInput)}>
+              Criar módulo
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

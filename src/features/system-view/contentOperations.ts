@@ -36,8 +36,10 @@ function mapEntity(
   }))
 }
 
-export function addModule(content: SystemViewContent): SystemViewContent {
-  const module: SystemViewModule = { id: newId(), name: 'Novo módulo', entities: [] }
+/** `name` vazio/só espaços cai no padrão "Novo módulo" (TASK-018, mesmo
+ * padrão de `createEmptyDiagram`/TASK-016) — nunca cria um módulo sem nome. */
+export function addModule(content: SystemViewContent, name?: string): SystemViewContent {
+  const module: SystemViewModule = { id: newId(), name: name?.trim() || 'Novo módulo', entities: [] }
   return { modules: [...content.modules, module] }
 }
 

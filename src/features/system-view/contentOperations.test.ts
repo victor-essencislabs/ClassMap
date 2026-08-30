@@ -8,6 +8,7 @@ import {
   removeEntity,
   removeModule,
   updateEntity,
+  updateModule,
   updateField,
 } from './contentOperations'
 import { emptySystemViewContent, type SystemViewContent } from './types'
@@ -19,6 +20,32 @@ function withModuleAndEntity(): { content: SystemViewContent; moduleId: string; 
   const entityId = content.modules[0].entities[0].id
   return { content, moduleId, entityId }
 }
+
+describe('addModule (TASK-018)', () => {
+  it('cria o módulo com o nome informado', () => {
+    const content = addModule(emptySystemViewContent(), 'Account')
+    expect(content.modules[0].name).toBe('Account')
+  })
+
+  it('nome vazio, só espaços ou ausente cai no padrão "Novo módulo"', () => {
+    expect(addModule(emptySystemViewContent()).modules[0].name).toBe('Novo módulo')
+    expect(addModule(emptySystemViewContent(), '').modules[0].name).toBe('Novo módulo')
+    expect(addModule(emptySystemViewContent(), '   ').modules[0].name).toBe('Novo módulo')
+  })
+})
+
+describe('updateModule', () => {
+  it('renomeia só o módulo indicado, mantendo suas entidades', () => {
+    let content = addModule(emptySystemViewContent(), 'Account')
+    const moduleId = content.modules[0].id
+    content = addEntity(content, moduleId)
+
+    content = updateModule(content, moduleId, { name: 'Company' })
+
+    expect(content.modules[0].name).toBe('Company')
+    expect(content.modules[0].entities).toHaveLength(1)
+  })
+})
 
 describe('addEntity', () => {
   it('nasce sempre com os 3 blocos presentes, mesmo vazios (RN-02)', () => {

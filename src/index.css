@@ -649,13 +649,33 @@ button.link-button {
   margin-bottom: 16px;
 }
 
-.ov-module-title {
+.ov-module-title,
+.ov-module-title-input {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--text-faint);
   padding: 4px 8px 8px;
+}
+
+.ov-module-title-input {
+  display: block;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+}
+
+.ov-module-title-input:hover {
+  border-color: var(--border);
+}
+
+.ov-module-title-input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
 }
 
 .ov-entity-btn {
