@@ -7,7 +7,7 @@ import { AppLayout } from './features/navigation/AppLayout'
 import { OrganizationsPage } from './features/navigation/OrganizationsPage'
 import { ProjectsPage } from './features/navigation/ProjectsPage'
 import { DiagramsPage } from './features/navigation/DiagramsPage'
-import { DiagramRouterPage } from './features/navigation/DiagramRouterPage'
+import { DiagramsRouteDispatcher } from './features/navigation/DiagramsRouteDispatcher'
 import { NotConfiguredPage } from './features/setup/NotConfiguredPage'
 
 function App() {
@@ -52,13 +52,12 @@ function App() {
         <Route
           path="/orgs/:orgId/projects/:projectId/diagrams/:diagramId"
           element={
-            // TASK-007/ADR-002: sem `AppLayout` aqui — o Diagrama de
-            // Classes já é full-bleed com seu próprio shell de 3
-            // colunas; `DiagramRouterPage` decide, por tipo, quem ainda
-            // precisa do `AppLayout` (Objetos/Visão do Sistema, até
-            // TASK-008/009).
+            // TASK-022/ADR-008: `:diagramId` pode ser um slug de tipo
+            // (lista por tipo, com `AppLayout`) ou um UUID de diagrama de
+            // verdade (telas full-bleed, sem `AppLayout`) — quem decide é
+            // `DiagramsRouteDispatcher`, não esta rota.
             <RequireAuth>
-              <DiagramRouterPage />
+              <DiagramsRouteDispatcher />
             </RequireAuth>
           }
         />
