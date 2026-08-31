@@ -44,6 +44,13 @@ vi.mock('../../lib/supabase/queries', () => ({
   findUserIdByEmail: vi.fn(),
 }))
 
+// TASK-023 (ADR-009): `OrganizationsPage` passou a usar `useAuth()` para
+// mostrar o e-mail do usuário logado no estado vazio — mock simples,
+// sem precisar montar `<AuthProvider>`/Supabase real nestes testes.
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({ session: { user: { email: 'nova.pessoa@essencislabs.com' } }, loading: false }),
+}))
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -119,5 +126,15 @@ describe('OrganizationsPage — gestão de acesso (TASK-013)', () => {
 
     expect(await screen.findByText('Gerenciar acesso — Org Gestão')).toBeInTheDocument()
     await waitFor(() => expect(listOrganizationMembers).toHaveBeenCalledWith('org-c'))
+  })
+})
+
+describe('OrganizationsPage — autocadastro (TASK-023)', () => {
+  it('CA-03: sem nenhuma organização, orienta a pedir acesso com o e-mail do usuário logado', async () => {
+    listMyOrganizations.mockResolvedValueOnce([])
+    renderPage()
+
+    expect(await screen.findByText(/peça a um administrador para liberar seu acesso/)).toBeInTheDocument()
+    expect(screen.getByText('nova.pessoa@essencislabs.com')).toBeInTheDocument()
   })
 })

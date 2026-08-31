@@ -20,12 +20,14 @@ const diagram: Diagram = {
 
 const getMyProjectRole = vi.fn(async (): Promise<ProjectRole> => 'editor')
 const updateDiagramContent = vi.fn(async () => undefined)
+const renameDiagram = vi.fn(async () => undefined)
 
 vi.mock('../../lib/supabase/queries', () => ({
   getDiagram: vi.fn(async () => diagram),
   getCurrentUserId: vi.fn(async () => 'user-1'),
   getMyProjectRole: () => getMyProjectRole(),
   updateDiagramContent: (...args: Parameters<typeof updateDiagramContent>) => updateDiagramContent(...args),
+  renameDiagram: (...args: Parameters<typeof renameDiagram>) => renameDiagram(...args),
 }))
 
 function renderPage() {
@@ -54,6 +56,7 @@ describe('SystemViewPage', () => {
     getMyProjectRole.mockClear()
     getMyProjectRole.mockResolvedValue('editor')
     updateDiagramContent.mockClear()
+    renameDiagram.mockClear()
   })
 
   it('RN-02: uma entidade recém-criada mostra os 3 blocos, mesmo vazios', async () => {
@@ -125,6 +128,144 @@ describe('SystemViewPage', () => {
       await waitFor(() => expect(getMyProjectRole).toHaveBeenCalled())
       expect(screen.queryByText('+ Módulo')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('Nome do módulo')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('TASK-020 — nome do diagrama', () => {
+    it('CA-01: editar o nome do diagrama persiste via renameDiagram', async () => {
+      renderPage()
+
+      const input = await screen.findByLabelText('Nome do diagrama')
+      fireEvent.change(input, { target: { value: 'Documentação — Módulo Cobrança' } })
+
+      await waitFor(() =>
+        expect(renameDiagram).toHaveBeenCalledWith('diagram-1', 'Documentação — Módulo Cobrança'),
+      )
+      expect(await screen.findByDisplayValue('Documentação — Módulo Cobrança')).toBeInTheDocument()
+    })
+
+    it('CA-02: campo vazio não persiste — volta ao nome anterior ao perder o foco', async () => {
+      renderPage()
+
+      const input = (await screen.findByLabelText('Nome do diagrama')) as HTMLInputElement
+      fireEvent.change(input, { target: { value: '  ' } })
+      fireEvent.blur(input)
+
+      expect(renameDiagram).not.toHaveBeenCalled()
+      expect(await screen.findByDisplayValue('Visão do Sistema')).toBeInTheDocument()
+    })
+
+    it('CA-03: em modo visualizador, o nome aparece como texto, sem input', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+
+      expect(await screen.findByText('Visão do Sistema')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Nome do diagrama')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('TASK-021 — excluir módulo', () => {
+    it('CA-01: excluir remove o módulo e persiste', async () => {
+      renderPage()
+
+      await createModule('Account')
+      fireEvent.click(await screen.findByLabelText('Excluir módulo Account'))
+      fireEvent.click(await screen.findByText('Excluir módulo', { selector: 'button' }))
+
+      await waitFor(() => expect(screen.queryByDisplayValue('Account')).not.toBeInTheDocument())
+      await waitFor(() =>
+        expect(updateDiagramContent).toHaveBeenCalledWith('diagram-1', expect.objectContaining({ modules: [] })),
+      )
+    })
+
+    it('CA-02: exige confirmação explícita — não some ao clicar só no "×"', async () => {
+      renderPage()
+
+      await createModule('Account')
+      fireEvent.click(await screen.findByLabelText('Excluir módulo Account'))
+
+      // ainda não confirmou — o módulo continua
+      expect(await screen.findByDisplayValue('Account')).toBeInTheDocument()
+      expect(screen.getByText('Excluir módulo', { selector: 'button' })).toBeInTheDocument()
+    })
+
+    it('CA-03: excluir o módulo com a entidade selecionada limpa a seleção', async () => {
+      renderPage()
+
+      await createModule('Account')
+      fireEvent.click(await screen.findByText('+ Entidade'))
+      fireEvent.click(screen.getByText('NovaEntidade'))
+      expect(screen.getByText('Campos')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByLabelText('Excluir módulo Account'))
+      fireEvent.click(screen.getByText('Excluir módulo', { selector: 'button' }))
+
+      expect(await screen.findByText('Selecione uma entidade para ver seus detalhes.')).toBeInTheDocument()
+    })
+
+    it('CA-04: em modo visualizador, não mostra o controle de excluir módulo', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+
+      await waitFor(() => expect(getMyProjectRole).toHaveBeenCalled())
+      expect(screen.queryByLabelText(/Excluir módulo/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('TASK-024 — excluir entidade', () => {
+    /** Cria um módulo, uma entidade dentro dele e seleciona essa
+     * entidade — estado de partida comum aos testes abaixo. */
+    async function createAndSelectEntity() {
+      await createModule('Account')
+      fireEvent.click(await screen.findByText('+ Entidade'))
+      fireEvent.click(screen.getByText('NovaEntidade'))
+    }
+
+    it('CA-01: excluir remove a entidade da sidebar/detalhe e persiste', async () => {
+      renderPage()
+      await createAndSelectEntity()
+      fireEvent.click(screen.getByText('+ Campo')) // dá conteúdo real pra perder, não só o nome
+
+      fireEvent.click(await screen.findByLabelText('Excluir entidade NovaEntidade'))
+      fireEvent.click(await screen.findByText('Excluir entidade', { selector: 'button' }))
+
+      await waitFor(() => expect(screen.queryByText('NovaEntidade')).not.toBeInTheDocument())
+      await waitFor(() =>
+        expect(updateDiagramContent).toHaveBeenCalledWith(
+          'diagram-1',
+          expect.objectContaining({ modules: [expect.objectContaining({ entities: [] })] }),
+        ),
+      )
+    })
+
+    it('CA-02: exige confirmação explícita — não some ao clicar só no "×"', async () => {
+      renderPage()
+      await createAndSelectEntity()
+
+      fireEvent.click(await screen.findByLabelText('Excluir entidade NovaEntidade'))
+
+      // ainda não confirmou — a entidade continua selecionada/visível
+      expect(screen.getByText('NovaEntidade', { selector: 'button' })).toBeInTheDocument()
+      expect(screen.getByText('Excluir entidade', { selector: 'button' })).toBeInTheDocument()
+    })
+
+    it('CA-03: excluir a entidade selecionada limpa a seleção (volta ao estado vazio)', async () => {
+      renderPage()
+      await createAndSelectEntity()
+      expect(screen.getByText('Campos')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByLabelText('Excluir entidade NovaEntidade'))
+      fireEvent.click(screen.getByText('Excluir entidade', { selector: 'button' }))
+
+      expect(await screen.findByText('Selecione uma entidade para ver seus detalhes.')).toBeInTheDocument()
+    })
+
+    it('CA-04: em modo visualizador, não mostra o controle de excluir entidade', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+
+      await waitFor(() => expect(getMyProjectRole).toHaveBeenCalled())
+      expect(screen.queryByLabelText(/Excluir entidade/)).not.toBeInTheDocument()
     })
   })
 })

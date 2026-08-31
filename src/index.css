@@ -116,6 +116,15 @@ body {
   background: var(--surface);
 }
 
+/* TASK-019 (ADR-007): agrupa o toggle de tema e "Sair", para
+   `.app-header` continuar só com 2 filhos diretos no `justify-content:
+   space-between` (marca de um lado, ações do outro). */
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .app-header .brand {
   display: inline-flex;
   align-items: center;
@@ -486,6 +495,36 @@ button.link-button {
   opacity: 0.7;
 }
 
+/* TASK-020: nome do diagrama editável na topbar (antes era um <strong>
+   estático) — mesmo padrão visual de hover/focus de `.ov-module-title-input`. */
+.diagram-name-input {
+  display: block;
+  min-width: 0;
+  max-width: 40vw;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 2px 6px;
+  margin: 0 -6px;
+}
+
+.diagram-name-input:hover {
+  border-color: var(--border);
+}
+
+.diagram-name-input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
 .class-diagram-layout {
   display: flex;
   flex-direction: column;
@@ -649,6 +688,19 @@ button.link-button {
   margin-bottom: 16px;
 }
 
+/* TASK-021: linha do título do módulo + botão de excluir (`.ov-row-remove`,
+   mesmo estilo de "×" já usado em campo/método/regra). */
+.ov-module-title-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ov-module-title-row .ov-module-title-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .ov-module-title,
 .ov-module-title-input {
   font-size: 10px;
@@ -789,6 +841,19 @@ button.link-button {
   outline: none;
   border-color: var(--accent-soft-border);
   background: var(--surface-alt);
+}
+
+/* TASK-024: linha do nome da entidade + botão de excluir, mesmo padrão
+   de `.ov-module-title-row` (TASK-021). */
+.ov-entity-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ov-entity-name-row .ov-entity-name-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .ov-summary-row {
@@ -1276,6 +1341,31 @@ button.ov-flag {
 
 .btn.danger:hover {
   border-color: var(--danger);
+}
+
+/* TASK-019 (ADR-007): alternância de tema — um botão de ícone único,
+   reaproveitado sem mudança nas 3 superfícies de topbar (AppLayout,
+   DiagramShell, SystemViewPage). Só os tokens já existentes — nenhuma
+   cor nova. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
 }
 
 /* ---- sidebar ---- */

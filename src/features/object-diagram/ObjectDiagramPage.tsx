@@ -6,6 +6,7 @@ import {
   getDiagram,
   getMyProjectRole,
   listDiagrams,
+  renameDiagram,
   updateDiagramContent,
 } from '../../lib/supabase/queries'
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
@@ -26,13 +27,18 @@ export function ObjectDiagramPage() {
   const [role, setRole] = useState<ProjectRole | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  // TASK-020: nome do diagrama editável na topbar — ver mesmo padrão em
+  // `DiagramEditorPage`.
+  const [nameInput, setNameInput] = useState('')
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nameSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!diagramId || !projectId) return
     Promise.all([getDiagram(diagramId), getCurrentUserId(), listDiagrams(projectId)])
       .then(([loadedDiagram, userId, projectDiagrams]) => {
         setDiagram(loadedDiagram)
+        setNameInput(loadedDiagram.name)
         setContent(
           isObjectDiagramContent(loadedDiagram.content)
             ? // TASK-017: diagramas salvos antes desta task não têm `links`
@@ -65,6 +71,32 @@ export function ObjectDiagramPage() {
     }, AUTOSAVE_DELAY_MS)
   }
 
+  // TASK-020: campo vazio/só espaços nunca é persistido (RN-01) — o blur
+  // (handleNameBlur) devolve o nome anterior nesse caso.
+  function handleNameChange(value: string) {
+    setNameInput(value)
+    if (!diagramId) return
+    if (nameSaveTimeout.current) clearTimeout(nameSaveTimeout.current)
+    const trimmed = value.trim()
+    if (!trimmed) return
+    setSaveState('saving')
+    nameSaveTimeout.current = setTimeout(() => {
+      renameDiagram(diagramId, trimmed)
+        .then(() => {
+          setDiagram((prev) => (prev ? { ...prev, name: trimmed } : prev))
+          setSaveState('saved')
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Erro ao renomear diagrama.')
+          setSaveState('error')
+        })
+    }, AUTOSAVE_DELAY_MS)
+  }
+
+  function handleNameBlur() {
+    if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
+  }
+
   async function loadClasses(sourceDiagramId: string) {
     const sourceDiagram = await getDiagram(sourceDiagramId)
     if (!isClassDiagramContent(sourceDiagram.content)) return []
@@ -88,9 +120,22 @@ export function ObjectDiagramPage() {
           <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>
             ← Diagramas
           </Link>
-          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {diagram.name}
-          </strong>
+          {readOnly ? (
+            <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {diagram.name}
+            </strong>
+          ) : (
+            <input
+              className="diagram-name-input"
+              aria-label="Nome do diagrama"
+              value={nameInput}
+              onChange={(e) => handleNameChange(e.target.value)}
+              onBlur={handleNameBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              }}
+            />
+          )}
           {!readOnly && (
             <span className="save-indicator">
               {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : saveState === 'error' ? 'Falha ao salvar' : ''}

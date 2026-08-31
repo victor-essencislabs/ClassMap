@@ -34,6 +34,22 @@ export async function signInWithPassword(email: string, password: string) {
   return data
 }
 
+/**
+ * Autocadastro (TASK-023, ADR-009) — cria a conta no Supabase Auth. Não
+ * cria nenhum vínculo de organização/projeto (RN-01 da TASK-023): o
+ * trigger `handle_new_user` (`20260828130400_profile_on_signup.sql`,
+ * TASK-001) já cria a linha correspondente em `profiles` sozinho. Com
+ * "Auth por e-mail confirmado" habilitado no projeto, `data.session` vem
+ * `null` até a pessoa confirmar o e-mail — quem chama trata isso como
+ * sucesso (pedir para checar o e-mail), não como erro.
+ */
+export async function signUp(email: string, password: string) {
+  const client = requireClient()
+  const { data, error } = await client.auth.signUp({ email, password })
+  if (error) throw error
+  return data
+}
+
 export async function signOut() {
   const client = requireClient()
   const { error } = await client.auth.signOut()
@@ -242,6 +258,18 @@ export async function createEmptyDiagram(
     .single()
   if (error) throw error
   return data as Diagram
+}
+
+/**
+ * Renomeia um diagrama já criado (TASK-020) — até aqui só era possível
+ * definir o nome na criação (TASK-016). Mesma política RLS de
+ * `updateDiagramContent` (`diagrams` update exige `editor` do projeto,
+ * TASK-003), nenhuma mudança de schema.
+ */
+export async function renameDiagram(diagramId: string, name: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('diagrams').update({ name }).eq('id', diagramId)
+  if (error) throw error
 }
 
 // ---------------------------------------------------------------------------

@@ -9,7 +9,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Modal } from '../diagram-shell/Modal'
-import { getCurrentUserId, getDiagram, getMyProjectRole, updateDiagramContent } from '../../lib/supabase/queries'
+import { ThemeToggle } from '../theme/ThemeToggle'
+import {
+  getCurrentUserId,
+  getDiagram,
+  getMyProjectRole,
+  renameDiagram,
+  updateDiagramContent,
+} from '../../lib/supabase/queries'
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import * as ops from './contentOperations'
 import {
@@ -64,12 +71,26 @@ export function SystemViewPage() {
   // "Novo módulo" (`ops.addModule`).
   const [creatingModule, setCreatingModule] = useState(false)
   const [moduleNameInput, setModuleNameInput] = useState('')
+  // TASK-020: nome do diagrama editável na topbar — mesmo padrão de
+  // `DiagramEditorPage`/`ObjectDiagramPage`.
+  const [nameInput, setNameInput] = useState('')
+  const nameSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // TASK-021: módulo aguardando confirmação de exclusão (`removeModule`
+  // já existia em `contentOperations.ts` desde a TASK-004, sem nenhum
+  // componente chamando).
+  const [deletingModule, setDeletingModule] = useState<SystemViewModule | null>(null)
+  // TASK-024: mesma situação de `removeModule` antes da TASK-021 —
+  // `removeEntity` já existia em `contentOperations.ts` desde a TASK-004,
+  // sem nenhum componente chamando. Guarda também `moduleId`, já que
+  // `removeEntity(content, moduleId, entityId)` precisa dos dois.
+  const [deletingEntity, setDeletingEntity] = useState<{ moduleId: string; entity: SystemViewEntity } | null>(null)
 
   useEffect(() => {
     if (!diagramId || !projectId) return
     Promise.all([getDiagram(diagramId), getCurrentUserId()])
       .then(([loadedDiagram, userId]) => {
         setDiagram(loadedDiagram)
+        setNameInput(loadedDiagram.name)
         setContent(isSystemViewContent(loadedDiagram.content) ? loadedDiagram.content : emptySystemViewContent())
         return userId ? getMyProjectRole(projectId, userId) : null
       })
@@ -104,6 +125,58 @@ export function SystemViewPage() {
     setCreatingModule(false)
   }
 
+  // TASK-021: confirmar exclusão remove o módulo e, se a entidade
+  // selecionada pertencia a ele, limpa a seleção (CA-03) para não deixar
+  // `ov-detail` apontando para uma entidade que não existe mais.
+  function handleConfirmDeleteModule() {
+    if (!content || !deletingModule) return
+    handleChange(ops.removeModule(content, deletingModule.id))
+    if (selectedModuleId === deletingModule.id) {
+      setSelectedModuleId(null)
+      setSelectedEntityId(null)
+    }
+    setDeletingModule(null)
+  }
+
+  // TASK-024: mesmo padrão de `handleConfirmDeleteModule` — confirmar
+  // remove a entidade e, se era a selecionada, limpa a seleção (CA-03)
+  // para o painel de detalhe voltar ao estado vazio em vez de continuar
+  // apontando para uma entidade que não existe mais.
+  function handleConfirmDeleteEntity() {
+    if (!content || !deletingEntity) return
+    handleChange(ops.removeEntity(content, deletingEntity.moduleId, deletingEntity.entity.id))
+    if (selectedEntityId === deletingEntity.entity.id) {
+      setSelectedEntityId(null)
+    }
+    setDeletingEntity(null)
+  }
+
+  // TASK-020: campo vazio/só espaços nunca é persistido (RN-01) — o blur
+  // (handleNameBlur) devolve o nome anterior nesse caso.
+  function handleNameChange(value: string) {
+    setNameInput(value)
+    if (!diagramId) return
+    if (nameSaveTimeout.current) clearTimeout(nameSaveTimeout.current)
+    const trimmed = value.trim()
+    if (!trimmed) return
+    setSaveState('saving')
+    nameSaveTimeout.current = setTimeout(() => {
+      renameDiagram(diagramId, trimmed)
+        .then(() => {
+          setDiagram((prev) => (prev ? { ...prev, name: trimmed } : prev))
+          setSaveState('saved')
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Erro ao renomear diagrama.')
+          setSaveState('error')
+        })
+    }, AUTOSAVE_DELAY_MS)
+  }
+
+  function handleNameBlur() {
+    if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
+  }
+
   if (error) return <p className="error">{error}</p>
   if (!diagram || !content) return <p>Carregando…</p>
 
@@ -123,9 +196,22 @@ export function SystemViewPage() {
           <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>
             ← Diagramas
           </Link>
-          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {diagram.name}
-          </strong>
+          {readOnly ? (
+            <strong style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {diagram.name}
+            </strong>
+          ) : (
+            <input
+              className="diagram-name-input"
+              aria-label="Nome do diagrama"
+              value={nameInput}
+              onChange={(e) => handleNameChange(e.target.value)}
+              onBlur={handleNameBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              }}
+            />
+          )}
           {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
         </div>
         <div className="topbar-actions">
@@ -135,6 +221,10 @@ export function SystemViewPage() {
             </button>
           )}
         </div>
+        {/* TASK-019 (ADR-007): fora do `topbar-actions` de propósito —
+            fica visível também em modo `visualizador`, que não vê "+
+            Módulo". */}
+        <ThemeToggle />
       </div>
 
       <div className="ov-body">
@@ -144,12 +234,23 @@ export function SystemViewPage() {
               {readOnly ? (
                 <div className="ov-module-title">{module.name}</div>
               ) : (
-                <input
-                  className="ov-module-title-input"
-                  aria-label="Nome do módulo"
-                  value={module.name}
-                  onChange={(e) => handleChange(ops.updateModule(content, module.id, { name: e.target.value }))}
-                />
+                <div className="ov-module-title-row">
+                  <input
+                    className="ov-module-title-input"
+                    aria-label="Nome do módulo"
+                    value={module.name}
+                    onChange={(e) => handleChange(ops.updateModule(content, module.id, { name: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="ov-row-remove"
+                    aria-label={`Excluir módulo ${module.name}`}
+                    title="Excluir módulo"
+                    onClick={() => setDeletingModule(module)}
+                  >
+                    ×
+                  </button>
+                </div>
               )}
               {module.entities.map((entity) => (
                 <button
@@ -189,6 +290,7 @@ export function SystemViewPage() {
               entity={selectedEntity}
               readOnly={readOnly}
               onChange={handleChange}
+              onRequestDelete={(moduleId, entity) => setDeletingEntity({ moduleId, entity })}
             />
           )}
         </div>
@@ -216,8 +318,63 @@ export function SystemViewPage() {
           </div>
         </Modal>
       )}
+
+      {deletingModule && (
+        <Modal title="Excluir módulo" onClose={() => setDeletingModule(null)}>
+          <p className="error">
+            Isto vai excluir o módulo <strong>{deletingModule.name}</strong>
+            {deletingModule.entities.length > 0
+              ? ` e as ${deletingModule.entities.length} entidade(s) dentro dele (com todos os campos, métodos de API e regras de permissão).`
+              : '.'}{' '}
+            Esta ação não pode ser desfeita.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="btn danger" onClick={handleConfirmDeleteModule}>
+              Excluir módulo
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setDeletingModule(null)}>
+              Cancelar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {deletingEntity && (
+        <Modal title="Excluir entidade" onClose={() => setDeletingEntity(null)}>
+          <p className="error">
+            Isto vai excluir a entidade <strong>{deletingEntity.entity.name}</strong>
+            {describeEntityLoss(deletingEntity.entity)} Esta ação não pode ser desfeita.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="btn danger" onClick={handleConfirmDeleteEntity}>
+              Excluir entidade
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setDeletingEntity(null)}>
+              Cancelar
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
+}
+
+/** Mensagem de perda para o modal de exclusão de entidade (TASK-024) —
+ * mesmo critério de risco da TASK-021 (removeModule): edição de conteúdo
+ * de um único diagrama, não hard delete de linhas do banco, então não
+ * exige digitar o nome, só avisa o que será perdido. */
+function describeEntityLoss(entity: SystemViewEntity): string {
+  const parts: string[] = []
+  if (entity.fields.length > 0) parts.push(`${entity.fields.length} campo${entity.fields.length === 1 ? '' : 's'}`)
+  if (entity.apiMethods.length > 0) {
+    parts.push(`${entity.apiMethods.length} método${entity.apiMethods.length === 1 ? '' : 's'} de API`)
+  }
+  if (entity.permissionRules.length > 0) {
+    parts.push(`${entity.permissionRules.length} regra${entity.permissionRules.length === 1 ? '' : 's'} de permissão`)
+  }
+  if (parts.length === 0) return '.'
+  if (parts.length === 1) return ` e ${parts[0]}.`
+  return ` e ${parts.slice(0, -1).join(', ')} e ${parts[parts.length - 1]}.`
 }
 
 function saveIndicatorLabel(state: 'idle' | 'saving' | 'saved' | 'error'): string {
@@ -239,12 +396,14 @@ function EntityDetail({
   entity,
   readOnly,
   onChange,
+  onRequestDelete,
 }: {
   content: SystemViewContent
   module: SystemViewModule
   entity: SystemViewEntity
   readOnly: boolean
   onChange: (content: SystemViewContent) => void
+  onRequestDelete: (moduleId: string, entity: SystemViewEntity) => void
 }) {
   const moduleId = module.id
 
@@ -255,11 +414,22 @@ function EntityDetail({
         {readOnly ? (
           <div className="ov-entity-name">{entity.name}</div>
         ) : (
-          <input
-            className="ov-entity-name-input"
-            value={entity.name}
-            onChange={(e) => onChange(ops.updateEntity(content, moduleId, entity.id, { name: e.target.value }))}
-          />
+          <div className="ov-entity-name-row">
+            <input
+              className="ov-entity-name-input"
+              value={entity.name}
+              onChange={(e) => onChange(ops.updateEntity(content, moduleId, entity.id, { name: e.target.value }))}
+            />
+            <button
+              type="button"
+              className="ov-row-remove"
+              aria-label={`Excluir entidade ${entity.name}`}
+              title="Excluir entidade"
+              onClick={() => onRequestDelete(moduleId, entity)}
+            >
+              ×
+            </button>
+          </div>
         )}
         <div className="ov-summary-row">
           <span className="ov-pill">{entity.fields.length} campos</span>

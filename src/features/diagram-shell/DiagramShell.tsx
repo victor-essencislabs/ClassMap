@@ -3,6 +3,7 @@
 // Só a estrutura de grid (topbar/sidebar/canvas/inspector) + marca —
 // nenhuma lógica de diagrama aqui, isso é TASK-007/008/009.
 import type { ComponentPropsWithRef, ReactNode } from 'react'
+import { ThemeToggle } from '../theme/ThemeToggle'
 
 export interface DiagramShellProps {
   /** Conteúdo entre a marca e as ações — ex. `.view-switch` ou um breadcrumb, decidido por quem consome o shell. */
@@ -45,6 +46,10 @@ export function DiagramShell({
           </>
         ) : null}
         <div className="topbar-actions">{topbarActions}</div>
+        {/* TASK-019 (ADR-007): fixo aqui (não via `topbarActions`) para
+            cobrir Diagrama de Classes/Objetos de uma vez só, sem exigir
+            que cada consumidor do shell se lembre de montá-lo. */}
+        <ThemeToggle />
       </div>
 
       <div className="diagram-shell-sidebar">{sidebar}</div>

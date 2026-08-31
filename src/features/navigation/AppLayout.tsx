@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signOut } from '../../lib/supabase/queries'
+import { ThemeToggle } from '../theme/ThemeToggle'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -17,9 +18,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <span className="brand-mark" aria-hidden="true" />
           ClassMap
         </Link>
-        <button type="button" onClick={handleSignOut}>
-          Sair
-        </button>
+        <div className="app-header-actions">
+          <ThemeToggle />
+          <button type="button" onClick={handleSignOut}>
+            Sair
+          </button>
+        </div>
       </header>
       <main>{children}</main>
     </div>

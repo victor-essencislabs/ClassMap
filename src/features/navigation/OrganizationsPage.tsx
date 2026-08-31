@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import {
   addOrganizationMember,
   createOrganization,
@@ -21,6 +22,9 @@ const ORGANIZATION_ROLE_OPTIONS: { value: OrganizationRole; label: string }[] = 
 ]
 
 export function OrganizationsPage() {
+  // TASK-023 (ADR-009): o e-mail do próprio usuário logado, mostrado no
+  // estado vazio para quem acabou de se cadastrar repassar a um admin.
+  const { session } = useAuth()
   const [organizations, setOrganizations] = useState<Organization[] | null>(null)
   // RN-01 da TASK-011: só quem é `admin` da organização vê "Excluir" — mesmo
   // reforço de UI das demais telas, a garantia real continua sendo RLS
@@ -125,7 +129,18 @@ export function OrganizationsPage() {
       ) : !error ? (
         <div className="empty-state">
           <p>Você ainda não pertence a nenhuma organização.</p>
-          <p>Crie a primeira abaixo para começar.</p>
+          <p>Crie a primeira abaixo para começar — ou, se você espera ser adicionado a uma organização já existente,</p>
+          <p>
+            peça a um administrador para liberar seu acesso
+            {session?.user.email ? (
+              <>
+                {' '}
+                (seu e-mail: <strong>{session.user.email}</strong>).
+              </>
+            ) : (
+              '.'
+            )}
+          </p>
         </div>
       ) : null}
 
