@@ -24,6 +24,9 @@ dist-ssr/
 *.local
 npm-debug.log*
 
+# ---- Supabase CLI (TASK-025) ----
+supabase/.temp/
+
 # ---- Editor/SO ----
 .DS_Store
 Thumbs.db

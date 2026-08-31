@@ -1,7 +1,7 @@
 ---
 id: TASK-019
 title: Alternância manual de tema claro/escuro, persistida por navegador
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31
@@ -111,4 +111,4 @@ Nenhuma — o usuário logou de novo no dev server local e a verificação ao vi
 - Verificação ao vivo completa (`npm run dev` local, usuário logado, dados reais do projeto ELIMS): alternar em `AppLayout` (Organizações) mudou a tela inteira para escuro (`document.documentElement.dataset.theme`/`localStorage` confirmados via JS, além do visual); reload da página manteve o tema sem flash (CA-02); `DiagramShell` (Diagrama de Classes, 5 classes reais) e `SystemViewPage` (Visão do Sistema) renderizaram corretamente em escuro, com o ícone 🌙 visível na topbar de ambos (CA-04).
 
 ## Handoff
-Nenhum — todas as CAs fechadas com evidência automatizada e manual ao vivo nas 3 superfícies. Candidata a `bootstrap-complete` mover para `completed/` quando o usuário pedir.
+Nenhum — todas as CAs fechadas com evidência automatizada e manual ao vivo nas 3 superfícies. Movida para `completed/` via `bootstrap-complete` (2026-08-31).

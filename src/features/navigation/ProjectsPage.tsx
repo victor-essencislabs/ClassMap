@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import {
   addProjectMember,
   createProject,
+  createUserWithPassword,
   deleteProject,
   getCurrentUserId,
   getMyOrganizationRole,
@@ -13,12 +14,13 @@ import {
   updateProjectMemberRole,
 } from '../../lib/supabase/queries'
 import type { Organization, OrganizationRole, Project, ProjectRole } from '../../lib/supabase/types'
-import { AccessManagementModal } from './AccessManagementModal'
+import { AccessManagementModal, type AccessRoleOption } from './AccessManagementModal'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
 
-const PROJECT_ROLE_OPTIONS: { value: ProjectRole; label: string }[] = [
-  { value: 'visualizador', label: 'Visualizador' },
-  { value: 'editor', label: 'Editor' },
+// TASK-026 (ADR-010): legenda curta do que cada papel de projeto permite.
+const PROJECT_ROLE_OPTIONS: AccessRoleOption<ProjectRole>[] = [
+  { value: 'visualizador', label: 'Visualizador', description: 'Só navega e visualiza os diagramas.' },
+  { value: 'editor', label: 'Editor', description: 'Cria, edita e exclui diagramas.' },
 ]
 
 export function ProjectsPage() {
@@ -173,6 +175,24 @@ export function ProjectsPage() {
           addMember={(userId, memberRole) => addProjectMember(manageTarget.id, userId, memberRole)}
           updateMemberRole={updateProjectMemberRole}
           removeMember={removeProjectMember}
+          createUser={(newEmail, newPassword, projectRole) =>
+            createUserWithPassword({
+              email: newEmail,
+              password: newPassword,
+              // RN-01 da TASK-026: sempre inclui o vínculo de organização
+              // (`member`) — sem isso a pessoa não teria como nem navegar
+              // até este projeto (organizations_select exige organization_members).
+              organizationId: orgId!,
+              orgRole: 'member',
+              projectId: manageTarget.id,
+              projectRole,
+            })
+          }
+          createUserHelpText={
+            organization
+              ? `Essa pessoa também será adicionada como membro de ${organization.name}, para conseguir navegar até aqui.`
+              : undefined
+          }
           onClose={() => setManageTarget(null)}
         />
       )}

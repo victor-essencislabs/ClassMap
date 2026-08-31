@@ -1,7 +1,7 @@
 ---
 id: TASK-024
 title: Excluir entidade na Visão do Sistema
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31
@@ -102,4 +102,4 @@ Nenhuma — validado ao vivo contra produção real nesta mesma sessão (ver "Es
 - Verificação ao vivo (`npm run dev` local, usuário logado, projeto real ELIMS): criada uma entidade de teste num módulo vazio, botão "Excluir entidade" apareceu corretamente, modal mostrou o aviso certo (sem cláusula de conteúdo perdido, já que a entidade de teste estava vazia), confirmar removeu a entidade de fato (indicador "Salvo"), seleção voltou ao estado vazio — sem tocar em nenhum dado real do usuário (módulo "account", entidades "Pedido"/"NovaEntidade" pré-existentes, intocados).
 
 ## Handoff
-Nenhum — todas as CAs fechadas com evidência automatizada e manual ao vivo. Candidata a `bootstrap-complete` mover para `completed/` quando o usuário pedir.
+Nenhum — todas as CAs fechadas com evidência automatizada e manual ao vivo. Movida para `completed/` via `bootstrap-complete` (2026-08-31).

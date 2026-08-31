@@ -1,7 +1,7 @@
 ---
 id: TASK-022
 title: Agrupar a listagem de diagramas por tipo (rotas dedicadas)
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31
@@ -103,4 +103,4 @@ Nenhuma — validado ao vivo contra produção real nesta mesma sessão, depois 
 - Verificação ao vivo: `npm run dev` local (via Browser pane, usuário logado), navegação completa Organizações→Projetos→Diagramas (3 cards com contagem real)→lista por tipo→abertura de diagrama real, sem erros de console, sem regressão.
 
 ## Handoff
-Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo). Candidata a `bootstrap-complete` mover para `completed/` quando o usuário pedir.
+Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo). Movida para `completed/` via `bootstrap-complete` (2026-08-31).

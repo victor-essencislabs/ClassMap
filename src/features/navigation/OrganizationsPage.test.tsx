@@ -42,6 +42,7 @@ vi.mock('../../lib/supabase/queries', () => ({
   updateOrganizationMemberRole: vi.fn(),
   removeOrganizationMember: vi.fn(),
   findUserIdByEmail: vi.fn(),
+  createUserWithPassword: vi.fn(),
 }))
 
 // TASK-023 (ADR-009): `OrganizationsPage` passou a usar `useAuth()` para

@@ -1,11 +1,13 @@
 ---
 id: ADR-009
 title: Autocadastro de usuário sem solicitação de acesso dentro do produto — aviso ao admin fora de banda
-status: accepted
+status: superseded
 date: 2026-08-31
 deciders: [victor-essencislabs]
 related_tasks: [TASK-023]
 ---
+
+> **Superseded por `ADR-010`** (2026-08-31): o autocadastro público esbarrou num limite real do serviço de e-mail padrão do Supabase (2 e-mails/hora — descoberto ao testar esta própria task em produção), inviável mesmo para uso interno pequeno. Decisão nova: o admin passa a criar a conta do usuário diretamente (e-mail + senha temporária, sem depender de nenhum disparo de e-mail), via Edge Function com a Admin API. A alternância pública "Criar conta" sai da tela de login. Ver `ADR-010` para a decisão completa.
 
 # ADR-009 — Autocadastro de usuário, sem solicitação de acesso em produto
 

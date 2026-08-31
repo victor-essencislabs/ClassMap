@@ -3,9 +3,12 @@
 // mudar papel e revogar. Mocka `findUserIdByEmail` (TASK-012) — as demais
 // operações (listar/adicionar/mudar papel/revogar) chegam via props,
 // exatamente como `OrganizationsPage`/`ProjectsPage` as passam.
+//
+// TASK-026 (ADR-010): modo "Criar conta nova" (`createUser`, chama a
+// Edge Function `admin-create-user` via `queries.ts`) e legenda de papel.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { AccessManagementModal, type AccessMember } from './AccessManagementModal'
+import { AccessManagementModal, type AccessMember, type AccessRoleOption } from './AccessManagementModal'
 
 const { findUserIdByEmail } = vi.hoisted(() => ({
   findUserIdByEmail: vi.fn(async (email: string) => (email === 'existe@empresa.com' ? 'user-2' : null)),
@@ -15,9 +18,9 @@ vi.mock('../../lib/supabase/queries', () => ({ findUserIdByEmail }))
 
 type Role = 'visualizador' | 'editor'
 
-const roleOptions = [
-  { value: 'visualizador' as Role, label: 'Visualizador' },
-  { value: 'editor' as Role, label: 'Editor' },
+const roleOptions: AccessRoleOption<Role>[] = [
+  { value: 'visualizador', label: 'Visualizador', description: 'Só navega e visualiza os diagramas.' },
+  { value: 'editor', label: 'Editor', description: 'Cria, edita e exclui diagramas.' },
 ]
 
 function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<Role>>[0]> = {}) {
@@ -28,6 +31,7 @@ function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<
   const addMember = vi.fn(async () => undefined)
   const updateMemberRole = vi.fn(async () => undefined)
   const removeMember = vi.fn(async () => undefined)
+  const createUser = vi.fn(async () => ({ user_id: 'new-user-1' }))
   const onClose = vi.fn()
 
   render(
@@ -40,12 +44,13 @@ function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<
       addMember={addMember}
       updateMemberRole={updateMemberRole}
       removeMember={removeMember}
+      createUser={createUser}
       onClose={onClose}
       {...overrides}
     />,
   )
 
-  return { listMembers, addMember, updateMemberRole, removeMember, onClose }
+  return { listMembers, addMember, updateMemberRole, removeMember, createUser, onClose }
 }
 
 describe('AccessManagementModal (TASK-013)', () => {
@@ -120,5 +125,71 @@ describe('AccessManagementModal (TASK-013)', () => {
     await waitFor(() =>
       expect(screen.getByText('Esta pessoa já tem acesso a este projeto.')).toBeInTheDocument(),
     )
+  })
+
+  it('legenda do papel muda com a seleção, no formulário de "Já tem conta"', async () => {
+    renderModal()
+    await screen.findByText('Ana (você)')
+
+    expect(screen.getByText('Só navega e visualiza os diagramas.')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
+    expect(screen.getByText('Cria, edita e exclui diagramas.')).toBeInTheDocument()
+  })
+
+  describe('TASK-026 — "Criar conta nova"', () => {
+    async function switchToCreateMode() {
+      await screen.findByText('Ana (você)')
+      fireEvent.click(screen.getByText('Criar conta nova'))
+    }
+
+    it('CA-01/02: chama createUser com e-mail/senha/papel e mostra a senha uma vez, na tela de sucesso', async () => {
+      const { createUser, listMembers } = renderModal()
+      await switchToCreateMode()
+
+      fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'novo@empresa.com' } })
+      fireEvent.change(screen.getByLabelText('Senha temporária'), { target: { value: 'senha-temp-123' } })
+      fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
+      fireEvent.click(screen.getByText('Criar conta'))
+
+      await waitFor(() =>
+        expect(createUser).toHaveBeenCalledWith('novo@empresa.com', 'senha-temp-123', 'editor'),
+      )
+      expect(await screen.findByText(/Conta criada\. Repasse para novo@empresa\.com/)).toBeInTheDocument()
+      expect(screen.getByText('senha-temp-123')).toBeInTheDocument()
+      await waitFor(() => expect(listMembers).toHaveBeenCalledTimes(2))
+    })
+
+    it('botão "Gerar senha" preenche o campo com um valor não vazio', async () => {
+      renderModal()
+      await switchToCreateMode()
+
+      fireEvent.click(screen.getByText('Gerar senha'))
+      expect((screen.getByLabelText('Senha temporária') as HTMLInputElement).value.length).toBeGreaterThan(0)
+    })
+
+    it('CA-04: e-mail já cadastrado mostra erro claro, sem criar duplicata', async () => {
+      const createUser = vi.fn(async () => {
+        throw new Error('Este e-mail já tem uma conta — use "Já tem conta" para vincular em vez de criar uma nova.')
+      })
+      renderModal({ createUser })
+      await switchToCreateMode()
+
+      fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'ja.existe@empresa.com' } })
+      fireEvent.change(screen.getByLabelText('Senha temporária'), { target: { value: 'senha-temp-123' } })
+      fireEvent.click(screen.getByText('Criar conta'))
+
+      expect(
+        await screen.findByText('Este e-mail já tem uma conta — use "Já tem conta" para vincular em vez de criar uma nova.'),
+      ).toBeInTheDocument()
+    })
+
+    it('mostra o texto de ajuda de vínculo de organização quando informado (modal de projeto)', async () => {
+      renderModal({ createUserHelpText: 'Essa pessoa também será adicionada como membro de ELIMS.' })
+      await switchToCreateMode()
+
+      expect(
+        screen.getByText('Essa pessoa também será adicionada como membro de ELIMS.'),
+      ).toBeInTheDocument()
+    })
   })
 })

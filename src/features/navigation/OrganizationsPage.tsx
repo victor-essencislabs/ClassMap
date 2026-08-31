@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import {
   addOrganizationMember,
   createOrganization,
+  createUserWithPassword,
   deleteOrganization,
   getCurrentUserId,
   getMyOrganizationRole,
@@ -13,12 +14,17 @@ import {
   updateOrganizationMemberRole,
 } from '../../lib/supabase/queries'
 import type { Organization, OrganizationRole } from '../../lib/supabase/types'
-import { AccessManagementModal } from './AccessManagementModal'
+import { AccessManagementModal, type AccessRoleOption } from './AccessManagementModal'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
 
-const ORGANIZATION_ROLE_OPTIONS: { value: OrganizationRole; label: string }[] = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'member', label: 'Membro' },
+// TASK-026 (ADR-010): legenda curta do que cada papel de organização permite.
+const ORGANIZATION_ROLE_OPTIONS: AccessRoleOption<OrganizationRole>[] = [
+  { value: 'admin', label: 'Admin', description: 'Gerencia acesso e pode excluir organização/projetos.' },
+  {
+    value: 'member',
+    label: 'Membro',
+    description: 'Navega na organização; acesso a projetos é concedido à parte.',
+  },
 ]
 
 export function OrganizationsPage() {
@@ -182,6 +188,14 @@ export function OrganizationsPage() {
           addMember={(userId, role) => addOrganizationMember(manageTarget.id, userId, role)}
           updateMemberRole={updateOrganizationMemberRole}
           removeMember={removeOrganizationMember}
+          createUser={(newEmail, newPassword, orgRole) =>
+            createUserWithPassword({
+              email: newEmail,
+              password: newPassword,
+              organizationId: manageTarget.id,
+              orgRole,
+            })
+          }
           onClose={() => setManageTarget(null)}
         />
       )}

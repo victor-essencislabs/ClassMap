@@ -1,7 +1,7 @@
 ---
 id: TASK-020
 title: Renomear diagrama depois de criado (Classes/Objetos/Visão do Sistema)
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31
@@ -99,4 +99,4 @@ Nenhuma — validado ao vivo contra produção real nesta mesma sessão (usuári
 - `npx vitest run --exclude "**/.claude/worktrees/**"` — ok, 21 arquivos / 156 testes passando (inclui os novos desta task e da TASK-021, implementada na mesma sessão).
 
 ## Handoff
-Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo). Candidata a `bootstrap-complete` mover para `completed/` quando o usuário pedir.
+Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo). Movida para `completed/` via `bootstrap-complete` (2026-08-31).

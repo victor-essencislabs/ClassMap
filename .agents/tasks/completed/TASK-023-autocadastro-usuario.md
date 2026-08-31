@@ -1,7 +1,7 @@
 ---
 id: TASK-023
 title: Autocadastro de usuário na tela de login (sem solicitação em produto)
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31

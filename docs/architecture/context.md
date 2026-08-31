@@ -1,7 +1,7 @@
 ---
 estado: real
-fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 1, 2 e 5; implementação real das TASK-001..005
-ultima-revisao: 2026-08-29 (bootstrap-audit — conteúdo conferido contra o estado pós-ADR-002/TASK-010: atores, fronteiras e integrações externas não mudaram, ADR-002 foi só reestilização de UI)
+fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seções 1, 2 e 5; implementação real das TASK-001..005; TASK-023/ADR-009 (autocadastro)
+ultima-revisao: 2026-08-31 (bootstrap-complete — TASK-023: autocadastro de usuário adicionou um ator novo, "Visitante autocadastrado")
 ---
 
 # Contexto do Sistema
@@ -17,6 +17,7 @@ ClassMap é uma ferramenta web sob medida para a Essencislabs que substitui o Vi
 | Gestor | Consome os diagramas e a Visão do Sistema para entender a arquitetura de Elims/GeoCloudAI, sem editar. |
 | Membro do time (Editor) | Cria/edita diagramas, importa o JSON gerado por um agente de IA, organiza projetos dentro de uma organização. |
 | Administrador da organização | Cria acessos de usuário e concede/revoga permissão visualizador/editor por projeto. |
+| Visitante autocadastrado (TASK-023) | Cria a própria conta (e-mail/senha) pela tela de login, sem aprovação prévia — fica sem nenhum vínculo de organização/projeto até um administrador conceder acesso (fora do produto, ver `docs/security/README.md`, item 6). |
 | Agente de IA (Claude Code / Codex) | Gera o JSON de diagrama a partir do código-fonte de Elims/GeoCloudAI (fora do ClassMap), para importação manual — ver `.claude/skills/gerar-diagrama-classmap/`. |
 
 ## Fronteiras do sistema (atores/sistemas externos)

@@ -1,7 +1,7 @@
 ---
 id: TASK-021
 title: Excluir módulo na Visão do Sistema
-status: active
+status: completed
 type: feature
 owner: frontend-diagramas
 created_at: 2026-08-31
@@ -100,4 +100,4 @@ Nenhuma — implementação seguiu o "Comportamento esperado" e o "Plano de impl
 - `npx vitest run --exclude "**/.claude/worktrees/**"` — ok, 21 arquivos / 156 testes passando (inclui os novos desta task e da TASK-020, implementada na mesma sessão).
 
 ## Handoff
-Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo, com ressalva registrada em "Pendências"). Candidata a `bootstrap-complete` mover para `completed/` quando o usuário pedir.
+Nenhum — todas as CAs fechadas com evidência (automatizada + manual ao vivo, com ressalva registrada em "Pendências"). Movida para `completed/` via `bootstrap-complete` (2026-08-31).

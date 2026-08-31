@@ -37,6 +37,7 @@ vi.mock('../../lib/supabase/queries', () => ({
   updateProjectMemberRole: vi.fn(),
   removeProjectMember: vi.fn(),
   findUserIdByEmail: vi.fn(),
+  createUserWithPassword: vi.fn(),
 }))
 
 function renderPage() {

@@ -11,8 +11,9 @@ Mantido automaticamente por `bootstrap-audit` a cada execução — não edite e
 | ADR-005 | Customização de cor do card de classe — interna ao ClassMap, fora do contrato JSON | accepted | 2026-08-29 | [ADR-005-customizacao-cor-card-classe.md](ADR-005-customizacao-cor-card-classe.md) |
 | ADR-006 | Diagrama de Objetos — link simples entre instâncias, sem os 5 tipos UML | accepted | 2026-08-29 | [ADR-006-link-simples-diagrama-objetos.md](ADR-006-link-simples-diagrama-objetos.md) |
 | ADR-007 | Alternância manual de tema claro/escuro — persistência em localStorage, sem sincronização entre dispositivos | accepted | 2026-08-31 | [ADR-007-alternancia-manual-tema-claro-escuro.md](ADR-007-alternancia-manual-tema-claro-escuro.md) |
-| ADR-008 | Agrupamento da listagem de diagramas por tipo — rotas dedicadas | accepted | 2026-08-31 | [ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md](ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md) |
-| ADR-009 | Autocadastro de usuário sem solicitação de acesso dentro do produto | accepted | 2026-08-31 | [ADR-009-autocadastro-sem-solicitacao-em-produto.md](ADR-009-autocadastro-sem-solicitacao-em-produto.md) |
+| ADR-008 | Agrupamento da listagem de diagramas por tipo — rotas dedicadas, mesmo componente decide pelo valor do parâmetro | accepted | 2026-08-31 | [ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md](ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md) |
+| ADR-009 | Autocadastro de usuário sem solicitação de acesso dentro do produto — aviso ao admin fora de banda | superseded | 2026-08-31 | [ADR-009-autocadastro-sem-solicitacao-em-produto.md](ADR-009-autocadastro-sem-solicitacao-em-produto.md) |
+| ADR-010 | Provisionamento de usuário pelo admin via Edge Function (Admin API) — substitui autocadastro público | accepted | 2026-08-31 | [ADR-010-provisionamento-usuario-pelo-admin-edge-function.md](ADR-010-provisionamento-usuario-pelo-admin-edge-function.md) |
 <!-- bootstrap-audit preenche uma linha por arquivo em .agents/decisions/*.md, lendo o frontmatter (id, title, status, date). Não remova este comentário — é o marcador de onde a regeneração insere as linhas. -->
 
 ## Status possíveis

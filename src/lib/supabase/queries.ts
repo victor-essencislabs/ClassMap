@@ -6,6 +6,7 @@
 // autorização — nenhuma query abaixo reimplementa isolamento
 // organização/projeto em código de aplicação (RN-02 da TASK-002 /
 // .claude/rules/global.md).
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from './client'
 import type {
   Diagram,
@@ -30,22 +31,6 @@ function requireClient() {
 export async function signInWithPassword(email: string, password: string) {
   const client = requireClient()
   const { data, error } = await client.auth.signInWithPassword({ email, password })
-  if (error) throw error
-  return data
-}
-
-/**
- * Autocadastro (TASK-023, ADR-009) — cria a conta no Supabase Auth. Não
- * cria nenhum vínculo de organização/projeto (RN-01 da TASK-023): o
- * trigger `handle_new_user` (`20260828130400_profile_on_signup.sql`,
- * TASK-001) já cria a linha correspondente em `profiles` sozinho. Com
- * "Auth por e-mail confirmado" habilitado no projeto, `data.session` vem
- * `null` até a pessoa confirmar o e-mail — quem chama trata isso como
- * sucesso (pedir para checar o e-mail), não como erro.
- */
-export async function signUp(email: string, password: string) {
-  const client = requireClient()
-  const { data, error } = await client.auth.signUp({ email, password })
   if (error) throw error
   return data
 }
@@ -410,5 +395,84 @@ export async function updateProjectMemberRole(memberId: string, role: ProjectRol
 export async function removeProjectMember(memberId: string): Promise<void> {
   const client = requireClient()
   const { error } = await client.from('project_members').delete().eq('id', memberId)
+  if (error) throw error
+}
+
+// ---------------------------------------------------------------------------
+// TASK-025/026 (ADR-010) — provisionamento de usuário pelo admin: cria a
+// conta com senha temporária (sem depender de e-mail) via a Edge Function
+// `admin-create-user`, e a própria pessoa troca a senha no primeiro login.
+// Substitui o autocadastro público (TASK-023, ADR-009, superseded).
+// ---------------------------------------------------------------------------
+
+export interface CreateUserWithPasswordParams {
+  email: string
+  password: string
+  organizationId: string
+  /** Default `'member'` na própria function se omitido. */
+  orgRole?: OrganizationRole
+  projectId?: string
+  /** Obrigatório (na function) se `projectId` for informado. */
+  projectRole?: ProjectRole
+}
+
+/** Mensagem amigável por código de erro devolvido pela function (ver `supabase/functions/admin-create-user/index.ts`). */
+const CREATE_USER_ERROR_MESSAGES: Record<string, string> = {
+  email_already_registered:
+    'Este e-mail já tem uma conta — use "Já tem conta" para vincular em vez de criar uma nova.',
+  not_org_admin: 'Você não é admin desta organização — sem permissão para criar contas nela.',
+  unauthenticated: 'Sessão expirada — faça login novamente.',
+  project_not_in_organization: 'Este projeto não pertence à organização informada.',
+  missing_fields: 'Preencha e-mail e senha.',
+}
+
+/**
+ * Cria uma conta nova com senha temporária, via a Edge Function
+ * `admin-create-user` (primeiro backend próprio do ClassMap, TASK-025) —
+ * já vinculada à organização (e, se informado, ao projeto) na mesma
+ * chamada. RN-01 da TASK-026: usada pelo modal de projeto sempre inclui
+ * `orgRole` (a pessoa recém-criada precisa de `organization_members`
+ * para sequer navegar até o projeto). O usuário nasce com
+ * `must_change_password: true` (ver `updatePassword`).
+ */
+export async function createUserWithPassword(
+  params: CreateUserWithPasswordParams,
+): Promise<{ user_id: string }> {
+  const client = requireClient()
+  const { data, error } = await client.functions.invoke('admin-create-user', {
+    body: {
+      email: params.email,
+      password: params.password,
+      organization_id: params.organizationId,
+      org_role: params.orgRole,
+      project_id: params.projectId,
+      project_role: params.projectRole,
+    },
+  })
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const body = await error.context.json().catch(() => null)
+      const code = typeof body?.error === 'string' ? body.error : null
+      throw new Error((code && CREATE_USER_ERROR_MESSAGES[code]) ?? 'Erro ao criar usuário.')
+    }
+    throw error
+  }
+  return data as { user_id: string }
+}
+
+/**
+ * Troca a senha da própria sessão (TASK-026) — 100% client-side via
+ * `auth.updateUser`, sem privilégio extra: é a própria pessoa trocando a
+ * própria senha. Usada pela tela de troca obrigatória no primeiro login
+ * de uma conta criada pelo admin. Zera `must_change_password` no mesmo
+ * update — `AuthContext` já ouve `USER_UPDATED` e atualiza a sessão
+ * sozinho, então `RequireAuth` libera a navegação sem reload manual.
+ */
+export async function updatePassword(password: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.auth.updateUser({
+    password,
+    data: { must_change_password: false },
+  })
   if (error) throw error
 }

@@ -5,7 +5,7 @@ description: Regras globais do ClassMap, válidas para qualquer subagente ou alt
 
 ## Propósito
 
-ClassMap não tem uma camada de backend própria com controllers/services — a única "API" é o SDK do Supabase (Postgres + Auth + Realtime), com autorização garantida no banco via RLS. Essas regras existem para que frontend, dados e parser `.vpp` continuem consistentes com essa decisão, independente de qual agente/ferramenta (Claude Code, Codex) executa a mudança.
+ClassMap não tem uma camada de backend própria com controllers/services — a "API" é o SDK do Supabase (Postgres + Auth + Realtime), com autorização garantida no banco via RLS. Única exceção pontual e documentada, desde a TASK-025/`ADR-010`: a Edge Function `supabase/functions/admin-create-user/` — a única operação do produto que exige a `service_role key` (Admin API do Supabase para criar usuário com senha já definida), isolada nesse arquivo, nunca exposta ao cliente. Não é uma guinada para "ter backend próprio" em geral — toda nova necessidade de lógica privilegiada deve ser justificada e registrada em ADR, como esta foi. Essas regras existem para que frontend, dados e parser `.vpp` continuem consistentes com essa decisão, independente de qual agente/ferramenta (Claude Code, Codex) executa a mudança.
 
 ## Escopo
 
