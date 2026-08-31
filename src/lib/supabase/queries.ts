@@ -300,14 +300,18 @@ async function loadProfileNames(userIds: string[]): Promise<Map<string, string |
 /** Código de erro do Postgres para violação de `unique constraint`. */
 const UNIQUE_VIOLATION = '23505'
 
-/** Membros de uma organização (papel `admin`/`member`), com nome de exibição resolvido. */
+/**
+ * Membros de uma organização (papel `admin`/`member`), com e-mail e nome
+ * de exibição resolvidos. TASK-027: usa `list_organization_members_with_email`
+ * (`SECURITY DEFINER`, mesmo padrão de `find_user_id_by_email`) — antes
+ * disso a lista só mostrava `full_name`/id truncado, inviável assim que
+ * existiu um segundo usuário real sem nome de perfil preenchido.
+ */
 export async function listOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
   const client = requireClient()
-  const { data, error } = await client
-    .from('organization_members')
-    .select('id, organization_id, user_id, role')
-    .eq('organization_id', organizationId)
-    .order('created_at')
+  const { data, error } = await client.rpc('list_organization_members_with_email', {
+    p_organization_id: organizationId,
+  })
   if (error) throw error
   const rows = data as Omit<OrganizationMember, 'full_name'>[]
   const names = await loadProfileNames(rows.map((row) => row.user_id))
@@ -352,14 +356,16 @@ export async function removeOrganizationMember(memberId: string): Promise<void> 
   if (error) throw error
 }
 
-/** Membros de um projeto (papel `visualizador`/`editor`), com nome de exibição resolvido. */
+/**
+ * Membros de um projeto (papel `visualizador`/`editor`), com e-mail e
+ * nome de exibição resolvidos — mesmo padrão de `listOrganizationMembers`
+ * (TASK-027, `list_project_members_with_email`).
+ */
 export async function listProjectMembers(projectId: string): Promise<ProjectMember[]> {
   const client = requireClient()
-  const { data, error } = await client
-    .from('project_members')
-    .select('id, project_id, user_id, role')
-    .eq('project_id', projectId)
-    .order('created_at')
+  const { data, error } = await client.rpc('list_project_members_with_email', {
+    p_project_id: projectId,
+  })
   if (error) throw error
   const rows = data as Omit<ProjectMember, 'full_name'>[]
   const names = await loadProfileNames(rows.map((row) => row.user_id))

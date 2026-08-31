@@ -171,6 +171,39 @@ Não aplicado contra o projeto Supabase real de produção (`classmap`)
 nesta task — decisão explícita, ver task. Repetir esta mesma validação
 lá antes de a TASK-013 depender da função em produção.
 
+**Atualização 2026-08-31 (TASK-025/026, achado ao vivo em produção)**: essa
+pendência ficou esquecida — a migration nunca foi de fato aplicada ao
+projeto real, e isso só quebrou na prática quando existiu, pela primeira
+vez, um segundo usuário real para testar "Adicionar por e-mail" contra
+produção (`404`/`PGRST202`, função não encontrada no schema cache).
+Aplicada agora via SQL Editor do painel (mesmo método usado para as
+migrations originais). Lição: `supabase_migrations.schema_migrations`
+nem existe neste projeto — todas as migrations até aqui foram aplicadas
+colando SQL no editor, nunca via `supabase db push`, então não há
+tabela de controle para conferir automaticamente o que já rodou contra
+produção. Ver ADR a considerar: adotar `supabase db push`/CLI como
+único caminho de aplicar migration daqui para frente, para este tipo de
+gap não se repetir silenciosamente.
+
+## Gestão de acesso com e-mail visível — `list_*_members_with_email` (TASK-027)
+
+Duas funções `SECURITY DEFINER` (`20260831140000_rpc_list_members_with_email.sql`),
+mesmo padrão de `find_user_id_by_email`: `list_organization_members_with_email(p_organization_id)`
+e `list_project_members_with_email(p_project_id)` — juntam
+`organization_members`/`project_members` com `auth.users` para devolver
+o e-mail de cada membro. Antes disso a lista de membros só mostrava
+`full_name`/id truncado (decisão original da TASK-012/ADR-004, para não
+duplicar dado de `auth.users` em `profiles`) — inviável na prática assim
+que existiu um segundo usuário real sem perfil preenchido.
+
+- Autorização: quem chama precisa já poder ver aquela linha pela RLS
+  existente (`is_org_member` para organização; `is_project_member` ou
+  `is_project_org_admin` para projeto) — a função só acrescenta o e-mail
+  a uma linha que o chamador já enxergaria via `select` direto na
+  tabela, nunca amplia quem vê quais linhas.
+- Usadas por `listOrganizationMembers`/`listProjectMembers`
+  (`src/lib/supabase/queries.ts`), no lugar do `select` direto anterior.
+
 ## Provisionamento de usuário pelo admin — `admin-create-user` (TASK-025, ADR-010)
 
 Primeira **Supabase Edge Function** do projeto (`supabase/functions/admin-create-user/index.ts`,

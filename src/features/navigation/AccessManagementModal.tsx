@@ -18,6 +18,8 @@ export interface AccessMember<TRole extends string> {
   user_id: string
   role: TRole
   full_name: string | null
+  /** TASK-027: identificação primária na lista — antes só id truncado. */
+  email: string
 }
 
 export interface AccessRoleOption<TRole extends string> {
@@ -187,11 +189,12 @@ export function AccessManagementModal<TRole extends string>({
           {members.map((member) => (
             <li key={member.id} className="access-member-row">
               <span className="access-member-name">
-                {member.full_name ?? `Usuário ${member.user_id.slice(0, 8)}…`}
+                {member.email}
+                {member.full_name ? ` — ${member.full_name}` : ''}
                 {member.user_id === currentUserId ? ' (você)' : ''}
               </span>
               <select
-                aria-label={`Papel de ${member.full_name ?? member.user_id}`}
+                aria-label={`Papel de ${member.email}`}
                 value={member.role}
                 disabled={busyMemberId === member.id}
                 onChange={(e) => handleRoleChange(member.id, e.target.value as TRole)}
@@ -274,15 +277,19 @@ export function AccessManagementModal<TRole extends string>({
                 </option>
               ))}
             </select>
-            {selectedRoleDescription && <p className="field-hint">{selectedRoleDescription}</p>}
           </div>
-          <button type="submit" className="btn primary" disabled={adding || email.trim().length === 0}>
+          {selectedRoleDescription && <p className="field-hint field-full">{selectedRoleDescription}</p>}
+          <button
+            type="submit"
+            className="btn primary access-add-submit"
+            disabled={adding || email.trim().length === 0}
+          >
             {adding ? 'Adicionando…' : 'Adicionar'}
           </button>
         </form>
       ) : (
         <form className="access-add-form" onSubmit={handleCreateUser}>
-          {createUserHelpText && <p className="field-hint">{createUserHelpText}</p>}
+          {createUserHelpText && <p className="field-hint field-full">{createUserHelpText}</p>}
           <div className="field">
             <label htmlFor="new-user-email">E-mail</label>
             <input
@@ -319,7 +326,7 @@ export function AccessManagementModal<TRole extends string>({
               </button>
             </div>
           </div>
-          <div className="field">
+          <div className="field field-full">
             <label htmlFor="new-user-role">Papel</label>
             <select
               id="new-user-role"
@@ -337,7 +344,7 @@ export function AccessManagementModal<TRole extends string>({
           </div>
           <button
             type="submit"
-            className="btn primary"
+            className="btn primary access-add-submit"
             disabled={adding || email.trim().length === 0 || newPassword.length === 0}
           >
             {adding ? 'Criando…' : 'Criar conta'}

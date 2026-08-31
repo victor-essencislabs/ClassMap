@@ -25,7 +25,7 @@ const roleOptions: AccessRoleOption<Role>[] = [
 
 function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<Role>>[0]> = {}) {
   const members: AccessMember<Role>[] = [
-    { id: 'member-1', user_id: 'user-1', role: 'editor', full_name: 'Ana' },
+    { id: 'member-1', user_id: 'user-1', role: 'editor', full_name: 'Ana', email: 'ana@empresa.com' },
   ]
   const listMembers = vi.fn(async () => members)
   const addMember = vi.fn(async () => undefined)
@@ -56,12 +56,12 @@ function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<
 describe('AccessManagementModal (TASK-013)', () => {
   it('CA-01/CA-02: lista os membros atuais com nome e papel', async () => {
     renderModal()
-    expect(await screen.findByText('Ana (você)')).toBeInTheDocument()
+    expect(await screen.findByText('ana@empresa.com — Ana (você)')).toBeInTheDocument()
   })
 
   it('CA-03: e-mail sem conta correspondente mostra a mensagem clara, sem adicionar', async () => {
     const { addMember } = renderModal()
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
     fireEvent.change(screen.getByLabelText('Adicionar por e-mail'), {
       target: { value: 'naoexiste@empresa.com' },
@@ -78,7 +78,7 @@ describe('AccessManagementModal (TASK-013)', () => {
 
   it('CA-01: e-mail de usuário existente vincula com o papel escolhido e a lista recarrega', async () => {
     const { addMember, listMembers } = renderModal()
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
     fireEvent.change(screen.getByLabelText('Adicionar por e-mail'), {
       target: { value: 'existe@empresa.com' },
@@ -92,9 +92,9 @@ describe('AccessManagementModal (TASK-013)', () => {
 
   it('CA-04: mudar o papel de um membro chama updateMemberRole e recarrega', async () => {
     const { updateMemberRole, listMembers } = renderModal()
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
-    fireEvent.change(screen.getByLabelText('Papel de Ana'), { target: { value: 'visualizador' } })
+    fireEvent.change(screen.getByLabelText('Papel de ana@empresa.com'), { target: { value: 'visualizador' } })
 
     await waitFor(() => expect(updateMemberRole).toHaveBeenCalledWith('member-1', 'visualizador'))
     await waitFor(() => expect(listMembers).toHaveBeenCalledTimes(2))
@@ -102,7 +102,7 @@ describe('AccessManagementModal (TASK-013)', () => {
 
   it('CA-05: revogar chama removeMember e recarrega', async () => {
     const { removeMember, listMembers } = renderModal()
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
     fireEvent.click(screen.getByText('Revogar'))
 
@@ -115,7 +115,7 @@ describe('AccessManagementModal (TASK-013)', () => {
       throw new Error('Esta pessoa já tem acesso a este projeto.')
     })
     renderModal({ addMember })
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
     fireEvent.change(screen.getByLabelText('Adicionar por e-mail'), {
       target: { value: 'existe@empresa.com' },
@@ -129,7 +129,7 @@ describe('AccessManagementModal (TASK-013)', () => {
 
   it('legenda do papel muda com a seleção, no formulário de "Já tem conta"', async () => {
     renderModal()
-    await screen.findByText('Ana (você)')
+    await screen.findByText('ana@empresa.com — Ana (você)')
 
     expect(screen.getByText('Só navega e visualiza os diagramas.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
@@ -138,7 +138,7 @@ describe('AccessManagementModal (TASK-013)', () => {
 
   describe('TASK-026 — "Criar conta nova"', () => {
     async function switchToCreateMode() {
-      await screen.findByText('Ana (você)')
+      await screen.findByText('ana@empresa.com — Ana (você)')
       fireEvent.click(screen.getByText('Criar conta nova'))
     }
 

@@ -2165,27 +2165,43 @@ button.ov-flag {
   color: inherit;
 }
 
+/* TASK-026/027 — grid de 2 colunas, não flex: com a legenda de papel
+   (`.field-hint`) e o aviso de vínculo de organização variando de altura
+   entre os dois modos, `align-items: flex-end` (versão anterior) jogava
+   o botão de submit para qualquer altura — cada campo mantém sua própria
+   coluna/linha independente do conteúdo do vizinho. */
 .access-add-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+  align-items: start;
 }
 
 .access-add-form .field {
-  flex: 1;
-  min-width: 10rem;
+  min-width: 0;
 }
 
 .access-add-form select {
+  width: 100%;
   font: inherit;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: var(--bg);
   color: inherit;
+}
+
+/* Campo/aviso que ocupa a linha inteira do grid (legenda de papel, texto
+   de ajuda de vínculo de organização) — nunca espremido numa coluna só. */
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.access-add-submit {
+  grid-column: 1 / -1;
+  justify-self: end;
 }
 
 /* TASK-026 (ADR-010) — alternância "Já tem conta"/"Criar conta nova" no
