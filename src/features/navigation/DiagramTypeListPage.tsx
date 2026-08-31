@@ -5,7 +5,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Modal } from '../diagram-shell/Modal'
-import { createEmptyDiagram, getCurrentUserId, getMyProjectRole, listDiagrams } from '../../lib/supabase/queries'
+import {
+  createEmptyDiagram,
+  deleteDiagram,
+  getCurrentUserId,
+  getMyProjectRole,
+  listDiagrams,
+} from '../../lib/supabase/queries'
 import type { Diagram, DiagramType, ProjectRole } from '../../lib/supabase/types'
 import { DIAGRAM_TYPE_LABELS } from './diagramTypeLabels'
 
@@ -21,6 +27,12 @@ export function DiagramTypeListPage({ type }: { type: DiagramType }) {
   // fixo pela rota, não escolhido entre 3 botões).
   const [naming, setNaming] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  // TASK-028: exclusão de diagrama — confirmação simples (sem digitar o
+  // nome), mesmo critério já usado para módulo/entidade na Visão do
+  // Sistema (TASK-021/024): exclusão de um único item, sem cascata para
+  // outros diagramas/projetos (diferente de ADR-003, organização/projeto).
+  const [deleteTarget, setDeleteTarget] = useState<Diagram | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function reload() {
     if (!projectId) return
@@ -67,6 +79,21 @@ export function DiagramTypeListPage({ type }: { type: DiagramType }) {
     }
   }
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteDiagram(deleteTarget.id)
+      setDeleteTarget(null)
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir diagrama.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   // `visualizador` não vê controle de criar diagrama — reforço de UI;
   // a garantia real de bloqueio é RLS (RN-02 da TASK-002).
   const canEdit = role === 'editor'
@@ -90,11 +117,22 @@ export function DiagramTypeListPage({ type }: { type: DiagramType }) {
       ) : filtered && filtered.length > 0 ? (
         <ul className="entity-list">
           {filtered.map((diagram) => (
-            <li key={diagram.id} className="entity-list-item">
+            <li key={diagram.id} className={canEdit ? 'entity-list-item with-actions' : 'entity-list-item'}>
               <Link to={`/orgs/${orgId}/projects/${projectId}/diagrams/${diagram.id}`} className="entity-link">
                 <span className="entity-name">{diagram.name}</span>
                 <span className="chevron">→</span>
               </Link>
+              {/* RN da TASK-028: só `editor` vê "Excluir" — reforço de UI, a
+                  garantia real continua sendo RLS (`diagrams_delete`). */}
+              {canEdit && (
+                <button
+                  type="button"
+                  className="btn danger ghost small"
+                  onClick={() => setDeleteTarget(diagram)}
+                >
+                  Excluir
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -115,26 +153,43 @@ export function DiagramTypeListPage({ type }: { type: DiagramType }) {
 
       {naming && (
         <Modal title={`Novo — ${DIAGRAM_TYPE_LABELS[type]}`} onClose={closeNamingModal}>
-          <label htmlFor="diagram-name-input">Nome do diagrama</label>
-          <input
-            id="diagram-name-input"
-            type="text"
-            style={{ display: 'block', width: '100%', marginTop: 6 }}
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreateDiagram(nameInput)
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleCreateDiagram(nameInput)
             }}
-          />
+          >
+            <div className="field">
+              <label htmlFor="diagram-name-input">Nome do diagrama</label>
+              <input
+                id="diagram-name-input"
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="submit" className="btn primary" disabled={creating}>
+                {creating ? 'Criando…' : 'Criar diagrama'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <Modal title="Excluir diagrama" onClose={() => setDeleteTarget(null)}>
+          <p className="error">
+            Isto vai excluir definitivamente o diagrama <strong>{deleteTarget.name}</strong>, com todo o
+            conteúdo dele. Esta ação não pode ser desfeita.
+          </p>
           <div className="modal-actions">
-            <button
-              type="button"
-              className="btn primary"
-              disabled={creating}
-              onClick={() => handleCreateDiagram(nameInput)}
-            >
-              {creating ? 'Criando…' : 'Criar diagrama'}
+            <button type="button" className="btn danger" disabled={deleting} onClick={handleConfirmDelete}>
+              {deleting ? 'Excluindo…' : 'Excluir definitivamente'}
+            </button>
+            <button type="button" className="btn ghost" disabled={deleting} onClick={() => setDeleteTarget(null)}>
+              Cancelar
             </button>
           </div>
         </Modal>

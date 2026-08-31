@@ -59,31 +59,37 @@ export function ClassPickerModal({ classDiagrams, loadClasses, onClose, onPick }
           <p>
             Selecione o Diagrama de Classes de origem e depois a classe da qual este objeto será uma instância.
           </p>
-          <select
-            style={{ display: 'block', width: '100%', marginBottom: 10 }}
-            value={sourceDiagramId}
-            onChange={(e) => handleSourceDiagramChange(e.target.value)}
-          >
-            <option value="">Diagrama de classes de origem…</option>
-            {classDiagrams.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <select
-            style={{ display: 'block', width: '100%' }}
-            value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            disabled={!sourceDiagramId || loadingClasses}
-          >
-            <option value="">{loadingClasses ? 'Carregando…' : 'Classe…'}</option>
-            {availableClasses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <div className="field">
+            <label htmlFor="object-source-diagram">Diagrama de classes de origem</label>
+            <select
+              id="object-source-diagram"
+              value={sourceDiagramId}
+              onChange={(e) => handleSourceDiagramChange(e.target.value)}
+            >
+              <option value="">Diagrama de classes de origem…</option>
+              {classDiagrams.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="object-source-class">Classe</label>
+            <select
+              id="object-source-class"
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              disabled={!sourceDiagramId || loadingClasses}
+            >
+              <option value="">{loadingClasses ? 'Carregando…' : 'Classe…'}</option>
+              {availableClasses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
           {error && <p className="error">{error}</p>}
           <div className="modal-actions">
             <button type="button" className="btn primary" disabled={!selectedClassId} onClick={handleSubmit}>

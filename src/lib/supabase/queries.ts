@@ -257,6 +257,20 @@ export async function renameDiagram(diagramId: string, name: string): Promise<vo
   if (error) throw error
 }
 
+/**
+ * Exclui definitivamente um diagrama (TASK-028) — RLS (`diagrams_delete`,
+ * TASK-001) já exige `editor` do projeto, nenhuma migration nova. Hard
+ * delete, sem confirmação por nome digitado (diferente de
+ * `deleteOrganization`/`deleteProject`, ADR-003): aqui a exclusão é de
+ * um único item, sem cascata para outros diagramas/projetos — mesmo
+ * critério já usado para módulo/entidade na Visão do Sistema (TASK-021/024).
+ */
+export async function deleteDiagram(diagramId: string): Promise<void> {
+  const client = requireClient()
+  const { error } = await client.from('diagrams').delete().eq('id', diagramId)
+  if (error) throw error
+}
+
 // ---------------------------------------------------------------------------
 // TASK-013 (ADR-004) — gestão de acesso: vincular usuário já cadastrado por
 // e-mail a uma organização/projeto e gerenciar o papel dele. Reaproveita

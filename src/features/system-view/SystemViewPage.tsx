@@ -298,24 +298,29 @@ export function SystemViewPage() {
 
       {creatingModule && (
         <Modal title="Novo módulo" onClose={() => setCreatingModule(false)}>
-          <label htmlFor="module-name-input">Nome do módulo</label>
-          <input
-            id="module-name-input"
-            type="text"
-            placeholder="ex.: Account, Company"
-            style={{ display: 'block', width: '100%', marginTop: 6 }}
-            value={moduleNameInput}
-            onChange={(e) => setModuleNameInput(e.target.value)}
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddModule(moduleNameInput)
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleAddModule(moduleNameInput)
             }}
-          />
-          <div className="modal-actions">
-            <button type="button" className="btn primary" onClick={() => handleAddModule(moduleNameInput)}>
-              Criar módulo
-            </button>
-          </div>
+          >
+            <div className="field">
+              <label htmlFor="module-name-input">Nome do módulo</label>
+              <input
+                id="module-name-input"
+                type="text"
+                placeholder="ex.: Account, Company"
+                value={moduleNameInput}
+                onChange={(e) => setModuleNameInput(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="submit" className="btn primary">
+                Criar módulo
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 

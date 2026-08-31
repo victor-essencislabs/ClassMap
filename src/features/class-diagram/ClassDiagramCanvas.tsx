@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
+import { InfoTooltip } from '../diagram-shell/InfoTooltip'
 import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassCard } from './ClassCard'
@@ -177,7 +178,7 @@ export function ClassDiagramCanvas({
             {!readOnly && (
               <button
                 type="button"
-                className="btn"
+                className={connectMode ? 'btn ghost active' : 'btn ghost'}
                 disabled={content.classes.length < 2}
                 onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
               >
@@ -444,7 +445,10 @@ function ClassInspector({
         )}
       </div>
       <div className="field">
-        <label htmlFor="class-stereotype-input">Estereótipo (opcional)</label>
+        <label htmlFor="class-stereotype-input">
+          Estereótipo (opcional)
+          <InfoTooltip text="Classificação UML opcional para a classe (ex.: «entity», «table», «interface», «enumeration») — indica o papel dela no sistema modelado, não é um dado do domínio." />
+        </label>
         {readOnly ? (
           <div className="mono">{cls.stereotype || '—'}</div>
         ) : (

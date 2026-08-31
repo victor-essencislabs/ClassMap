@@ -171,7 +171,7 @@ export function ObjectDiagramCanvas({
             {!readOnly && (
               <button
                 type="button"
-                className="btn"
+                className={connectMode ? 'btn ghost active' : 'btn ghost'}
                 disabled={content.objects.length < 2}
                 onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
               >

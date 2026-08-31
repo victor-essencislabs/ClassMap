@@ -108,11 +108,11 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
 
   return (
     <div className="import-export-controls">
-      <button type="button" className="btn ghost small" onClick={openExportModal}>
+      <button type="button" className="btn ghost" onClick={openExportModal}>
         Exportar JSON
       </button>
       {canImport && (
-        <button type="button" className="btn ghost small" onClick={openImportModal}>
+        <button type="button" className="btn ghost" onClick={openImportModal}>
           Importar JSON
         </button>
       )}

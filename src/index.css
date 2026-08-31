@@ -2227,6 +2227,37 @@ button.ov-flag {
   line-height: 1.5;
 }
 
+/* Botão "i" de ajuda contextual (`InfoTooltip`) — tooltip nativa do
+   navegador via `title`, ao lado do texto do label. Primeiro uso:
+   explicar "estereótipo" no inspector do Diagrama de Classes. */
+.info-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 5px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.info-tooltip:hover,
+.info-tooltip:focus-visible {
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  outline: none;
+}
+
 .field-with-action {
   display: flex;
   gap: 6px;
