@@ -1647,6 +1647,11 @@ button.ov-flag {
   font-size: 12px;
   cursor: grab;
   user-select: none;
+  /* TASK-041 (ADR-011) — corte seco vira transição suave ao
+     selecionar/deselecionar: só cor de borda e o realce (box-shadow),
+     nunca dimensão do card (evita reflow). Reduzida a instantânea em
+     prefers-reduced-motion, ver bloco local no fim do arquivo. */
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
 
 /* TASK-033 (ADR-011) — tinta técnica azul (`--class-accent`), não o selo
@@ -2378,5 +2383,70 @@ button.ov-flag {
   .ov-detail > .ov-header,
   .ov-detail > .ov-section {
     animation: none;
+  }
+}
+
+/* TASK-041 (ADR-011) — Diagrama de Classes: conector "nascendo" ao ser
+   criado no modo de conexão (`ClassDiagramCanvas.tsx` marca a relação
+   recém-criada como `justCreated`, `Connector.tsx` aplica a classe
+   `just-created` no <g> e avisa o canvas via onAnimationEnd para
+   limpar o estado — RN-01: nunca dispara em relação carregada de um
+   diagrama existente, só na criação de fato).
+   `.connector-path` só ganha `pathLength="1"` (normaliza dash/offset
+   para 0..1, independente do comprimento real do traço em pixels)
+   enquanto `just-created` — depois volta ao padrão real em pixels.
+   RN-02: usa --class-accent (tinta do próprio Diagrama de Classes),
+   nunca --accent (selo genérico). */
+@keyframes connector-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes connector-symbol-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes connector-fade-once {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.connector.just-created .connector-path {
+  stroke-dasharray: 1;
+  animation: connector-draw 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Losango/triângulo/seta (ponta da relação) só aparecem depois que o
+   traço termina de se desenhar — nunca durante. */
+.connector.just-created .connector-symbol {
+  opacity: 0;
+  animation: connector-symbol-in 120ms ease-out 200ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem "desenho" — a relação aparece pronta de uma vez, com um único
+     fade curto no grupo inteiro (traço + símbolos juntos) só para
+     comunicar "algo novo apareceu", sem a coreografia em 2 etapas. */
+  .connector.just-created {
+    animation: connector-fade-once 150ms ease-out;
+  }
+
+  .connector.just-created .connector-path,
+  .connector.just-created .connector-symbol {
+    animation: none;
+    opacity: 1;
   }
 }
