@@ -2207,6 +2207,12 @@ button.ov-flag {
   color: var(--text-faint);
   cursor: pointer;
   white-space: nowrap;
+  /* TASK-040 — o carimbo desliza de preenchimento (cor), nunca de
+     tamanho/posição (evita reflow), ao trocar de papel. */
+  transition:
+    background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .role-picker-opt:hover:not(:disabled):not(.active) {
@@ -2223,6 +2229,14 @@ button.ov-flag {
 .role-picker-opt:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* TASK-040 — bloco de reduced-motion local (não o global do arquivo):
+   mantém a troca de estado, remove só a transição do carimbo. */
+@media (prefers-reduced-motion: reduce) {
+  .role-picker-opt {
+    transition: none;
+  }
 }
 
 /* TASK-026/027 — grid de 2 colunas, não flex: com a legenda de papel
