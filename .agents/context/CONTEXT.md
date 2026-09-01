@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-01 (TASK-037 — prompt para IA no modal de exportar JSON)
+ultima-revisao: 2026-09-01 (planejamento TASK-038..045 — animação do sistema, `bootstrap-plan`)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -127,6 +127,24 @@ Pedido do usuário via `/impeccable`: redesenhar o visual do sistema inteiro, cl
 **Achado operacional — colisão de numeração de task (2026-09-01)**: as 5 tasks do redesign foram criadas originalmente como TASK-027..031, sem conferir primeiro se esses números já estavam em uso — TASK-027/028 já eram tasks reais e concluídas de antes desta sessão ("email membros e migration faltante", "polimento UI e exclusão diagrama"), e TASK-031 colidiu ao vivo com um `spawn_task` de limpeza de CSS que o usuário rodou em paralelo **na mesma pasta do projeto** (não isolado em worktree). Corrigido renumerando as 5 tasks do redesign para TASK-032..036 (arquivos renomeados, frontmatter/cabeçalhos/referências cruzadas atualizados em ADR-011/DESIGN.md/CONTEXT.md/comentários de código, sem tocar as referências antigas legítimas). **Lição para sessões futuras**: sempre conferir `ls .agents/tasks/active .agents/tasks/backlog .agents/tasks/completed` antes de atribuir um novo número de task — não presumir que "a próxima task depois da última que eu vi" está livre, ainda mais com trabalho em paralelo (subagentes, `spawn_task`, outra sessão) em andamento.
 
 **TASK-037 implementada** (mesma sessão, 2026-09-01): pedido do usuário — dentro do modal de "Exportar JSON" (Diagrama de Classes), um botão novo "Baixar prompt para IA (.md)" baixa um markdown autocontido (como usar + bloco de prompt pronto pra colar num agente rodando no repositório do sistema a documentar) para quem não sabe o formato de JSON esperado. O conteúdo vem de uma fonte única — `.claude/skills/gerar-diagrama-classmap/SKILL.md` importado como texto puro (`?raw` do Vite) em `src/features/import-export/agentPrompt.ts`, nunca duplicado à mão, pra nunca divergir da skill real (dona: `contrato-ia-diagrama`). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (198 testes, 6 novos). Validado só contra harness de preview sintético (mesma ressalva de TASK-036 — sem sessão autenticada disponível).
+
+## Animação do sistema — planejamento (2026-09-01, `bootstrap-plan`)
+
+Pedido do usuário: a partir de um levantamento de 11 ideias de animação feito pelo `/impeccable animate` (dentro da direção "Certificado de Ensaio" já implementada, ver `DESIGN.md`), gerar tasks de implementação arquitetadas para execução paralela por vários subagentes ao mesmo tempo, todas mescladas numa única branch nova de animação (não `main`).
+
+**Ritual de 3 opções/ADR pulado, com justificativa explícita**: esta não é uma decisão de arquitetura nova — reaproveita o mesmo padrão já aceito e documentado neste projeto em "Backlog inteiro (TASK-011..017) via subagentes paralelos" (2026-08-29): subagentes trabalhando em worktrees git isolados, cada um em sua própria branch de task, mesclados sequencialmente numa branch alvo, com `build`/`lint`/`test` revalidados a cada merge, e overlaps de arquivo conhecidos mapeados de antemão e resolvidos preservando as duas mudanças. A única diferença desta vez é a branch alvo dos merges: `feature/animacoes-sistema` (nova, a partir de `main`), não `main` diretamente — para o usuário revisar antes de decidir mesclar/publicar.
+
+**11 ideias → 8 tasks** (agrupadas por arquivo/coerência de efeito, não 1:1): `TASK-038` (o carimbo de validação — único "momento autoral", toca os 5 pontos de confirmação/sucesso do app), `TASK-039` (toast), `TASK-040` (`RolePicker`), `TASK-041` (Diagrama de Classes: seleção de card + conector nascendo), `TASK-042` (Diagrama de Objetos: seleção de card + destaque de herança — a ideia mais especulativa da rodada, marcada para validação honesta), `TASK-043` (assentamento do "ajustar à tela", canvas compartilhado), `TASK-044` (transição de profundidade na navegação Organizações→Projetos→Diagramas), `TASK-045` (abrir/fechar do `Modal` genérico — beneficia todos os modais do app de uma vez). A 11ª ideia do levantamento original (destaque na troca de entidade da Visão do Sistema) já está implementada desde a TASK-035 (`ov-detail-in`) — não virou task nova. Presença em tempo real ficou de fora do levantamento por ainda não existir no frontend.
+
+**Owner único**: todas as 8 tasks são `frontend-diagramas` — é trabalho 100% de UI/CSS em `src/`, sem schema/RLS/Edge Function envolvidos, então não há necessidade de coordenar papéis diferentes como na rodada TASK-011..017.
+
+**Mapeamento de overlap de arquivo (para o merge sequencial, não para o dispatch dos subagentes)**: `ClassDiagramCanvas.tsx` é tocado por TASK-041 (rastreio de relação recém-criada) e TASK-043 (classe de assentamento); `ObjectDiagramCanvas.tsx` é tocado por TASK-042 (rastreio de objeto recém-criado) e TASK-043 (idem) — em ambos os casos, linhas diferentes, mesmo padrão de overlap trivial já aceito na rodada anterior. `src/index.css` é tocado por todas as 8 tasks, cada uma em um bloco novo e comentado com o próprio id de task, mais seu próprio `@media (prefers-reduced-motion: reduce)` local (nenhuma task edita o bloco de reduced-motion global já existente) — reduz a chance de conflito real a quase zero, e qualquer conflito trivial de "append no fim do arquivo" se resolve preservando os dois blocos, mesma prática já usada em `index.css`/`queries.ts` na rodada TASK-011..017.
+
+**Ondas de dispatch/merge sugeridas**: onda 1, em paralelo — TASK-038, 039, 040, 041, 042, 044, 045 (7 subagentes, sem dependência entre si). Onda 2, só depois de 041 e 042 mescladas em `feature/animacoes-sistema` — TASK-043 (por causa do overlap de arquivo documentado acima). Dispatch dos subagentes pode ocorrer junto para as 8; só o merge final de TASK-043 espera as outras duas.
+
+**Branch única pedida pelo usuário**: `feature/animacoes-sistema`, criada a partir de `main` antes do dispatch. Nenhuma task mescla direto em `main` nem é enviada ao remoto sem pedido explícito — desvio deliberado, só para esta rodada, do fluxo padrão do projeto ("branch única main, sem PR", ver "Fluxo de git ajustado" acima).
+
+**Próximo passo, pendente de confirmação do usuário**: disparar os subagentes das 8 tasks (mesmo mecanismo da rodada TASK-011..017 — worktree isolado por task, branch própria a partir de `feature/animacoes-sistema`).
 
 ## Decisões recentes
 
