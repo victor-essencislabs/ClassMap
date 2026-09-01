@@ -2347,6 +2347,12 @@ button.ov-flag {
 }
 
 /* ---- toast ---- */
+/* TASK-039 (ADR-011) — entrada com slide-up + fade (150ms, curva própria),
+   saída só com fade, mais rápida (100ms), sem deslocamento vertical. A
+   entrada usa `animation` (própria de `.toast.show`, dispara a cada vez que
+   a classe é adicionada) e a saída usa `transition` (própria de `.toast`
+   base, dispara quando a classe é removida) — assim a saída nunca reaplica
+   o `translateY` da entrada, sem "pulo" de posição antes de sumir. */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -2361,18 +2367,30 @@ button.ov-flag {
   box-shadow: var(--shadow);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.1s ease;
   z-index: 60;
 }
 
 .toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(-4px);
+  animation: toast-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast {
-    transition: none;
+  .toast.show {
+    animation: none;
+    transition: opacity 0.15s ease;
   }
 
   .ov-detail > .ov-header,
