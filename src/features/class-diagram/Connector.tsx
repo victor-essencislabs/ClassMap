@@ -1,4 +1,9 @@
-import { useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useRef,
+  type AnimationEvent as ReactAnimationEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { screenDeltaToWorld } from '../diagram-shell/canvasTransform'
 import { CLASS_CARD_WIDTH, estimateClassCardHeight, type DiagramClass, type DiagramRelationship } from './types'
 
@@ -12,6 +17,15 @@ interface ConnectorProps {
    * arraste do ponto de controle (em pixels de tela) para coordenadas
    * do mundo corretamente. */
   zoom: number
+  /** TASK-041 — true só para a relação recém-criada nesta sessão (RN-01:
+   * nunca em relações carregadas de um diagrama existente). Dispara o
+   * traço "nascendo" (`stroke-dasharray`/`stroke-dashoffset`) e o delay
+   * dos símbolos de ponta — ver `src/index.css`, bloco `.connector.just-created`. */
+  justCreated?: boolean
+  /** Avisa o canvas que a animação de "nascer" terminou, para ele
+   * limpar o id rastreado e o efeito não repetir em re-renders futuros
+   * (reduced-motion também dispara isto, com sua própria animação mais curta). */
+  onJustCreatedAnimationEnd?: () => void
   onSelect: (id: string) => void
   onDragControlPoint: (id: string, controlX: number) => void
 }
@@ -30,6 +44,18 @@ const TRIANGLE_LENGTH = 16
 const TRIANGLE_HALF_HEIGHT = 8
 const ARROW_LENGTH = 10
 
+/** TASK-041 — nomes das animações CSS (`src/index.css`, bloco
+ * `.connector.just-created`) que marcam o FIM do efeito de "conector
+ * nascendo": `connector-symbol-in` (movimento normal, símbolo com
+ * delay) ou `connector-fade-once` (prefers-reduced-motion, fade único
+ * no grupo inteiro). Extraído como função pura e exportada porque
+ * jsdom não implementa `AnimationEvent` — `onAnimationEnd` do React
+ * nunca dispara de fato num evento `animationend` simulado em teste,
+ * então a decisão em si é testada aqui, isolada do DOM. */
+export function isJustCreatedAnimationEnd(animationName: string | undefined): boolean {
+  return animationName === 'connector-symbol-in' || animationName === 'connector-fade-once'
+}
+
 function anchorPoint(cls: DiagramClass, side: 'left' | 'right'): Point {
   const y = cls.y + estimateClassCardHeight(cls) / 2
   const x = side === 'right' ? cls.x + CLASS_CARD_WIDTH : cls.x
@@ -43,6 +69,8 @@ export function Connector({
   selected,
   readOnly,
   zoom,
+  justCreated = false,
+  onJustCreatedAnimationEnd,
   onSelect,
   onDragControlPoint,
 }: ConnectorProps) {
@@ -107,20 +135,39 @@ export function Connector({
     onSelect(relationship.id)
   }
 
+  // TASK-041 — só reage ao fim da animação relevante (a mais longa de
+  // cada modo: símbolo com delay em movimento normal, fade único em
+  // prefers-reduced-motion) para não cortar o efeito no meio ao limpar
+  // `justCreated` um instante antes dele realmente terminar.
+  function handleGroupAnimationEnd(e: ReactAnimationEvent<SVGGElement>) {
+    if (!justCreated) return
+    if (isJustCreatedAnimationEnd(e.animationName)) {
+      onJustCreatedAnimationEnd?.()
+    }
+  }
+
   return (
-    <g onClick={handleSelect} style={{ cursor: 'pointer' }}>
+    <g
+      className={justCreated ? 'connector just-created' : 'connector'}
+      onClick={handleSelect}
+      onAnimationEnd={handleGroupAnimationEnd}
+      style={{ cursor: 'pointer' }}
+    >
       {/* área de clique mais larga, invisível, para facilitar selecionar */}
       <path d={path} stroke="transparent" strokeWidth={12} fill="none" />
       <path
         d={path}
+        className="connector-path"
         stroke={stroke}
         strokeWidth={strokeWidth}
         fill="none"
         strokeDasharray={dashed ? '6 4' : undefined}
+        pathLength={justCreated ? 1 : undefined}
       />
 
       {hasFromDiamond && (
         <polygon
+          className="connector-symbol"
           points={`${fromAnchor.x},${fromAnchor.y} ${fromAnchor.x + fromDir * (DIAMOND_LENGTH / 2)},${fromAnchor.y - DIAMOND_HALF_HEIGHT} ${fromAnchor.x + fromDir * DIAMOND_LENGTH},${fromAnchor.y} ${fromAnchor.x + fromDir * (DIAMOND_LENGTH / 2)},${fromAnchor.y + DIAMOND_HALF_HEIGHT}`}
           fill={relationship.type === 'composition' ? stroke : 'var(--surface-raised)'}
           stroke={stroke}
@@ -130,6 +177,7 @@ export function Connector({
 
       {hasToTriangle && (
         <polygon
+          className="connector-symbol"
           points={`${toAnchor.x},${toAnchor.y} ${toAnchor.x + toDir * TRIANGLE_LENGTH},${toAnchor.y - TRIANGLE_HALF_HEIGHT} ${toAnchor.x + toDir * TRIANGLE_LENGTH},${toAnchor.y + TRIANGLE_HALF_HEIGHT}`}
           fill="var(--surface-raised)"
           stroke={stroke}
@@ -140,6 +188,7 @@ export function Connector({
       {hasToArrow && (
         <>
           <line
+            className="connector-symbol"
             x1={toAnchor.x}
             y1={toAnchor.y}
             x2={toAnchor.x - toDir * ARROW_LENGTH}
@@ -148,6 +197,7 @@ export function Connector({
             strokeWidth={strokeWidth}
           />
           <line
+            className="connector-symbol"
             x1={toAnchor.x}
             y1={toAnchor.y}
             x2={toAnchor.x - toDir * ARROW_LENGTH}

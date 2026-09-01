@@ -57,6 +57,12 @@ export function ClassDiagramCanvas({
   const [searchQuery, setSearchQuery] = useState('')
   const [connectMode, setConnectMode] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
+  // TASK-041 — id da relação recém-criada NESTA sessão do componente,
+  // só para disparar o efeito de "conector nascendo" (RN-01: começa
+  // null e só é setado no próprio handler de criação abaixo — nunca ao
+  // carregar um diagrama existente). `Connector` limpa isto sozinho
+  // quando a animação termina (`onJustCreatedAnimationEnd`).
+  const [justCreatedRelationshipId, setJustCreatedRelationshipId] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const zoomPan = useCanvasZoomPan(canvasRef)
@@ -135,9 +141,11 @@ export function ClassDiagramCanvas({
       return
     }
     const next = ops.addRelationship(content, result.from, result.to, 'association')
+    const createdId = next.relationships[next.relationships.length - 1].id
     onChange(next)
     endConnectMode()
-    setSelection({ type: 'relationship', id: next.relationships[next.relationships.length - 1].id })
+    setSelection({ type: 'relationship', id: createdId })
+    setJustCreatedRelationshipId(createdId)
     showToast('Relação criada — escolha o tipo (associação, herança…) no inspector')
   }
 
@@ -240,6 +248,10 @@ export function ClassDiagramCanvas({
                       selected={selection?.type === 'relationship' && selection.id === rel.id}
                       readOnly={readOnly}
                       zoom={zoomPan.zoom}
+                      justCreated={rel.id === justCreatedRelationshipId}
+                      onJustCreatedAnimationEnd={() =>
+                        setJustCreatedRelationshipId((current) => (current === rel.id ? null : current))
+                      }
                       onSelect={(id) => setSelection({ type: 'relationship', id })}
                       onDragControlPoint={(id, controlX) => updateRelationship(id, { controlX })}
                     />
