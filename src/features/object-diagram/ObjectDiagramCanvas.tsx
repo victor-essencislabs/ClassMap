@@ -11,6 +11,7 @@ import type { DiagramClass } from '../class-diagram/types'
 import { resolveConnectClick } from '../class-diagram/connectMode'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
+import { FitToScreenGlyph, LinkGlyph } from '../diagram-shell/Icons'
 import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassPickerModal, type ClassDiagramOption } from './ClassPickerModal'
@@ -175,7 +176,7 @@ export function ObjectDiagramCanvas({
                 disabled={content.objects.length < 2}
                 onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
               >
-                🔗 Link
+                <LinkGlyph /> Link
               </button>
             )}
             {!readOnly && (
@@ -274,7 +275,7 @@ export function ObjectDiagramCanvas({
                 aria-label="Ajustar à tela"
                 onClick={() => zoomPan.fitToScreen(computeBounds(content.objects.map(ops.toBoundedNode)))}
               >
-                ⤢
+                <FitToScreenGlyph />
               </button>
               <button type="button" title="Afastar" aria-label="Afastar" onClick={zoomPan.zoomOut}>
                 −

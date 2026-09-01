@@ -102,8 +102,10 @@ describe('ProjectsPage — gestão de acesso (TASK-013)', () => {
 
     expect(await screen.findByText('Gerenciar acesso — Projeto Gestão')).toBeInTheDocument()
     await waitFor(() => expect(listProjectMembers).toHaveBeenCalledWith('proj-4'))
-    expect(screen.getByLabelText('Papel')).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Visualizador' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Editor' })).toBeInTheDocument()
+    // TASK-036 (ADR-011): o `<select>` de papel virou `RolePicker` (2
+    // botões de rádio lado a lado, raise "Painel Catódico").
+    expect(screen.getByRole('radiogroup', { name: 'Papel' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Visualizador' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Editor' })).toBeInTheDocument()
   })
 })

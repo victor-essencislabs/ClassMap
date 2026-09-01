@@ -95,9 +95,10 @@ export function Connector({
   }
 
   const strokeWidth = selected ? 2.5 : 1.5
-  // TASK-007 — antes hardcoded `#2563eb`; agora usa o token de acento do
-  // design system (mesmo azul-violeta usado em `.node-box.selected`).
-  const stroke = selected ? 'var(--accent)' : 'currentColor'
+  // TASK-033 (ADR-011) — tinta técnica azul (`--class-accent`), não o
+  // selo genérico (`--accent`): o Diagrama de Classes tem sua própria
+  // tinta, distinta da tinta QC verde do Diagrama de Objetos.
+  const stroke = selected ? 'var(--class-accent)' : 'currentColor'
 
   function handleSelect(e: ReactMouseEvent<SVGGElement>) {
     // Sem isto, o clique borbulha até o <svg> (que deseleciona ao clicar
@@ -173,7 +174,7 @@ export function Connector({
           cx={controlX}
           cy={midY}
           r={5}
-          fill={selected ? 'var(--accent)' : 'currentColor'}
+          fill={selected ? 'var(--class-accent)' : 'currentColor'}
           opacity={selected ? 1 : 0.35}
           onPointerDown={handleHandlePointerDown}
           onPointerMove={handleHandlePointerMove}

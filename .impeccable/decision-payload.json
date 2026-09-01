@@ -1,0 +1,108 @@
+{
+  "title": "Escolha a nova direção visual do ClassMap",
+  "question": "O sorteio atribuiu Caderneta de Campo. Manter, escolher uma alternativa, ou rolar de novo.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Caderneta de Campo",
+      "kicker": "O SORTEIO",
+      "lineage": "cadernetas de campo de geologia/mineração e a disciplina de registro de laboratório",
+      "thesis": "Cada diagrama é um registro de campo assinado — não um dashboard, um caderno técnico com cadeia de custódia.",
+      "palette": ["#eef3ea", "#1c2320", "#c23b2e", "#1f3a5f", "#c98a2c"],
+      "materials": ["papel milimetrado de campo (grid 5mm)", "carimbo de cadeia de custódia", "lápis vermelho de interpretação", "abas de amostra coloridas"],
+      "viewport": "Sidebar como lombada de caderneta com abas numeradas por diagrama; canvas como página quadriculada onde cada classe é uma entrada carimbada com número, data e autor.",
+      "risk": "Vira pastiche 'vintage' se o quadriculado virar decoração em vez de grade funcional de alinhamento.",
+      "raised": [
+        {"from": "challenger-miura-fold", "raise": "Um único controle de foco (selecionar uma entidade) implanta os 3 blocos da Visão do Sistema com a mesma precisão mecânica de uma dobra controlada — nunca abertura solta ou parcial."},
+        {"from": "challenger-cathode-gauze", "raise": "Papéis (visualizador/editor) sempre mostram as duas opções lado a lado — a concedida 'carimbada' cheia, a outra como marca fantasma não carimbada — nunca um rótulo isolado."},
+        {"from": "challenger-teletext", "raise": "Tabelas da Visão do Sistema seguem uma grade de coluna rígida e exata, sem alinhamento manual solto — disciplina de grade emprestada, nunca o visual retrô de tela."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Certificado de Ensaio",
+      "kicker": "ESCOLHA DO IMPECCABLE",
+      "lineage": "certificados de ensaio laboratorial (XRF/geoquímica) e laudos técnicos assinados",
+      "thesis": "Cada tela lida como um laudo certificado: cabeçalho travado, tabela travada, selo de validação — a mesma linguagem dos dados que o Elims já processa.",
+      "palette": ["#f7f6f2", "#14161c", "#b8322a", "#2f5f8f", "#2f8f5f"],
+      "materials": ["papel timbrado técnico", "selo de validação/QC", "tabela de resultados travada", "cabeçalho de certificado"],
+      "viewport": "Cada diagrama abre como um laudo: cabeçalho com metadados (projeto/autor/data) travado no topo, corpo em tabela/grade travada, selo 'validado' no canto quando salvo.",
+      "risk": "É a leitura mais óbvia do domínio (Elims é literalmente um LIMS) — vira padrão de categoria se o selo e a grade forem decoração, não rigor visual de verdade."
+    },
+    {
+      "id": "challenger-miura-fold",
+      "label": "Folha Miura-Ori",
+      "verdict": "competitive",
+      "lineage": "folhas dobráveis Miura-fold (origami aeroespacial)",
+      "thesis": "Vinculado a: cada nível de detalhe é uma dobra controlada, nunca uma revelação solta.",
+      "palette": ["#ffffff", "#1a1a1a", "#8a95a5", "#a9c6e0"],
+      "materials": ["vinco-montanha", "vinco-vale", "mono técnica aeroespacial"],
+      "case": "Funde bem com a navegação módulo→entidade→3 blocos da Visão do Sistema (implantação progressiva); perde em identificação — a audiência de mineração/lab não vive nesse mundo.",
+      "risk": "Vira gimmick decorativo se o vinco não corresponder a uma hierarquia real de dados."
+    },
+    {
+      "id": "challenger-cathode-gauze",
+      "label": "Painel Catódico",
+      "verdict": "competitive",
+      "lineage": "válvulas nixie/catódicas de instrumentação analógica",
+      "thesis": "Vinculado a: toda opção de papel/permissão presente como fantasma, a concedida golpeada em brilho.",
+      "palette": ["#0d1117", "#e8622c", "#8a6d3b"],
+      "materials": ["gaze de ânodo em bronze fino", "brilho catódico", "vidro escuro"],
+      "case": "Funde bem nas telas de acesso/permissão (visualizador/editor); perde em identificação para o resto do sistema — é uma linguagem de instrumentação, não de campo/laboratório.",
+      "risk": "Ilegível se aplicado fora das telas de estado binário para as quais foi desenhado."
+    },
+    {
+      "id": "challenger-teletext",
+      "label": "Serviço Teletexto",
+      "verdict": "competitive",
+      "lineage": "revistas de teletexto de radiodifusão",
+      "thesis": "Vinculado a: toda tabela de dados trava numa grade de coluna exata, endereçável.",
+      "palette": ["#000000", "#ffff00", "#00c0c0", "#ffffff"],
+      "materials": ["mosaico de blocos", "grade de caractere fixa"],
+      "case": "Funde bem na disciplina de grade da Visão do Sistema (tabelas exatas); perde em identificação — é um mundo de broadcast retrô, não de registro técnico de campo.",
+      "risk": "Vira novidade retrô se a grade não for genuinamente funcional (endereçamento, densidade real)."
+    },
+    {
+      "id": "challenger-gravity-garden",
+      "label": "Jardim de Chuva Gravitacional",
+      "verdict": "declined",
+      "lineage": "mundos oníricos/surreais impossíveis",
+      "palette": ["#3a4a3f", "#2a3a6a", "#6a2a2a"],
+      "materials": ["nuvens coloridas por gravidade", "chuva direcional"],
+      "case": "Funde mal: nenhuma relação com o trabalho de documentação técnica; a audiência não se identifica.",
+      "kept": "Compromisso total com uma única regra física/visual governando toda a interação."
+    },
+    {
+      "id": "challenger-elbow-panel",
+      "label": "Painel de Nave (Pop)",
+      "verdict": "declined",
+      "lineage": "console de ficção científica, vidro preto, blocos pastel",
+      "palette": ["#000000", "#e0b0c0", "#f0c060"],
+      "materials": ["blocos pastel chapados", "cotovelos grossos arredondados"],
+      "case": "Funde mal: estética de painel de nave não tem relação com registro técnico de laboratório/campo.",
+      "kept": "Feedback de estado instantâneo, sem transição, na cor chapada."
+    },
+    {
+      "id": "challenger-racing-league",
+      "label": "Identidade de Liga de Corrida",
+      "verdict": "declined",
+      "lineage": "identidade visual de equipe de corrida fictícia",
+      "palette": ["#2a2a2a", "#ff6a00", "#f0e000"],
+      "materials": ["decalques de patrocinador", "tipografia extendida"],
+      "case": "Funde mal: velocidade/movimento não é o que o produto precisa comunicar — é precisão e confiabilidade de registro.",
+      "kept": "Contadores numéricos lidos como instrumento — aplicável aos números de Classes/Relações/Objetos da sidebar."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code", "toggle": false },
+  "canon": true,
+  "canonCard": {
+    "label": "O padrão da categoria",
+    "thesis": "Dashboard SaaS genérico: cards brancos, acento indigo, sombras suaves — o visual atual do ClassMap, executado com apuro.",
+    "palette": ["#ffffff", "#4a4fe0", "#1b1e27", "#f3f4f8"],
+    "materials": ["cards brancos com sombra suave", "acento indigo/roxo", "sans-serif neutra (Manrope)"],
+    "viewport": "Layout de dashboard SaaS convencional — sidebar simples, cards de conteúdo, sem identidade de domínio.",
+    "risk": "Indistinguível de qualquer outra ferramenta interna gerada por IA — exatamente o problema que motivou este redesign."
+  },
+  "steer": true
+}

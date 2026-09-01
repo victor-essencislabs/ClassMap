@@ -12,6 +12,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { findUserIdByEmail } from '../../lib/supabase/queries'
 import { Modal } from '../diagram-shell/Modal'
+import { RolePicker } from './RolePicker'
 
 export interface AccessMember<TRole extends string> {
   id: string
@@ -193,18 +194,13 @@ export function AccessManagementModal<TRole extends string>({
                 {member.full_name ? ` — ${member.full_name}` : ''}
                 {member.user_id === currentUserId ? ' (você)' : ''}
               </span>
-              <select
-                aria-label={`Papel de ${member.email}`}
+              <RolePicker
+                ariaLabel={`Papel de ${member.email}`}
+                options={roleOptions}
                 value={member.role}
                 disabled={busyMemberId === member.id}
-                onChange={(e) => handleRoleChange(member.id, e.target.value as TRole)}
-              >
-                {roleOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(newRole) => handleRoleChange(member.id, newRole)}
+              />
               <button
                 type="button"
                 className="btn danger ghost small"
@@ -264,19 +260,8 @@ export function AccessManagementModal<TRole extends string>({
             />
           </div>
           <div className="field">
-            <label htmlFor="access-role">Papel</label>
-            <select
-              id="access-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as TRole)}
-              disabled={adding}
-            >
-              {roleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <label>Papel</label>
+            <RolePicker ariaLabel="Papel" options={roleOptions} value={role} disabled={adding} onChange={setRole} />
           </div>
           {selectedRoleDescription && <p className="field-hint field-full">{selectedRoleDescription}</p>}
           <button
@@ -327,19 +312,8 @@ export function AccessManagementModal<TRole extends string>({
             </div>
           </div>
           <div className="field field-full">
-            <label htmlFor="new-user-role">Papel</label>
-            <select
-              id="new-user-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as TRole)}
-              disabled={adding}
-            >
-              {roleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <label>Papel</label>
+            <RolePicker ariaLabel="Papel" options={roleOptions} value={role} disabled={adding} onChange={setRole} />
             {selectedRoleDescription && <p className="field-hint">{selectedRoleDescription}</p>}
           </div>
           <button

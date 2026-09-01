@@ -5,16 +5,38 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ClassMap</title>
-    <!-- Manrope (UI) + IBM Plex Mono (código/atributos, classe `.mono`) —
-         mesmo par de fontes do artefato-protótipo (ADR-002/TASK-006). -->
+    <!-- IBM Plex Sans (UI) + IBM Plex Mono (dado técnico/tabular, classe
+         `.mono`) — direção "Certificado de Ensaio" (ADR-011/TASK-032),
+         substitui o par Manrope/IBM Plex Mono do artefato-protótipo
+         (ADR-002/TASK-006). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
+    <!--
+      THESIS: ClassMap não é um dashboard — é o laudo técnico assinado que
+      substitui uma imagem estática do Visual Paradigm por um registro vivo
+      e auditável.
+      OWN-WORLD: papel de certificado (#f7f6f2/#17181a), tinta grafite
+      (#14161c/#ece9e2), selo vermelhão de validação (#b8322a) como acento
+      primário, tinta técnica azul para o Diagrama de Classes (#2f5f8f),
+      tinta QC verde para o Diagrama de Objetos (#2f8f5f); IBM Plex Sans
+      para UI, IBM Plex Mono para todo dado técnico/tabular.
+      STORY: o time abre um diagrama e lê como abriria o laudo de um
+      ensaio — cabeçalho travado com projeto/autor/data, corpo em
+      tabela/grade travada, selo "salvo" quando confirmado.
+      FIRST VIEWPORT: cabeçalho de laudo travado no topo (marca + ações),
+      corpo full-bleed sobre a grade técnica do papel de certificado.
+      FORM: Certificado de Ensaio, ESCOLHA DO IMPECCABLE — ADR-011, seed
+      key 54ce3b5a.
+      FINISH: unreviewed and undocumented is unfinished; this build ends
+      with the finish review, the verdict, DESIGN.md, and every shipping
+      raster carrying its provenance.
+    -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

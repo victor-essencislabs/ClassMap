@@ -30,7 +30,7 @@ function addClassButton() {
 }
 
 function startConnectButton() {
-  return screen.getByRole('button', { name: '🔗 Relação' })
+  return screen.getByRole('button', { name: 'Relação' })
 }
 
 describe('ClassDiagramCanvas — editor', () => {
@@ -212,7 +212,7 @@ describe('ClassDiagramCanvas — visualizador (CA-05)', () => {
 
     expect(within(classCards()[0] as HTMLElement).getByText('Pedido')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '+ Classe' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '🔗 Relação' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Relação' })).not.toBeInTheDocument()
 
     fireEvent.pointerDown(classCards()[0])
     expect(screen.queryByRole('button', { name: 'Excluir classe' })).not.toBeInTheDocument()

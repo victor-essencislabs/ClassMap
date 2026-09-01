@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import type { ClassDiagramContent } from '../class-diagram/types'
+import { CheckGlyph } from '../diagram-shell/Icons'
 import { Modal } from '../diagram-shell/Modal'
 import { exportClassDiagram, importClassDiagram } from './classDiagramConversion'
 
@@ -130,8 +131,14 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
             onFocus={(e) => e.currentTarget.select()}
           />
           <div className="modal-actions">
-            <button type="button" className="btn primary" onClick={handleCopy}>
-              {copyLabel}
+            {/* TASK-036 (ADR-011) — "selo de validação no estado de
+                sucesso": o botão ganha o check quando a cópia confirma. */}
+            <button
+              type="button"
+              className={copyLabel === 'Copiado!' ? 'btn primary stamped' : 'btn primary'}
+              onClick={handleCopy}
+            >
+              {copyLabel === 'Copiado!' && <CheckGlyph />} {copyLabel}
             </button>
             <button type="button" className="btn" onClick={handleDownload}>
               Baixar arquivo .json

@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
+import { FitToScreenGlyph, LinkGlyph } from '../diagram-shell/Icons'
 import { InfoTooltip } from '../diagram-shell/InfoTooltip'
 import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
@@ -182,7 +183,7 @@ export function ClassDiagramCanvas({
                 disabled={content.classes.length < 2}
                 onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
               >
-                🔗 Relação
+                <LinkGlyph /> Relação
               </button>
             )}
             {!readOnly && (
@@ -281,7 +282,7 @@ export function ClassDiagramCanvas({
                 aria-label="Ajustar à tela"
                 onClick={() => zoomPan.fitToScreen(computeBounds(content.classes.map(ops.toBoundedNode)))}
               >
-                ⤢
+                <FitToScreenGlyph />
               </button>
               <button type="button" title="Afastar" aria-label="Afastar" onClick={zoomPan.zoomOut}>
                 −
@@ -539,7 +540,7 @@ function ClassInspector({
       {!readOnly && (
         <div className="insp-actions">
           <button type="button" className="btn" onClick={onStartConnect}>
-            🔗 Ligar a outra classe
+            <LinkGlyph /> Ligar a outra classe
           </button>
           <button type="button" className="btn danger" onClick={onDelete}>
             Excluir classe

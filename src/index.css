@@ -1,93 +1,117 @@
 :root {
   color-scheme: light dark;
 
-  /* Tokens extraídos literalmente do artefato-protótipo validado pelo
-     usuário (ADR-002/TASK-006 — ver
-     .agents/decisions/ADR-002-redesign-telas-diagrama-artefato.md).
-     Substituem a aproximação genérica (roxo #7c3aed) criada em
-     2026-08-29 antes de o artefato real ter sido localizado.
-     Compartilhados por toda a navegação e pelas 3 telas de diagrama
-     (class-diagram/object-diagram/system-view). Dark/light via
-     `prefers-color-scheme` com override manual por `[data-theme]`,
-     igual ao artefato — não via `light-dark()` como na versão anterior,
-     para deixar pronta uma futura alternância manual de tema. */
-  --bg: #f3f4f8;
-  --surface: #ffffff;
-  --surface-alt: #eceef4;
+  /* Direção "Certificado de Ensaio" (ADR-011/TASK-032 — ver
+     .agents/decisions/ADR-011-redesign-laudo-certificado-ensaio.md).
+     Substitui os tokens extraídos do artefato-protótipo (ADR-002/TASK-006):
+     cada tela lê como um laudo técnico certificado, não um dashboard SaaS
+     genérico. Papel/tinta como base neutra; --accent é o selo de validação
+     (ação primária, em todo o app); --class-accent (tinta técnica azul) é
+     reservado ao Diagrama de Classes e --object-accent (tinta QC verde) ao
+     Diagrama de Objetos — cada visualização com sua própria tinta, nunca
+     decorativo. Compartilhados por toda a navegação e pelas 3 telas de
+     diagrama. Dark/light via `prefers-color-scheme` com override manual
+     por `[data-theme]` (TASK-019/ADR-007). */
+  --bg: #f7f6f2;
+  --surface: #fbfaf7;
+  --surface-alt: #efece3;
   --surface-raised: #ffffff;
-  --border: #d9dce5;
-  --border-soft: #e6e8f0;
-  --text: #1b1e27;
-  --text-muted: #5c6274;
-  --text-faint: #9198ab;
-  --accent: #4a4fe0;
-  --accent-strong: #3538c2;
+  --border: #d8d3c3;
+  --border-soft: #e7e3d6;
+  --text: #14161c;
+  --text-muted: #5c5f57;
+  --text-faint: #8b8e85;
+  --accent: #b8322a;
+  --accent-strong: #8f231d;
   --accent-contrast: #ffffff;
-  --accent-soft: #eceeff;
-  --accent-soft-border: #c9ccff;
-  --object-accent: #0e9c8f;
-  --object-soft: #e2f7f4;
-  --danger: #d1436b;
-  --shadow: 0 1px 2px rgba(20, 22, 40, 0.04), 0 8px 24px rgba(20, 22, 40, 0.06);
-  --canvas-dot: #d6d9e4;
-  --canvas-bg: #eaecf3;
+  --accent-soft: #f6e3e1;
+  --accent-soft-border: #e3b3ae;
+  --class-accent: #2f5f8f;
+  --class-soft: #e2ebf3;
+  --class-soft-border: #a9c2d9;
+  --object-accent: #2f8f5f;
+  --object-soft: #e2f2e9;
+  --danger: #af2d55;
+  --shadow: 0 1px 2px rgba(30, 26, 20, 0.06), 0 8px 22px rgba(30, 26, 20, 0.08);
+  --canvas-dot: #ddd7c6;
+  --canvas-bg: #f1efe6;
 
-  font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #12131a;
-    --surface: #1a1c26;
-    --surface-alt: #20222e;
-    --surface-raised: #242733;
-    --border: #333648;
-    --border-soft: #2a2d3c;
-    --text: #e8e9f2;
-    --text-muted: #9a9fb5;
-    --text-faint: #6c7188;
-    --accent: #8489ff;
-    --accent-strong: #a1a5ff;
-    --accent-soft: #242849;
-    --accent-soft-border: #3d4180;
-    --object-accent: #3fd6c5;
-    --object-soft: #173330;
-    --danger: #f0728f;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-    --canvas-dot: #2a2d3c;
-    --canvas-bg: #16171f;
+    --bg: #17181a;
+    --surface: #1e2023;
+    --surface-alt: #24262a;
+    --surface-raised: #2a2d31;
+    --border: #3a3d38;
+    --border-soft: #2e302c;
+    --text: #ece9e2;
+    --text-muted: #a9ac9f;
+    --text-faint: #75786d;
+    --accent: #c4402f;
+    --accent-strong: #d1523f;
+    --accent-soft: #3a211d;
+    --accent-soft-border: #6b3128;
+    --class-accent: #6ea3d1;
+    --class-soft: #223140;
+    --class-soft-border: #3d5a78;
+    --object-accent: #4fbf8f;
+    --object-soft: #16332a;
+    --danger: #e8688a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.38);
+    --canvas-dot: #33352f;
+    --canvas-bg: #1c1d1a;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #12131a;
-  --surface: #1a1c26;
-  --surface-alt: #20222e;
-  --surface-raised: #242733;
-  --border: #333648;
-  --border-soft: #2a2d3c;
-  --text: #e8e9f2;
-  --text-muted: #9a9fb5;
-  --text-faint: #6c7188;
-  --accent: #8489ff;
-  --accent-strong: #a1a5ff;
-  --accent-soft: #242849;
-  --accent-soft-border: #3d4180;
-  --object-accent: #3fd6c5;
-  --object-soft: #173330;
-  --danger: #f0728f;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --canvas-dot: #2a2d3c;
-  --canvas-bg: #16171f;
+  --bg: #17181a;
+  --surface: #1e2023;
+  --surface-alt: #24262a;
+  --surface-raised: #2a2d31;
+  --border: #3a3d38;
+  --border-soft: #2e302c;
+  --text: #ece9e2;
+  --text-muted: #a9ac9f;
+  --text-faint: #75786d;
+  --accent: #c4402f;
+  --accent-strong: #d1523f;
+  --accent-soft: #3a211d;
+  --accent-soft-border: #6b3128;
+  --class-accent: #6ea3d1;
+  --class-soft: #223140;
+  --class-soft-border: #3d5a78;
+  --object-accent: #4fbf8f;
+  --object-soft: #16332a;
+  --danger: #e8688a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.38);
+  --canvas-dot: #33352f;
+  --canvas-bg: #1c1d1a;
 }
 
-/* Manrope para UI, IBM Plex Mono (classe `.mono`) para nomes de
-   atributos/código — mesmo par de fontes do artefato (ver <link> em
-   index.html). */
+/* Seleção de texto, caret e foco herdam a tinta do selo, não o azul
+   padrão do navegador — mesmo princípio dos tokens acima: nada de cor que
+   não venha da paleta do sistema. */
+::selection {
+  background: var(--accent-soft-border);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* IBM Plex Sans para UI, IBM Plex Mono (classe `.mono`) para todo dado
+   técnico/tabular (nomes de atributos/código, IDs, contadores) — direção
+   "Certificado de Ensaio" (ADR-011/TASK-032, ver <link> em index.html). */
 .mono {
   font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 * {
@@ -107,13 +131,28 @@ body {
   min-height: 100vh;
 }
 
+/* Masthead do laudo: régua cinza + uma segunda régua fina na tinta do
+   selo logo abaixo — a assinatura de "cabeçalho travado" da direção
+   Certificado de Ensaio (ADR-011), usada uma única vez, aqui, nunca
+   repetida como decoração em cada card. */
 .app-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
 }
 
 /* TASK-019 (ADR-007): agrupa o toggle de tema e "Sair", para
@@ -128,18 +167,30 @@ body {
 .app-header .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
   font-weight: 700;
   font-size: 1.05rem;
   text-decoration: none;
   color: inherit;
 }
 
+/* O selo: marca circular com as 3 tintas do sistema (selo → azul técnico
+   → verde QC), um anel de "relevo" em vez de sombra — a mesma leitura de
+   um carimbo de laudo, não um ícone de app genérico. */
 .brand-mark {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, var(--accent), var(--object-accent));
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 200deg,
+    var(--accent),
+    var(--class-accent),
+    var(--object-accent),
+    var(--accent)
+  );
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3px var(--border);
   flex-shrink: 0;
 }
 
@@ -158,9 +209,13 @@ main {
   padding: 1rem;
 }
 
+/* Card de login como a folha de rosto de um laudo: régua do selo travada
+   no topo, canto quase reto, sombra rasa de papel em vez do halo
+   flutuante de SaaS. */
 .card {
   border: 1px solid var(--border);
-  border-radius: 0.9rem;
+  border-top: 3px solid var(--accent);
+  border-radius: 4px;
   padding: 2rem;
   max-width: 360px;
   width: 100%;
@@ -168,21 +223,30 @@ main {
   flex-direction: column;
   gap: 0.5rem;
   background: var(--surface);
-  box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow);
 }
 
 .card h1 {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
 }
 
 .card h1::before {
   content: '';
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, var(--accent), var(--object-accent));
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 200deg,
+    var(--accent),
+    var(--class-accent),
+    var(--object-accent),
+    var(--accent)
+  );
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 3px var(--border);
   flex-shrink: 0;
 }
 
@@ -196,15 +260,10 @@ main {
 .card input {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 3px;
   font: inherit;
   background: var(--bg);
   color: inherit;
-}
-
-.card input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 button {
@@ -215,7 +274,7 @@ button {
 .card button[type='submit'] {
   margin-top: 1rem;
   padding: 0.65rem;
-  border-radius: 0.5rem;
+  border-radius: 3px;
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
@@ -242,15 +301,16 @@ button {
 
 .list li {
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: 3px;
   padding: 0.75rem;
 }
 
 .badge {
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   opacity: 0.7;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 3px;
   padding: 0.1rem 0.5rem;
   margin-left: 0.5rem;
 }
@@ -304,9 +364,12 @@ button {
 
 .entity-list-item {
   display: block;
-  border-radius: 0.75rem;
+  border-radius: 4px;
 }
 
+/* Linha de ledger, não card flutuante: sem elevação/lift no hover — só a
+   tinta do selo entrando na borda e no fundo, como marcar um item numa
+   lista de registro. */
 .entity-link {
   display: flex;
   align-items: center;
@@ -314,19 +377,16 @@ button {
   gap: 0.75rem;
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 4px;
   text-decoration: none;
   color: inherit;
   background: var(--surface);
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .entity-link:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .entity-link .entity-name {
@@ -339,6 +399,7 @@ button {
   gap: 0.5rem;
   color: var(--text-muted);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .entity-link .chevron {
@@ -350,9 +411,9 @@ button {
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 3px;
   padding: 0.2rem 0.65rem;
   color: var(--text-muted);
   white-space: nowrap;
@@ -378,7 +439,7 @@ button {
 
 .empty-state {
   border: 1px dashed var(--border);
-  border-radius: 0.75rem;
+  border-radius: 4px;
   padding: 2.5rem 1.5rem;
   text-align: center;
   color: var(--text-muted);
@@ -399,7 +460,7 @@ button {
   gap: 0.75rem;
   padding: 1.1rem;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 4px;
   background: var(--surface);
 }
 
@@ -420,22 +481,17 @@ button {
 .inline-create-form input {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 3px;
   font: inherit;
   background: var(--bg);
   color: inherit;
-}
-
-.inline-create-form input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 button.primary {
   font: inherit;
   cursor: pointer;
   padding: 0.6rem 1.25rem;
-  border-radius: 0.5rem;
+  border-radius: 3px;
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
@@ -466,7 +522,7 @@ button.link-button {
 
 .app-header button {
   padding: 0.45rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: 3px;
   border: 1px solid var(--border);
   background: transparent;
   color: inherit;
@@ -479,16 +535,6 @@ button.link-button {
 }
 
 /* ---- Diagrama de Classes (TASK-003) ---- */
-
-.diagram-editor-page {
-  max-width: none;
-}
-
-.diagram-editor-header {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
 
 .save-indicator {
   font-size: 0.85rem;
@@ -525,38 +571,11 @@ button.link-button {
   background: var(--surface-alt);
 }
 
-.class-diagram-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-}
-
-.new-relationship-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.new-relationship-form select {
-  font: inherit;
-  padding: 0.25rem;
-}
-
-.canvas-area {
-  position: relative;
-  min-height: 70vh;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow: auto;
-  --diagram-bg: light-dark(#fff, #1a1a1a);
 }
 
 .connectors-layer {
@@ -600,47 +619,6 @@ button.link-button {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-}
-
-.edit-panel {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-width: 320px;
-}
-
-.edit-panel label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.85rem;
-}
-
-.edit-panel input,
-.edit-panel select {
-  font: inherit;
-  padding: 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-}
-
-.attribute-row {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.attribute-row input {
-  flex: 1;
-  min-width: 0;
-}
-
-.edit-panel button.danger {
-  margin-top: 0.5rem;
-  color: #b91c1c;
-  border-color: #b91c1c;
 }
 
 .object-card u {
@@ -715,7 +693,7 @@ button.link-button {
   display: block;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
   font-family: inherit;
 }
@@ -743,7 +721,7 @@ button.link-button {
   font-size: 12.5px;
   font-weight: 700;
   padding: 8px 9px;
-  border-radius: 8px;
+  border-radius: 3px;
   cursor: pointer;
 }
 
@@ -757,18 +735,21 @@ button.link-button {
   color: var(--accent-strong);
 }
 
+/* TASK-035 (ADR-011) — selo (não a tinta verde de objeto, que não tem
+   relação semântica com entidades da Visão do Sistema), coerente com
+   `.ov-entity-btn.active` logo acima. */
 .ov-entity-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--object-accent);
+  background: var(--accent);
   flex: none;
 }
 
 .ov-nav-add {
   width: 100%;
   padding: 7px;
-  border-radius: 7px;
+  border-radius: 3px;
   border: 1px dashed var(--border);
   background: transparent;
   color: var(--text-muted);
@@ -787,6 +768,29 @@ button.link-button {
 .ov-detail {
   overflow-y: auto;
   padding: 26px 34px 60px;
+}
+
+/* TASK-035 (ADR-011) — raise incorporado do desafiante "Folha Miura-Ori"
+   (ver ADR-011): selecionar uma entidade implanta os 3 blocos de uma
+   vez, nunca em cascata — cabeçalho e as 3 seções animam com a MESMA
+   duração/atraso (não escalonado), lidas como um único movimento
+   mecânico, não uma revelação item a item. `EntityDetail` é remontado
+   por `key={entity.id}` (`SystemViewPage.tsx`) para esta animação
+   repetir a cada troca de entidade. */
+@keyframes ov-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ov-detail > .ov-header,
+.ov-detail > .ov-section {
+  animation: ov-detail-in 0.18s ease-out;
 }
 
 .ov-empty {
@@ -826,7 +830,7 @@ button.link-button {
 .ov-entity-name-input {
   display: block;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 3px;
   background: transparent;
   color: var(--text);
   padding: 2px 6px;
@@ -863,13 +867,16 @@ button.link-button {
   flex-wrap: wrap;
 }
 
+/* TASK-035 (ADR-011) — retângulo, não pílula: etiqueta de classificação
+   carimbada, mesmo tratamento de `.entity-badge` (TASK-032). */
 .ov-pill {
   font-size: 11px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--text-muted);
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 3px;
   padding: 4px 12px;
 }
 
@@ -899,7 +906,7 @@ button.link-button {
 .ov-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 4px;
   background: var(--surface);
 }
 
@@ -907,6 +914,7 @@ table.ov-table {
   border-collapse: collapse;
   width: 100%;
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 table.ov-table th {
@@ -947,7 +955,7 @@ table.ov-table input {
   width: 100%;
   min-width: 6rem;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 3px;
   background: transparent;
   padding: 3px 5px;
 }
@@ -973,7 +981,7 @@ table.ov-table input:focus {
   align-items: center;
   font-size: 9px;
   font-weight: 800;
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 1px 5px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
@@ -1011,7 +1019,7 @@ button.ov-flag {
   flex: none;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: 3px;
   border: none;
   background: transparent;
   color: var(--text-faint);
@@ -1076,7 +1084,7 @@ button.ov-flag {
   flex: 1;
   min-width: 0;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 3px;
   background: transparent;
   padding: 2px 5px;
 }
@@ -1108,7 +1116,7 @@ button.ov-flag {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 12px 14px;
   margin-bottom: 8px;
 }
@@ -1129,7 +1137,7 @@ button.ov-flag {
   color: var(--accent-strong);
   font-size: 12px;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 3px;
   background: transparent;
   padding: 2px 4px;
   margin: -2px 0 6px -4px;
@@ -1150,7 +1158,7 @@ button.ov-flag {
   font-size: 11px;
   color: var(--object-accent);
   background: var(--object-soft);
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 8px 10px;
   overflow-x: auto;
   margin-top: 6px;
@@ -1165,7 +1173,7 @@ button.ov-flag {
   color: var(--object-accent);
   background: var(--object-soft);
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 8px 10px;
   margin-top: 6px;
 }
@@ -1220,7 +1228,12 @@ button.ov-flag {
 }
 
 /* ---- topbar ---- */
+/* TASK-035 (ADR-011) — mesmo masthead do `.app-header` (TASK-032):
+   régua cinza + régua fina na tinta do selo. Estende o "cabeçalho
+   travado de laudo" às 3 telas de diagrama (Classes/Objetos/Visão do
+   Sistema, que reaproveitam esta topbar), não só nav/login. */
 .diagram-shell-topbar {
+  position: relative;
   grid-area: topbar;
   display: flex;
   align-items: center;
@@ -1228,6 +1241,17 @@ button.ov-flag {
   padding: 0 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  z-index: 5;
+}
+
+.diagram-shell-topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
   z-index: 5;
 }
 
@@ -1250,37 +1274,6 @@ button.ov-flag {
   flex: none;
 }
 
-.diagram-shell-topbar .view-switch {
-  display: flex;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.diagram-shell-topbar .view-switch button {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 12.5px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.diagram-shell-topbar .view-switch button.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow);
-}
-
-.diagram-shell-topbar .view-switch button.active[data-view='objects'] {
-  color: var(--object-accent);
-}
-
 .diagram-shell-topbar .topbar-actions {
   display: flex;
   align-items: center;
@@ -1299,7 +1292,7 @@ button.ov-flag {
   font-weight: 700;
   font-size: 12.5px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: 3px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1355,10 +1348,9 @@ button.ov-flag {
   height: 30px;
   flex: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 3px;
   background: transparent;
   color: var(--text);
-  font-size: 15px;
   line-height: 1;
   cursor: pointer;
 }
@@ -1386,7 +1378,7 @@ button.ov-flag {
 .diagram-shell-sidebar .side-search {
   width: 100%;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text);
@@ -1420,7 +1412,7 @@ button.ov-flag {
   align-items: center;
   gap: 8px;
   padding: 7px 9px;
-  border-radius: 7px;
+  border-radius: 3px;
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 600;
@@ -1432,16 +1424,31 @@ button.ov-flag {
   color: var(--text);
 }
 
+/* TASK-033 (ADR-011) — visto ao vivo: deixar em selo (vermelhão) enquanto
+   o card selecionado no canvas já lê em azul técnico batia estranho —
+   mesma tinta em toda a cadeia de seleção (dot → linha da sidebar →
+   borda do card). `.obj` (Diagrama de Objetos) segue à parte, TASK-034. */
 .diagram-shell-sidebar .side-item.selected {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--class-soft);
+  color: var(--class-accent);
 }
 
+/* TASK-034 (ADR-011) — `.side-item.obj.selected` tem mais especificidade
+   que a regra acima (3 classes vs. 2) e dá ao Diagrama de Objetos sua
+   própria tinta QC verde, coerente com `.node-box.object.selected`. */
+.diagram-shell-sidebar .side-item.obj.selected {
+  background: var(--object-soft);
+  color: var(--object-accent);
+}
+
+/* TASK-033 (ADR-011) — o dot sem `.obj` é sempre uma classe (a sidebar
+   é reaproveitada só pelo Diagrama de Classes e pelo de Objetos, nunca
+   os dois ao mesmo tempo) — tinta técnica azul, não o selo genérico. */
 .diagram-shell-sidebar .side-item .dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--class-accent);
   flex: none;
 }
 
@@ -1499,7 +1506,7 @@ button.ov-flag {
   flex: 1;
   min-width: 0;
   background: var(--surface-alt);
-  border-radius: 9px;
+  border-radius: 4px;
   padding: 8px 6px;
 }
 
@@ -1541,7 +1548,7 @@ button.ov-flag {
   gap: 6px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 5px;
   box-shadow: var(--shadow);
 }
@@ -1551,7 +1558,7 @@ button.ov-flag {
   height: 30px;
   border: none;
   background: transparent;
-  border-radius: 7px;
+  border-radius: 3px;
   color: var(--text-muted);
   font-size: 16px;
   cursor: pointer;
@@ -1609,7 +1616,7 @@ button.ov-flag {
 .diagram-shell-canvas .empty-hint-card {
   background: var(--surface);
   border: 1px dashed var(--border);
-  border-radius: 14px;
+  border-radius: 4px;
   padding: 22px 28px;
   max-width: 340px;
   text-align: center;
@@ -1634,7 +1641,7 @@ button.ov-flag {
 .diagram-shell-canvas .node-box {
   background: var(--surface-raised);
   border: 1.5px solid var(--border);
-  border-radius: 9px;
+  border-radius: 4px;
   box-shadow: var(--shadow);
   overflow: hidden;
   font-size: 12px;
@@ -1642,9 +1649,13 @@ button.ov-flag {
   user-select: none;
 }
 
+/* TASK-033 (ADR-011) — tinta técnica azul (`--class-accent`), não o selo
+   genérico: o Diagrama de Classes tem sua própria tinta, distinta da
+   tinta QC verde do Diagrama de Objetos (`.node-box.object.selected`
+   logo abaixo, inalterada). */
 .diagram-shell-canvas .node-box.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--class-accent);
+  box-shadow: 0 0 0 3px var(--class-soft);
 }
 
 .diagram-shell-canvas .node-box.object.selected {
@@ -1674,8 +1685,8 @@ button.ov-flag {
 }
 
 .diagram-shell-canvas .node-head {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--class-soft);
+  color: var(--class-accent);
   font-weight: 800;
   font-size: 12.5px;
   padding: 7px 10px;
@@ -1776,7 +1787,7 @@ button.ov-flag {
 .diagram-shell-inspector .field select {
   width: 100%;
   padding: 7px 9px;
-  border-radius: 7px;
+  border-radius: 3px;
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text);
@@ -1800,7 +1811,7 @@ button.ov-flag {
   flex: 1;
   min-width: 0;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 3px;
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text);
@@ -1832,7 +1843,7 @@ button.ov-flag {
 .diagram-shell-inspector .add-row-btn {
   width: 100%;
   padding: 7px;
-  border-radius: 7px;
+  border-radius: 3px;
   border: 1px dashed var(--border);
   background: transparent;
   color: var(--text-muted);
@@ -1878,20 +1889,22 @@ button.ov-flag {
   font-size: 11.5px;
   color: var(--text-muted);
   background: var(--surface-alt);
-  border-radius: 6px;
+  border-radius: 3px;
   padding: 5px 8px;
   cursor: pointer;
   border: 1.5px solid transparent;
 }
 
 .diagram-shell-inspector .rel-chip:hover {
-  border-color: var(--accent-soft-border);
+  border-color: var(--class-soft-border);
 }
 
+/* TASK-033 (ADR-011) — `.rel-chip` só existe no inspector do Diagrama de
+   Classes (a lista de relações de uma classe) — tinta técnica azul. */
 .diagram-shell-inspector .rel-chip.selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  border-color: var(--class-accent);
+  background: var(--class-soft);
+  color: var(--class-accent);
 }
 
 .diagram-shell-inspector .rel-chip .arrow {
@@ -1939,7 +1952,7 @@ button.ov-flag {
   align-items: center;
   gap: 4px;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: 3px;
   padding: 8px 6px;
   cursor: pointer;
   background: var(--surface-alt);
@@ -1949,13 +1962,15 @@ button.ov-flag {
 }
 
 .diagram-shell-inspector .edge-type-opt:hover {
-  border-color: var(--accent-soft-border);
+  border-color: var(--class-soft-border);
 }
 
+/* TASK-033 (ADR-011) — `.edge-type-opt` (os 5 tipos UML) só existe no
+   inspector do Diagrama de Classes — tinta técnica azul. */
 .diagram-shell-inspector .edge-type-opt.active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  border-color: var(--class-accent);
+  background: var(--class-soft);
+  color: var(--class-accent);
 }
 
 .diagram-shell-inspector .edge-type-opt svg {
@@ -1983,7 +1998,7 @@ button.ov-flag {
 
 .diagram-shell-inspector .class-color-opt {
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1.5px solid var(--border);
   background: var(--swatch, var(--surface-alt));
   cursor: pointer;
@@ -2025,7 +2040,7 @@ button.ov-flag {
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 4px;
   width: min(560px, 90vw);
   max-height: 80vh;
   display: flex;
@@ -2072,7 +2087,7 @@ button.ov-flag {
   resize: vertical;
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 3px;
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
@@ -2095,16 +2110,18 @@ button.ov-flag {
   color: var(--text-muted);
 }
 
-.modal-body .field input {
+.modal-body .field input,
+.modal-body .field select {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 3px;
   font: inherit;
   background: var(--bg);
   color: inherit;
 }
 
-.modal-body .field input:focus-visible {
+.modal-body .field input:focus-visible,
+.modal-body .field select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -2141,7 +2158,7 @@ button.ov-flag {
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--surface);
 }
 
@@ -2155,14 +2172,44 @@ button.ov-flag {
   font-size: 13px;
 }
 
-.access-member-row select {
+/* TASK-036 (ADR-011) — raise incorporado do desafiante descartado "Painel
+   Catódico": os 2 papéis sempre lado a lado, o concedido carimbado
+   (`--accent` sólido), o outro como marca fantasma (contorno fraco) —
+   nunca um rótulo isolado atrás de um `<select>` fechado. Ver
+   `RolePicker.tsx`. */
+.role-picker {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.role-picker-opt {
   font: inherit;
-  font-size: 12.5px;
-  padding: 5px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 3px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: inherit;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.role-picker-opt:hover:not(:disabled):not(.active) {
+  border-color: var(--accent-soft-border);
+  color: var(--text-muted);
+}
+
+.role-picker-opt.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.role-picker-opt:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* TASK-026/027 — grid de 2 colunas, não flex: com a legenda de papel
@@ -2181,16 +2228,6 @@ button.ov-flag {
 
 .access-add-form .field {
   min-width: 0;
-}
-
-.access-add-form select {
-  width: 100%;
-  font: inherit;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--bg);
-  color: inherit;
 }
 
 /* Campo/aviso que ocupa a linha inteira do grid (legenda de papel, texto
@@ -2268,11 +2305,13 @@ button.ov-flag {
   min-width: 0;
 }
 
+/* Já era, antes desta task, o "selo de validação no estado de sucesso"
+   que o ADR-011 pede — mantido, só a geometria foi alinhada à fundação. */
 .access-created-account {
   margin: 10px 0 0;
   padding: 10px 12px;
   border: 1px solid var(--accent-soft-border);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--accent-soft);
   color: var(--text);
   font-size: 12.5px;
@@ -2284,7 +2323,14 @@ button.ov-flag {
   font-weight: 700;
   background: var(--surface);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: 3px;
+}
+
+/* TASK-036 (ADR-011) — "selo de validação no estado de sucesso": o botão
+   de copiar JSON exportado ganha o check + tom mais forte quando confirma. */
+.btn.primary.stamped {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 /* ---- toast ---- */
@@ -2314,5 +2360,10 @@ button.ov-flag {
 @media (prefers-reduced-motion: reduce) {
   .toast {
     transition: none;
+  }
+
+  .ov-detail > .ov-header,
+  .ov-detail > .ov-section {
+    animation: none;
   }
 }

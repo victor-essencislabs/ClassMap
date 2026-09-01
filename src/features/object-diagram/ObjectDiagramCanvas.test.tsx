@@ -40,7 +40,7 @@ function objectCards() {
 }
 
 function startLinkButton() {
-  return screen.getByRole('button', { name: '🔗 Link' })
+  return screen.getByRole('button', { name: 'Link' })
 }
 
 async function createObjectViaModal() {
@@ -202,7 +202,7 @@ describe('ObjectDiagramCanvas — link entre objetos (TASK-017, ver ADR-006)', (
     expect(relStat?.textContent).toBe('0')
   })
 
-  it('"🔗 Link" fica desabilitado com menos de 2 objetos', async () => {
+  it('"Link" fica desabilitado com menos de 2 objetos', async () => {
     render(<ControlledCanvas />)
     expect(startLinkButton()).toBeDisabled()
     await createObjectViaModal()
@@ -216,7 +216,7 @@ describe('ObjectDiagramCanvas — visualizador (CA-05)', () => {
   it('não mostra nenhum controle de criação/edição — só navega/dá zoom/pan', () => {
     render(<ControlledCanvas readOnly />)
     expect(screen.queryByRole('button', { name: '+ Objeto' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '🔗 Link' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Link' })).not.toBeInTheDocument()
     expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
   })
 })

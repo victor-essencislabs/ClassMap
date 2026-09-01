@@ -6,7 +6,7 @@
 //
 // TASK-026 (ADR-010): modo "Criar conta nova" (`createUser`, chama a
 // Edge Function `admin-create-user` via `queries.ts`) e legenda de papel.
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { AccessManagementModal, type AccessMember, type AccessRoleOption } from './AccessManagementModal'
 
@@ -22,6 +22,15 @@ const roleOptions: AccessRoleOption<Role>[] = [
   { value: 'visualizador', label: 'Visualizador', description: 'Só navega e visualiza os diagramas.' },
   { value: 'editor', label: 'Editor', description: 'Cria, edita e exclui diagramas.' },
 ]
+
+// TASK-036 (ADR-011): o `<select>` de papel virou `RolePicker` (2 botões
+// de rádio lado a lado, raise "Painel Catódico") — clicar no rótulo do
+// papel desejado dentro do `radiogroup` certo (há mais de um "Papel" na
+// tela: o de cada linha de membro e o do formulário de adicionar).
+function clickRole(radiogroupName: string, roleLabel: string) {
+  const group = screen.getByRole('radiogroup', { name: radiogroupName })
+  fireEvent.click(within(group).getByText(roleLabel))
+}
 
 function renderModal(overrides: Partial<Parameters<typeof AccessManagementModal<Role>>[0]> = {}) {
   const members: AccessMember<Role>[] = [
@@ -83,7 +92,7 @@ describe('AccessManagementModal (TASK-013)', () => {
     fireEvent.change(screen.getByLabelText('Adicionar por e-mail'), {
       target: { value: 'existe@empresa.com' },
     })
-    fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
+    clickRole('Papel', 'Editor')
     fireEvent.click(screen.getByText('Adicionar'))
 
     await waitFor(() => expect(addMember).toHaveBeenCalledWith('user-2', 'editor'))
@@ -94,7 +103,7 @@ describe('AccessManagementModal (TASK-013)', () => {
     const { updateMemberRole, listMembers } = renderModal()
     await screen.findByText('ana@empresa.com — Ana (você)')
 
-    fireEvent.change(screen.getByLabelText('Papel de ana@empresa.com'), { target: { value: 'visualizador' } })
+    clickRole('Papel de ana@empresa.com', 'Visualizador')
 
     await waitFor(() => expect(updateMemberRole).toHaveBeenCalledWith('member-1', 'visualizador'))
     await waitFor(() => expect(listMembers).toHaveBeenCalledTimes(2))
@@ -132,7 +141,7 @@ describe('AccessManagementModal (TASK-013)', () => {
     await screen.findByText('ana@empresa.com — Ana (você)')
 
     expect(screen.getByText('Só navega e visualiza os diagramas.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
+    clickRole('Papel', 'Editor')
     expect(screen.getByText('Cria, edita e exclui diagramas.')).toBeInTheDocument()
   })
 
@@ -148,7 +157,7 @@ describe('AccessManagementModal (TASK-013)', () => {
 
       fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'novo@empresa.com' } })
       fireEvent.change(screen.getByLabelText('Senha temporária'), { target: { value: 'senha-temp-123' } })
-      fireEvent.change(screen.getByLabelText('Papel'), { target: { value: 'editor' } })
+      clickRole('Papel', 'Editor')
       fireEvent.click(screen.getByText('Criar conta'))
 
       await waitFor(() =>

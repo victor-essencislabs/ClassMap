@@ -285,6 +285,10 @@ export function SystemViewPage() {
             <div className="ov-empty">Selecione uma entidade para ver seus detalhes.</div>
           ) : (
             <EntityDetail
+              // TASK-035 (ADR-011) — remonta a cada troca de entidade para
+              // repetir a animação `ov-detail-in` (raise da Folha
+              // Miura-Ori: os 3 blocos aparecem juntos, nunca em cascata).
+              key={selectedEntity.id}
               content={content}
               module={selectedModule}
               entity={selectedEntity}
