@@ -1663,6 +1663,14 @@ button.ov-flag {
   box-shadow: 0 0 0 3px var(--object-soft);
 }
 
+/* TASK-042 (ADR-011) — mesma transição de seleção da TASK-041 (borda
+   ~120ms), aplicada num bloco próprio ao card de objeto para não
+   depender da ordem de merge com a TASK-041 (que trata o `.node-box`
+   genérico do Diagrama de Classes em `ClassCard.tsx`/`Connector.tsx`). */
+.diagram-shell-canvas .node-box.object {
+  transition: border-color 120ms ease-out;
+}
+
 /* Cor de card escolhida no inspector (TASK-014, ver ADR-005) — aplicada
    como acento (borda + leve realce do cabeçalho via `color-mix`, mesma
    técnica já usada em `var(--accent)` acima) em vez de cor de texto
@@ -1730,6 +1738,28 @@ button.ov-flag {
 
 .diagram-shell-canvas .node-row .attr-val {
   color: var(--object-accent);
+}
+
+/* TASK-042 (ADR-011) — destaque de "valor herdado da classe" no momento
+   da criação do objeto (RN-01 da TASK-004): `--object-soft` pisca uma
+   vez (~300ms) nos `.node-row` de valor, controlado pela prop
+   `justCreated` de `ObjectCard.tsx`/estado em `ObjectDiagramCanvas.tsx`.
+   RN-01/RN-02 da própria task: dispara só na criação (nunca ao reabrir
+   um diagrama existente nem depois de editar um valor manualmente) e
+   usa `--object-soft` (identidade estrutural do Diagrama de Objetos),
+   nunca o selo genérico `--accent`. */
+@keyframes node-row-inherited-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  25% {
+    background-color: var(--object-soft);
+  }
+}
+
+.diagram-shell-canvas .node-row.inherited-flash {
+  animation: node-row-inherited-flash 300ms ease-out;
 }
 
 .diagram-shell-canvas .node-empty-row {
@@ -2470,5 +2500,19 @@ button.ov-flag {
   .app-page-transition,
   .app-page-transition-back {
     animation-name: app-page-in-fade;
+  }
+}
+
+/* TASK-042 (ADR-011) — bloco próprio de `prefers-reduced-motion` para os
+   2 efeitos desta task (CA-05): seleção de card de objeto vira troca
+   instantânea de cor; o destaque de herança some (sem flash), a borda
+   `--object-accent` da seleção já comunica "algo mudou" o suficiente. */
+@media (prefers-reduced-motion: reduce) {
+  .diagram-shell-canvas .node-box.object {
+    transition: none;
+  }
+
+  .diagram-shell-canvas .node-row.inherited-flash {
+    animation: none;
   }
 }

@@ -55,6 +55,13 @@ export function ObjectDiagramCanvas({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [connectMode, setConnectMode] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
+  /** TASK-042 (ADR-011) — id do objeto recém-criado nesta sessão de
+   * edição (RN-01: nunca setado ao carregar um diagrama existente, só
+   * dentro de `handlePickClass`). Dispara o destaque de "valor herdado
+   * da classe" em `ObjectCard`; o próprio card limpa este estado ao
+   * final da animação (`onJustCreatedShown`), para não repetir o efeito
+   * em re-renders/edições manuais posteriores (CA-04). */
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const zoomPan = useCanvasZoomPan(canvasRef)
@@ -81,8 +88,14 @@ export function ObjectDiagramCanvas({
         }
       : undefined
     const next = ops.addObject(content, sourceClass, origin)
+    const created = next.objects[next.objects.length - 1]
     onChange(next)
-    setSelection({ type: 'object', id: next.objects[next.objects.length - 1].id })
+    setSelection({ type: 'object', id: created.id })
+    // TASK-042: só marca "recém-criado" quando há algum valor herdado
+    // para destacar — um objeto sem atributos não tem `.node-row` para
+    // animar, então nunca dispararia `onJustCreatedShown` e o flag
+    // ficaria preso indefinidamente.
+    if (created.values.length > 0) setJustCreatedId(created.id)
     setPickerOpen(false)
   }
 
@@ -248,8 +261,10 @@ export function ObjectDiagramCanvas({
                   readOnly={readOnly}
                   zoom={zoomPan.zoom}
                   connectMode={connectMode}
+                  justCreated={obj.id === justCreatedId}
                   onSelect={handleCardClick}
                   onMove={(id, x, y) => updateObject(id, { x, y })}
+                  onJustCreatedShown={() => setJustCreatedId((current) => (current === obj.id ? null : current))}
                 />
               ))}
             </div>
