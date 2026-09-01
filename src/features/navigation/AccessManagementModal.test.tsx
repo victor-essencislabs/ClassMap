@@ -168,6 +168,24 @@ describe('AccessManagementModal (TASK-013)', () => {
       await waitFor(() => expect(listMembers).toHaveBeenCalledTimes(2))
     })
 
+    // TASK-038 (ADR-011): "seal-confirm" dispara na entrada do bloco
+    // "Conta criada..." — o `<p>` só existe a partir do momento em que
+    // `createdAccount` deixa de ser nulo (RN-01), então não há estado
+    // intermediário para checar "antes" além de o bloco não existir.
+    it('CA-03: o bloco "Conta criada..." ganha o efeito de carimbo (seal-confirm) ao aparecer', async () => {
+      renderModal()
+      await switchToCreateMode()
+
+      expect(document.querySelector('.seal-confirm')).not.toBeInTheDocument()
+
+      fireEvent.change(screen.getByLabelText('E-mail'), { target: { value: 'novo@empresa.com' } })
+      fireEvent.change(screen.getByLabelText('Senha temporária'), { target: { value: 'senha-temp-123' } })
+      fireEvent.click(screen.getByText('Criar conta'))
+
+      const block = await screen.findByText(/Conta criada\. Repasse para novo@empresa\.com/)
+      expect(block).toHaveClass('seal-confirm')
+    })
+
     it('botão "Gerar senha" preenche o campo com um valor não vazio', async () => {
       renderModal()
       await switchToCreateMode()

@@ -136,8 +136,10 @@ export function ObjectDiagramPage() {
               }}
             />
           )}
+          {/* TASK-038 (ADR-011) — "seal-confirm" só entra na transição real
+              para `saved` (RN-01); nunca ao reabrir um diagrama já salvo. */}
           {!readOnly && (
-            <span className="save-indicator">
+            <span className={saveState === 'saved' ? 'save-indicator seal-confirm' : 'save-indicator'}>
               {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : saveState === 'error' ? 'Falha ao salvar' : ''}
             </span>
           )}
