@@ -2140,6 +2140,19 @@ button.ov-flag {
   justify-content: center;
 }
 
+/* Anexo do modal de exportar: prompt pronto pra colar num agente de IA
+   (pedido do usuário) — régua fina separando do bloco de ações
+   principal, mesmo padrão de divisor já usado em `.access-add-form`. */
+.import-export-guide {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
 /* ---- gestão de acesso (TASK-013, ADR-004) ---- */
 .access-member-list {
   list-style: none;

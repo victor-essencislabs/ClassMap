@@ -44,6 +44,23 @@ describe('ImportExportControls — exportar', () => {
     expect(textarea).toHaveAttribute('readonly')
     expect(JSON.parse(textarea.value).classes).toHaveLength(1)
   })
+
+  // Pedido do usuário: quem não sabe o formato esperado deveria conseguir
+  // baixar um prompt pronto para colar num agente de IA.
+  it('oferece "Baixar prompt para IA (.md)" dentro do modal de exportar', () => {
+    render(
+      <ImportExportControls
+        content={addClass(emptyClassDiagramContent())}
+        fileName="teste"
+        canImport
+        onImport={() => {}}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Exportar JSON'))
+
+    expect(screen.getByText('Baixar prompt para IA (.md)')).toBeInTheDocument()
+  })
 })
 
 describe('ImportExportControls — importar', () => {

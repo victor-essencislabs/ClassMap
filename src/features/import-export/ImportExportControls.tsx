@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import type { ClassDiagramContent } from '../class-diagram/types'
 import { CheckGlyph } from '../diagram-shell/Icons'
 import { Modal } from '../diagram-shell/Modal'
+import { buildAgentPromptMarkdown } from './agentPrompt'
 import { exportClassDiagram, importClassDiagram } from './classDiagramConversion'
 
 const IMPORT_PLACEHOLDER =
@@ -56,6 +57,21 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
     const a = document.createElement('a')
     a.href = url
     a.download = `${fileName || 'diagrama'}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Pedido do usuário: quem não sabe qual é o formato de JSON esperado
+  // deveria conseguir baixar um guia pronto para colar num agente de IA
+  // (Claude Code/Codex) rodando no repositório do sistema a documentar,
+  // pedindo pra ele gerar o diagrama a partir do código-fonte real —
+  // independente do diagrama atual (o conteúdo não usa `content`/`exportJson`).
+  function handleDownloadAgentPrompt() {
+    const blob = new Blob([buildAgentPromptMarkdown()], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'classmap-prompt-ia.md'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -142,6 +158,17 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
             </button>
             <button type="button" className="btn" onClick={handleDownload}>
               Baixar arquivo .json
+            </button>
+          </div>
+
+          <div className="import-export-guide">
+            <p className="field-hint">
+              Não sabe qual é o formato esperado? Baixe um prompt pronto para colar num agente de IA (Claude
+              Code/Codex) rodando no repositório do sistema que você quer documentar — ele lê o código-fonte real
+              e gera o JSON no modelo certo.
+            </p>
+            <button type="button" className="btn ghost small" onClick={handleDownloadAgentPrompt}>
+              Baixar prompt para IA (.md)
             </button>
           </div>
         </Modal>
