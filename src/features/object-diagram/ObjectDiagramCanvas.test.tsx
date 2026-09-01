@@ -39,6 +39,17 @@ function objectCards() {
   return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
 }
 
+/** TASK-042: simula o fim da animação CSS de destaque de herança.
+ * jsdom não roda animações de verdade, e o React (via detecção de
+ * propriedade de estilo com prefixo de fornecedor) registra o listener
+ * nativo como `webkitanimationend` neste ambiente de teste em vez de
+ * `animationend` puro — disparar os dois cobre a diferença sem acoplar
+ * o teste a uma versão específica do jsdom. */
+function fireInheritedFlashEnd(el: HTMLElement) {
+  fireEvent(el, new Event('webkitAnimationEnd', { bubbles: true, cancelable: true }))
+  fireEvent.animationEnd(el)
+}
+
 function startLinkButton() {
   return screen.getByRole('button', { name: 'Link' })
 }
@@ -209,6 +220,72 @@ describe('ObjectDiagramCanvas — link entre objetos (TASK-017, ver ADR-006)', (
     expect(startLinkButton()).toBeDisabled()
     await createObjectViaModal()
     expect(startLinkButton()).not.toBeDisabled()
+  })
+})
+
+describe('ObjectDiagramCanvas — destaque de herança na criação (TASK-042, ADR-011)', () => {
+  it('CA-02: criar um objeto a partir de uma classe com atributos marca `.node-row` com `inherited-flash`', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+
+    const [card] = objectCards()
+    const row = card.querySelector('.node-row')
+    expect(row).not.toBeNull()
+    expect(row).toHaveClass('inherited-flash')
+  })
+
+  it('CA-03: reabrir um diagrama com objetos existentes NÃO marca `.node-row` com `inherited-flash`', () => {
+    const existing: ObjectDiagramContent = {
+      objects: [
+        {
+          id: 'existing-1',
+          classId: 'class-pedido',
+          className: 'Pedido',
+          values: [{ attributeId: 'a1', name: 'id', type: 'long', value: '1' }],
+          x: 0,
+          y: 0,
+        },
+      ],
+      links: [],
+    }
+
+    function PreloadedCanvas() {
+      const [content, setContent] = useState<ObjectDiagramContent>(existing)
+      return (
+        <ObjectDiagramCanvas
+          content={content}
+          readOnly={false}
+          onChange={setContent}
+          classDiagrams={[{ id: 'diagram-classes-1', name: 'Diagrama de Classes' }]}
+          loadClasses={async () => [pedidoClass]}
+        />
+      )
+    }
+
+    render(<PreloadedCanvas />)
+    const [card] = objectCards()
+    const row = card.querySelector('.node-row')
+    expect(row).not.toBeNull()
+    expect(row).not.toHaveClass('inherited-flash')
+  })
+
+  it('CA-04: `onAnimationEnd` limpa o destaque, e editar um valor manualmente depois não o reativa', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+
+    const [card] = objectCards()
+    let row = card.querySelector('.node-row') as HTMLElement
+    expect(row).toHaveClass('inherited-flash')
+
+    fireInheritedFlashEnd(card.querySelector('.node-body') as HTMLElement)
+    row = card.querySelector('.node-row') as HTMLElement
+    expect(row).not.toHaveClass('inherited-flash')
+
+    // editar o valor manualmente depois não reativa o destaque (RN-01/CA-04)
+    fireEvent.pointerDown(card)
+    fireEvent.change(screen.getByLabelText('id (long)'), { target: { value: '99' } })
+    row = card.querySelector('.node-row') as HTMLElement
+    expect(row).not.toHaveClass('inherited-flash')
   })
 })
 
