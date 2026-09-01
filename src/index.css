@@ -2401,6 +2401,60 @@ button.ov-flag {
   }
 }
 
+/* TASK-044 (ADR-011) — transição de profundidade na navegação
+   Organizações→Projetos→Diagramas: `AppLayout.tsx` remonta o wrapper de
+   `children` por `key={location.pathname}` (mesmo mecanismo do
+   `ov-detail-in` da TASK-035) a cada troca de rota, e escolhe a classe
+   de direção pela heurística de profundidade do path — "forward" ao
+   descer um nível (entra da direita), "back" ao subir (entra da
+   esquerda). Sutil de propósito: não é uma page-transition de site de
+   marketing, só uma pista de direção/profundidade. */
+@keyframes app-page-in-forward {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes app-page-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes app-page-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.app-page-transition,
+.app-page-transition-back {
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.app-page-transition {
+  animation-name: app-page-in-forward;
+}
+
+.app-page-transition-back {
+  animation-name: app-page-in-back;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast.show {
     animation: none;
@@ -2410,5 +2464,11 @@ button.ov-flag {
   .ov-detail > .ov-header,
   .ov-detail > .ov-section {
     animation: none;
+  }
+
+  /* TASK-044 — mantém só o fade, remove o `translateX`. */
+  .app-page-transition,
+  .app-page-transition-back {
+    animation-name: app-page-in-fade;
   }
 }
