@@ -123,7 +123,13 @@ export function DiagramEditorPage() {
               }}
             />
           )}
-          {!readOnly && <span className="save-indicator">{saveIndicatorLabel(saveState)}</span>}
+          {/* TASK-038 (ADR-011) — "seal-confirm" só entra na transição real
+              para `saved` (RN-01); nunca ao reabrir um diagrama já salvo. */}
+          {!readOnly && (
+            <span className={saveState === 'saved' ? 'save-indicator seal-confirm' : 'save-indicator'}>
+              {saveIndicatorLabel(saveState)}
+            </span>
+          )}
         </div>
       }
       topbarActions={

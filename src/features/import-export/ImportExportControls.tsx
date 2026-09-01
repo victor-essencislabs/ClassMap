@@ -148,13 +148,22 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
           />
           <div className="modal-actions">
             {/* TASK-036 (ADR-011) — "selo de validação no estado de
-                sucesso": o botão ganha o check quando a cópia confirma. */}
+                sucesso": o botão ganha o check quando a cópia confirma.
+                TASK-038 — o check em si ganha o efeito de carimbo
+                ("seal-confirm") ao aparecer; span novo a cada cópia
+                confirmada (React remonta), então o efeito sempre
+                dispara na transição real, nunca em re-render à toa. */}
             <button
               type="button"
               className={copyLabel === 'Copiado!' ? 'btn primary stamped' : 'btn primary'}
               onClick={handleCopy}
             >
-              {copyLabel === 'Copiado!' && <CheckGlyph />} {copyLabel}
+              {copyLabel === 'Copiado!' && (
+                <span className="seal-confirm">
+                  <CheckGlyph />
+                </span>
+              )}{' '}
+              {copyLabel}
             </button>
             <button type="button" className="btn" onClick={handleDownload}>
               Baixar arquivo .json

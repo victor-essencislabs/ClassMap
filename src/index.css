@@ -2516,3 +2516,76 @@ button.ov-flag {
     animation: none;
   }
 }
+
+/* TASK-038 (ADR-011) — "o carimbo bate no papel": único momento autoral
+   desta rodada de animação (ver .agents/context/CONTEXT.md, seção
+   "Animação do sistema"), aplicado nos 5 pontos de confirmação/sucesso
+   do app (indicadores "Salvo" do Diagrama de Classes/Objetos/Visão do
+   Sistema, botão "Copiar" do export, bloco "Conta criada..." do modal
+   de acesso). Scale-in de 0.94→1 + rotação sutil corrigindo para 0°,
+   chegada confiante (nunca bounce/elástico), mais um halo curto na
+   borda do próprio elemento (via ::after, já que CSS não tem seletor de
+   pai) reforçando "isso acabou de ser certificado". Usa sempre
+   `--accent` (selo, cor de ação — RN-02), nunca `--class-accent`/
+   `--object-accent`, mesmo dentro de uma tela de diagrama. A classe é
+   aplicada só no momento real da transição para o estado de sucesso
+   (RN-01) — nunca em todo re-render — então o próprio React
+   monta/desmonta ou alterna a classe apenas nesse instante. */
+@keyframes seal-confirm-stamp {
+  from {
+    opacity: 0;
+    transform: scale(0.94) rotate(-3.5deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes seal-confirm-halo {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.seal-confirm {
+  position: relative;
+  animation: seal-confirm-stamp 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.seal-confirm::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid var(--accent);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  animation: seal-confirm-halo 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-confirm {
+    animation: seal-confirm-fade 200ms ease-out both;
+  }
+
+  .seal-confirm::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+@keyframes seal-confirm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

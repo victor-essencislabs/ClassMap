@@ -74,3 +74,26 @@ describe('DiagramEditorPage — TASK-020 nome do diagrama', () => {
     expect(screen.queryByLabelText('Nome do diagrama')).not.toBeInTheDocument()
   })
 })
+
+describe('DiagramEditorPage — TASK-038 selo de validação no indicador "Salvo"', () => {
+  beforeEach(() => {
+    getMyProjectRole.mockClear()
+    getMyProjectRole.mockResolvedValue('editor')
+    renameDiagram.mockClear()
+  })
+
+  it('CA-01: "seal-confirm" só aparece na transição real para o estado salvo, nunca antes disso', async () => {
+    renderPage()
+    const input = await screen.findByLabelText('Nome do diagrama')
+
+    // ainda não houve nenhuma gravação nesta sessão — nenhum carimbo na tela.
+    expect(document.querySelector('.seal-confirm')).not.toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: 'Domínio de Cobrança' } })
+
+    // enquanto salva, o indicador existe mas ainda sem o efeito de carimbo.
+    expect(await screen.findByText('Salvando…')).not.toHaveClass('seal-confirm')
+
+    await waitFor(() => expect(screen.getByText('Salvo')).toHaveClass('seal-confirm'))
+  })
+})
