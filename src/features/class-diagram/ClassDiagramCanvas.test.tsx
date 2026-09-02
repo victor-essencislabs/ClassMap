@@ -6,7 +6,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
-import { ClassDiagramCanvas } from './ClassDiagramCanvas'
+import { ClassDiagramCanvas, isBackgroundTarget } from './ClassDiagramCanvas'
 import { emptyClassDiagramContent, type ClassDiagramContent } from './types'
 
 /** Wrapper com estado local, do jeito que `DiagramEditorPage` usa o canvas de verdade. */
@@ -253,5 +253,41 @@ describe('ClassDiagramCanvas — visualizador (CA-05)', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Cor do card' })).not.toBeInTheDocument()
     // zoom/pan continuam disponíveis
     expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
+  })
+})
+
+describe('isBackgroundTarget', () => {
+  // Regressão (2026-09-02, achada em produção pelo usuário): um clique
+  // num botão flutuante sobre o canvas (zoom-controls, connect-banner)
+  // contava como "fundo do canvas", disparando `onBackgroundPointerDown`
+  // → `setPointerCapture` no fundo → todo `pointerup`/`click` seguinte
+  // era redirecionado pro fundo em vez do botão, que parecia "não fazer
+  // nada" (+/−/ajustar à tela sem efeito nenhum).
+  it('não conta um <button> (ex.: zoom-controls) como fundo do canvas', () => {
+    const button = document.createElement('button')
+    document.body.appendChild(button)
+    expect(isBackgroundTarget(button)).toBe(false)
+    document.body.removeChild(button)
+  })
+
+  it('conta um elemento comum do fundo (ex.: o próprio SVG) como fundo do canvas', () => {
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    document.body.appendChild(bg)
+    expect(isBackgroundTarget(bg)).toBe(true)
+    document.body.removeChild(bg)
+  })
+
+  it('continua contando um elemento dentro de um card (.node-box) como não-fundo', () => {
+    const card = document.createElement('div')
+    card.className = 'node-box'
+    const child = document.createElement('span')
+    card.appendChild(child)
+    document.body.appendChild(card)
+    expect(isBackgroundTarget(child)).toBe(false)
+    document.body.removeChild(card)
+  })
+
+  it('trata null (fora de um Element, ex. document) como fundo', () => {
+    expect(isBackgroundTarget(null)).toBe(true)
   })
 })

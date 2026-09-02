@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { DiagramClass } from '../class-diagram/types'
-import { ObjectDiagramCanvas } from './ObjectDiagramCanvas'
+import { isBackgroundTarget, ObjectDiagramCanvas } from './ObjectDiagramCanvas'
 import { emptyObjectDiagramContent, type ObjectDiagramContent } from './types'
 
 const pedidoClass: DiagramClass = {
@@ -295,5 +295,28 @@ describe('ObjectDiagramCanvas — visualizador (CA-05)', () => {
     expect(screen.queryByRole('button', { name: '+ Objeto' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Link' })).not.toBeInTheDocument()
     expect(screen.getByTitle('Aproximar')).toBeInTheDocument()
+  })
+})
+
+describe('isBackgroundTarget', () => {
+  // Regressão (2026-09-02) — mesmo bug/correção do `ClassDiagramCanvas`
+  // (ver o teste equivalente lá para a explicação completa): um clique
+  // num botão flutuante (zoom-controls) não pode contar como "fundo do
+  // canvas", ou `setPointerCapture` no fundo hijacka o `click` do botão.
+  it('não conta um <button> (ex.: zoom-controls) como fundo do canvas', () => {
+    const button = document.createElement('button')
+    document.body.appendChild(button)
+    expect(isBackgroundTarget(button)).toBe(false)
+    document.body.removeChild(button)
+  })
+
+  it('continua contando um elemento dentro de um card (.node-box) como não-fundo', () => {
+    const card = document.createElement('div')
+    card.className = 'node-box object'
+    const child = document.createElement('span')
+    card.appendChild(child)
+    document.body.appendChild(card)
+    expect(isBackgroundTarget(child)).toBe(false)
+    document.body.removeChild(card)
   })
 })

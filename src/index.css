@@ -520,7 +520,12 @@ button.link-button {
   text-decoration: underline;
 }
 
-.app-header button {
+/* :not(.theme-toggle) — sem isso, o padding genérico (0.45rem 1rem =
+   ~7px/16px) vence `.theme-toggle` por especificidade (seletor de
+   descendente com elemento bate seletor de classe sozinho) e esmaga o
+   ícone de 16px dentro da caixa fixa de 30px do botão de tema, deixando
+   o botão vazio — achado em produção, 2026-09-02. */
+.app-header button:not(.theme-toggle) {
   padding: 0.45rem 1rem;
   border-radius: 3px;
   border: 1px solid var(--border);
@@ -529,7 +534,7 @@ button.link-button {
   font-weight: 500;
 }
 
-.app-header button:hover {
+.app-header button:not(.theme-toggle):hover {
   border-color: var(--border);
   background: var(--surface-alt);
 }
@@ -1928,6 +1933,18 @@ button.ov-flag {
   padding: 5px 8px;
   cursor: pointer;
   border: 1.5px solid transparent;
+  /* achado em produção, 2026-09-02: nomes de classe longos empurravam
+     o chip (e o painel inteiro) para um scroll horizontal — item flex
+     sem `min-width: 0` não encolhe abaixo do próprio conteúdo. */
+  max-width: 100%;
+}
+
+.diagram-shell-inspector .rel-chip > span:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diagram-shell-inspector .rel-chip:hover {

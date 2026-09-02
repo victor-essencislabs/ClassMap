@@ -35,9 +35,11 @@ interface ObjectDiagramCanvasProps {
 type Selection = { type: 'object'; id: string } | { type: 'link'; id: string } | null
 
 /** Um clique conta como "no fundo do canvas" (pan/deselect) quando não
- * pousa dentro de um card — mesmo critério do `ClassDiagramCanvas`. */
-function isBackgroundTarget(target: EventTarget | null): boolean {
-  return !(target instanceof Element) || !target.closest('.node-box')
+ * pousa dentro de um card — nem dentro de um `<button>` (zoom-controls
+ * etc.) — mesmo critério do `ClassDiagramCanvas`, ver o comentário lá
+ * para a explicação completa do bug que a exclusão de `button` evita. */
+export function isBackgroundTarget(target: EventTarget | null): boolean {
+  return !(target instanceof Element) || !target.closest('.node-box, button')
 }
 
 const CLICK_MOVE_THRESHOLD_PX = 4

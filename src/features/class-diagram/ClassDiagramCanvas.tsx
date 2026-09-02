@@ -41,9 +41,16 @@ const CLICK_MOVE_THRESHOLD_PX = 4
 
 /** Um clique conta como "no fundo do canvas" (pan/deselect) quando não
  * pousa dentro de um card — mesmo critério do artefato
- * (`ev.target.closest('.node-box')`). */
-function isBackgroundTarget(target: EventTarget | null): boolean {
-  return !(target instanceof Element) || !target.closest('.node-box')
+ * (`ev.target.closest('.node-box')`) — nem dentro de um `<button>`
+ * (zoom-controls, connect-banner, etc.): sem essa exclusão, o
+ * `pointerdown` num botão flutuante borbulha até aqui,
+ * `zoomPan.onBackgroundPointerDown` chama `setPointerCapture` no fundo
+ * do canvas, e todo `pointerup`/`click` seguinte é redirecionado pro
+ * fundo em vez do botão — o botão parece "não fazer nada". Achado em
+ * produção, 2026-09-02 (relatado pelo usuário: +/−/ajustar à tela sem
+ * efeito). */
+export function isBackgroundTarget(target: EventTarget | null): boolean {
+  return !(target instanceof Element) || !target.closest('.node-box, button')
 }
 
 export function ClassDiagramCanvas({
