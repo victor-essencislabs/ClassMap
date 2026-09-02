@@ -70,11 +70,26 @@ export function useCanvasZoomPan(containerRef: RefObject<HTMLElement | null>): U
   }, [])
 
   // RN-01: nenhum timeout pendente sobrevive ao desmonte do componente.
+  //
+  // Precisa passar por `clearSettling()` (que também reseta `settling`
+  // para `false`), não só `clearTimeout` cru — do contrário, em dev com
+  // `<StrictMode>` (`main.tsx`), o ciclo sintético de desmontagem/
+  // remontagem que o React roda uma vez por montagem cancela o timeout
+  // agendado pelo `fitToScreen` inicial sem nunca zerar o estado
+  // `settling`, e o efeito-guarda de "só ajustar uma vez"
+  // (`didInitialFit` em `ClassDiagramCanvas`/`ObjectDiagramCanvas`)
+  // impede a remontagem seguinte de re-agendar — `.canvas-viewport`
+  // fica com `settling`/a transição de 150ms grudada indefinidamente
+  // até a primeira interação do usuário (zoom/pan) chamar
+  // `clearSettling()` por outro caminho. Achado por validação visual
+  // manual em 2026-09-01 (rodada de animação, TASK-043) — não pego
+  // pelos testes automatizados porque `renderHook` não reproduz o
+  // ciclo duplo do `StrictMode`.
   useEffect(() => {
     return () => {
-      if (settlingTimeoutRef.current !== null) clearTimeout(settlingTimeoutRef.current)
+      clearSettling()
     }
-  }, [])
+  }, [clearSettling])
 
   function viewport() {
     const rect = containerRef.current?.getBoundingClientRect()
