@@ -15,9 +15,27 @@ import skillGuide from '../../../.claude/skills/gerar-diagrama-classmap/SKILL.md
 
 /** Remove o frontmatter YAML (`name`/`description`) do início da skill —
  * é metadado para o próprio Claude Code descobrir a skill, sem sentido
- * dentro de um prompt colado manualmente. */
-function stripFrontmatter(markdown: string): string {
-  return markdown.replace(/^---\n[\s\S]*?\n---\n/, '').trim()
+ * dentro de um prompt colado manualmente.
+ *
+ * CRLF-safe (`\r?\n`, não só `\n`): `SKILL.md` é lido via `?raw` do Vite,
+ * então o conteúdo reflete os terminadores de linha reais do arquivo no
+ * disco no momento do build — num checkout Windows com `core.autocrlf`
+ * habilitado (padrão deste repositório, sem `.gitattributes` fixando LF),
+ * um `git checkout`/worktree novo materializa esse arquivo com `\r\n`,
+ * e a versão só-`\n` da regex não casava, deixando o frontmatter vazar
+ * para o markdown gerado. Achado em 2026-09-01 durante a rodada de
+ * animação (TASK-038..045): 4 subagentes rodando em worktrees paralelos
+ * confirmaram o mesmo teste falhando ali, mesmo com a suíte limpa no
+ * checkout principal — a causa era a materialização do arquivo, não o
+ * teste. Ver TASK-037.
+ *
+ * Exportada (só para teste direto com entrada `\r\n` sintética — o
+ * conteúdo real do `SKILL.md` no checkout que roda os testes pode ter
+ * `\n` ou `\r\n` dependendo de como foi materializado, então testar só
+ * `buildAgentPromptMarkdown()` não pegaria uma regressão de forma
+ * confiável). */
+export function stripFrontmatter(markdown: string): string {
+  return markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim()
 }
 
 export function buildAgentPromptMarkdown(): string {
