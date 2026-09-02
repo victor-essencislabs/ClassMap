@@ -118,5 +118,15 @@ node .claude/skills/impeccable/scripts/detect.mjs --json src/index.css src/featu
 ```
 Validação visual: navegador embutido, harness de preview temporário (`main.tsx`, revertido) — modal de exportar com o novo bloco/botão conferido nos dois temas, clique sem erro de console.
 
+## Correção pós-implementação (2026-09-01, achada durante a rodada de animação TASK-038..045)
+
+**Bug real, não desta task originalmente, mas no código dela**: `stripFrontmatter()` (`agentPrompt.ts`) usava uma regex que só reconhecia `\n` como terminador de linha (`/^---\n[\s\S]*?\n---\n/`). Em qualquer checkout Windows com `core.autocrlf` habilitado (padrão deste repositório — sem `.gitattributes` fixando LF), um `git checkout`/`clone`/`worktree` novo materializa `SKILL.md` com `\r\n`, e a regex deixava de casar — o frontmatter YAML (`name`/`description`) vazava para dentro do markdown gerado, violando CA-03 desta task.
+
+**Como foi achado**: 4 dos 8 subagentes da rodada de animação (TASK-038..045, todos em `git worktree`s isolados) confirmaram o teste `agentPrompt.test.ts` falhando em seus próprios worktrees, mesmo com a suíte limpa no checkout principal na hora — a causa era a materialização do arquivo (CRLF no worktree novo, LF no checkout principal já existente), não uma regressão de código. Nenhum deles corrigiu (fora do escopo de cada task deles); ficou registrado como pendência a resolver depois.
+
+**Correção**: regex agora CRLF-safe (`/^---\r?\n[\s\S]*?\r?\n---\r?\n/`); `stripFrontmatter` exportada e testada diretamente com entrada `\r\n` sintética (`agentPrompt.test.ts`, 2 casos novos) — testar só `buildAgentPromptMarkdown()` não pegaria essa regressão de forma confiável, já que o terminador de linha real do `SKILL.md` no checkout que roda o teste varia conforme como o arquivo foi materializado.
+
+`npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (200 testes, 2 novos). Commitada direto em `main` (correção pontual, sem relação com a rodada de animação — feita fora da branch `feature/animacoes-sistema`).
+
 ## Handoff
-Nenhum handoff pendente — task implementada nesta sessão.
+Nenhum handoff pendente — task implementada nesta sessão. Correção pós-implementação registrada acima (2026-09-01).
