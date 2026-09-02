@@ -201,6 +201,8 @@ Pedido do usuário: discussão sobre o painel de "quem está vendo o diagrama ag
 
 **Pendência real, não técnica**: isolamento multi-tenant do Postgres Changes (uma pessoa de fora nunca deveria receber eventos de um diagrama que não é dela) não foi validado com uma segunda conta real — só uma conta disponível nesta sessão. A garantia teórica (RLS já existente se aplica ao Realtime) é a mesma que sustenta todo o resto do isolamento deste projeto, mas fica registrado como não confirmado empiricamente, mesma lacuna estrutural já registrada para outras tasks.
 
+**Correção pós-implementação, mesmo dia**: usuário reportou o aviso disparando mesmo editando sozinho (criar uma classe e movê-la). Causa raiz confirmada ao vivo no SQL Editor do Supabase: `jsonb` do Postgres reordena as chaves de um objeto (`{"z":1,"a":2}` volta como `{"a":2,"z":1}`) — o `content` que chega pelo Realtime nunca tem a mesma ordem de chaves do objeto JS local, então a comparação original (`JSON.stringify` cru, sensível à ordem) reportava "diferente" mesmo sendo o mesmo conteúdo. Corrigido com `stableStringify` (ordena chaves de objetos antes de comparar, preserva ordem de arrays — essa sim significativa). Revalidado ao vivo: o cenário exato relatado (criar classe + mover) não dispara mais o aviso. `npx vitest run` limpo (255 testes, 5 novos desta correção). Detalhe completo em `TASK-047`, seção "Correção pós-implementação".
+
 ## Decisões recentes
 
 - **ADR-001** — Fatiamento do MVP de produção por camada técnica (dados → frontend → integração). Ver `.agents/decisions/README.md`.

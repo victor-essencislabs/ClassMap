@@ -133,15 +133,27 @@ Ver "Impacto técnico" e "Plano de implementação" acima — implementação co
 ### Pendências
 - Validação de isolamento multi-tenant do Postgres Changes com uma segunda conta real (ver "Riscos e rollback").
 
+## Correção pós-implementação (2026-09-02) — falso positivo editando sozinho
+
+**Achado real do usuário, em produção**: o aviso "atualizado por outra pessoa" disparava mesmo com uma única pessoa editando — reproduzido criando uma classe e movendo-a em seguida.
+
+**Causa raiz confirmada ao vivo** (SQL Editor do painel Supabase, contra o projeto real): `jsonb` do Postgres reordena as chaves de um objeto — `select '{"z":1,"a":2,"m":{"y":1,"b":2}}'::jsonb` devolve `{"a":2,"m":{"b":2,"y":1},"z":1}` (ordem alfabética recursiva, não a ordem de inserção). Como `payload.new.content` chega pelo Realtime já passado pelo `jsonb`, ele nunca tem a mesma ordem de chaves do objeto JS local — a comparação original (`JSON.stringify` cru, sensível à ordem) reportava "diferente" mesmo sendo exatamente o mesmo conteúdo, então praticamente qualquer save (inclusive o da própria pessoa) disparava o aviso.
+
+**Correção**: nova função `stableStringify` (`useDiagramRemoteUpdate.ts`) — serializa objetos com as chaves ordenadas antes de comparar (arrays continuam comparados na própria ordem, que é significativa: a posição de uma classe numa lista importa). Usada nos dois lados da comparação (`incoming` e `contentRef.current`).
+
+CA-03 (autosave nunca dispara o próprio aviso) precisou ser reforçado — o critério original só cobria "mesmo objeto, exatamente igual"; a causa real do bug era mais sutil (mesmo conteúdo, ordem de chaves diferente). Teste de regressão novo reproduz exatamente esse caso.
+
+Revalidado ao vivo contra produção real: criar uma classe e movê-la (o cenário exato relatado) não dispara mais o aviso.
+
 ## Validação
 
 ```bash
 npm run build   # tsc -b && vite build — OK
 npm run lint    # oxlint — sem erros novos
-npx vitest run --exclude "**/.claude/worktrees/**"   # 250/250 (19 novos)
+npx vitest run --exclude "**/.claude/worktrees/**"   # 255/255 (24 novos ao total desta task)
 ```
 
-Validação visual: navegador embutido, sessão autenticada contra produção real (Essencis Labs). Confirmado ao vivo: avatar de presença nas 3 telas de diagrama (Classes/Objetos/Visão do Sistema), dois temas; ciclo completo do aviso de atualização remota usando 2 abas do mesmo diagrama de teste ("teste de classes") — as duas abas editaram concorrentemente (cenário real de "2 pessoas no mesmo diagrama"), as duas mostraram o aviso uma para a outra (nunca a própria aba se auto-avisando), e "Recarregar" funcionou nas duas.
+Validação visual: navegador embutido, sessão autenticada contra produção real (Essencis Labs). Confirmado ao vivo: avatar de presença nas 3 telas de diagrama (Classes/Objetos/Visão do Sistema), dois temas; ciclo completo do aviso de atualização remota usando 2 abas do mesmo diagrama de teste ("teste de classes") — as duas abas editaram concorrentemente (cenário real de "2 pessoas no mesmo diagrama"), as duas mostraram o aviso uma para a outra (nunca a própria aba se auto-avisando), e "Recarregar" funcionou nas duas. Depois da correção do falso positivo: criar uma classe sozinho e movê-la não dispara mais o aviso indevido.
 
 ## Handoff
 Nenhum handoff pendente — implementado e validado nesta sessão. Pendência real (não técnica) registrada em "Riscos e rollback": confirmar isolamento multi-tenant do Postgres Changes quando houver uma segunda conta real disponível.

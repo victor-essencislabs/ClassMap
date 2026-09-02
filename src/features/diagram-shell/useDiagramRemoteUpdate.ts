@@ -7,6 +7,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase/client'
 
+/** Correção pós-implementação (2026-09-02, achado real do usuário: o
+ * aviso disparava mesmo editando sozinho). Causa raiz: `jsonb` do
+ * Postgres reordena as chaves de um objeto (confirmado ao vivo —
+ * `{"z":1,"a":2,"m":{"y":1,"b":2}}` volta como
+ * `{"a":2,"m":{"b":2,"y":1},"z":1}`, ordem alfabética recursiva) — o
+ * `payload.new.content` que chega pelo Realtime nunca tem a mesma ordem
+ * de chaves do objeto JS local, então `JSON.stringify` cru (sensível à
+ * ordem) via de regra reportava "diferente" mesmo salvando o próprio
+ * conteúdo sem nenhuma mudança real. `stableStringify` serializa objetos
+ * com as chaves ordenadas (arrays continuam na própria ordem, que é
+ * significativa) dos dois lados antes de comparar. Exportada só para
+ * teste direto do caso de reordenação de chaves. */
+export function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, val: unknown) => {
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      return Object.keys(val as Record<string, unknown>)
+        .sort()
+        .reduce<Record<string, unknown>>((sorted, k) => {
+          sorted[k] = (val as Record<string, unknown>)[k]
+          return sorted
+        }, {})
+    }
+    return val
+  })
+}
+
 /**
  * Assina mudanças (`postgres_changes`, UPDATE) na linha `diagramId` da
  * tabela `diagrams` e sinaliza `remoteUpdateAvailable = true` quando o
@@ -36,7 +62,7 @@ export function useDiagramRemoteUpdate(diagramId: string | undefined, content: u
         { event: 'UPDATE', schema: 'public', table: 'diagrams', filter: `id=eq.${diagramId}` },
         (payload) => {
           const incoming = (payload.new as { content?: unknown } | undefined)?.content
-          if (JSON.stringify(incoming) !== JSON.stringify(contentRef.current)) {
+          if (stableStringify(incoming) !== stableStringify(contentRef.current)) {
             setRemoteUpdateAvailable(true)
           }
         },

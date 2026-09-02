@@ -6,7 +6,7 @@
 import { renderHook } from '@testing-library/react'
 import { act } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useDiagramRemoteUpdate } from './useDiagramRemoteUpdate'
+import { stableStringify, useDiagramRemoteUpdate } from './useDiagramRemoteUpdate'
 
 const channelMock = vi.fn()
 
@@ -126,5 +126,45 @@ describe('useDiagramRemoteUpdate', () => {
     unmount()
 
     expect(fake.unsubscribe).toHaveBeenCalled()
+  })
+
+  // Regressão (2026-09-02, achado real do usuário): editando sozinho —
+  // criar uma classe e movê-la — o aviso disparava mesmo sem ninguém
+  // mais mexendo no diagrama. Causa raiz: o `jsonb` do Postgres reordena
+  // as chaves de um objeto (confirmado ao vivo contra produção real —
+  // `{"z":1,"a":2}` volta como `{"a":2,"z":1}`), então o eco do próprio
+  // autosave nunca tinha a mesma ordem de chaves do objeto local, e a
+  // comparação por `JSON.stringify` cru (sensível à ordem) reportava
+  // "diferente" mesmo sendo o mesmo conteúdo.
+  it('UPDATE com o mesmo conteúdo em ordem de chaves diferente (jsonb reordenado) não dispara o aviso', () => {
+    const fake = createFakeChannel()
+    channelMock.mockReturnValue(fake.channel)
+
+    const local = { classes: [{ id: 'c1', name: 'Pedido', x: 10, y: 20 }], relationships: [] }
+    // mesmo conteúdo, chaves em outra ordem — como o jsonb devolveria.
+    const echoedFromJsonb = { relationships: [], classes: [{ y: 20, x: 10, name: 'Pedido', id: 'c1' }] }
+
+    const { result } = renderHook(() => useDiagramRemoteUpdate('diagram-1', local))
+    act(() => fake.emitUpdate(echoedFromJsonb))
+
+    expect(result.current.remoteUpdateAvailable).toBe(false)
+  })
+})
+
+describe('stableStringify', () => {
+  it('ignora a ordem das chaves de um objeto', () => {
+    expect(stableStringify({ z: 1, a: 2 })).toBe(stableStringify({ a: 2, z: 1 }))
+  })
+
+  it('ignora a ordem das chaves em objetos aninhados', () => {
+    expect(stableStringify({ m: { y: 1, b: 2 } })).toBe(stableStringify({ m: { b: 2, y: 1 } }))
+  })
+
+  it('continua sensível à ordem dos elementos de um array (significativa)', () => {
+    expect(stableStringify({ classes: ['A', 'B'] })).not.toBe(stableStringify({ classes: ['B', 'A'] }))
+  })
+
+  it('continua detectando uma diferença real de valor', () => {
+    expect(stableStringify({ a: 1 })).not.toBe(stableStringify({ a: 2 }))
   })
 })
