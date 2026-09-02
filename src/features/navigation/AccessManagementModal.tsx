@@ -218,8 +218,11 @@ export function AccessManagementModal<TRole extends string>({
 
       {error && <p className="error">{error}</p>}
 
+      {/* TASK-038 (ADR-011) — "seal-confirm" dispara na entrada do bloco
+          inteiro: o `<p>` só é montado quando `createdAccount` deixa de
+          ser nulo (RN-01 — nunca em re-render por outro motivo). */}
       {createdAccount && (
-        <p className="access-created-account" role="status">
+        <p className="access-created-account seal-confirm" role="status">
           Conta criada. Repasse para {createdAccount.email}: senha{' '}
           <code>{createdAccount.password}</code> — ela vai precisar trocar no primeiro login.
         </p>

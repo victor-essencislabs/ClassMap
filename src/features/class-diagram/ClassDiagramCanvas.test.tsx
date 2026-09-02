@@ -185,6 +185,38 @@ describe('ClassDiagramCanvas — editor', () => {
     expect(classCards()[0]).not.toHaveClass('has-color')
   })
 
+  it('TASK-041 RN-01: criar uma relação nova marca o conector como "just-created", mas uma relação carregada de um diagrama existente nunca fica marcada', () => {
+    // Diagrama já existente (como se tivesse acabado de ser aberto do
+    // Supabase) — a relação pré-existente não deve nascer animada.
+    const existing: ClassDiagramContent = {
+      classes: [
+        { id: 'c1', name: 'A', attributes: [], x: 0, y: 0 },
+        { id: 'c2', name: 'B', attributes: [], x: 300, y: 0 },
+      ],
+      relationships: [{ id: 'r1', from: 'c1', to: 'c2', type: 'association', controlX: 150 }],
+    }
+    render(<ControlledCanvas initial={existing} />)
+    expect(document.querySelector('.connectors-layer > g.just-created')).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+
+    // Agora cria uma relação de verdade nesta sessão — essa sim nasce animada.
+    fireEvent.click(addClassButton())
+    const cards = classCards()
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(cards[0]) // classe A (pré-existente)
+    fireEvent.pointerDown(cards[cards.length - 1]) // classe nova
+
+    const groups = document.querySelectorAll('.connectors-layer > g')
+    expect(groups).toHaveLength(2)
+    const justCreatedGroups = document.querySelectorAll('.connectors-layer > g.just-created')
+    expect(justCreatedGroups).toHaveLength(1)
+    // A limpeza do estado ao fim da animação (`onJustCreatedAnimationEnd`,
+    // para o efeito não repetir em re-renders futuros) é coberta à parte
+    // em `Connector.test.ts` (`isJustCreatedAnimationEnd`) — jsdom não
+    // implementa `AnimationEvent`, então `onAnimationEnd` do React nunca
+    // dispara de fato num evento `animationend` simulado aqui.
+  })
+
   it('exclui uma classe e a relação que a referenciava junto (reforça removeClass)', () => {
     render(<ControlledCanvas />)
     fireEvent.click(addClassButton())

@@ -1647,6 +1647,11 @@ button.ov-flag {
   font-size: 12px;
   cursor: grab;
   user-select: none;
+  /* TASK-041 (ADR-011) — corte seco vira transição suave ao
+     selecionar/deselecionar: só cor de borda e o realce (box-shadow),
+     nunca dimensão do card (evita reflow). Reduzida a instantânea em
+     prefers-reduced-motion, ver bloco local no fim do arquivo. */
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
 
 /* TASK-033 (ADR-011) — tinta técnica azul (`--class-accent`), não o selo
@@ -1661,6 +1666,14 @@ button.ov-flag {
 .diagram-shell-canvas .node-box.object.selected {
   border-color: var(--object-accent);
   box-shadow: 0 0 0 3px var(--object-soft);
+}
+
+/* TASK-042 (ADR-011) — mesma transição de seleção da TASK-041 (borda
+   ~120ms), aplicada num bloco próprio ao card de objeto para não
+   depender da ordem de merge com a TASK-041 (que trata o `.node-box`
+   genérico do Diagrama de Classes em `ClassCard.tsx`/`Connector.tsx`). */
+.diagram-shell-canvas .node-box.object {
+  transition: border-color 120ms ease-out;
 }
 
 /* Cor de card escolhida no inspector (TASK-014, ver ADR-005) — aplicada
@@ -1730,6 +1743,28 @@ button.ov-flag {
 
 .diagram-shell-canvas .node-row .attr-val {
   color: var(--object-accent);
+}
+
+/* TASK-042 (ADR-011) — destaque de "valor herdado da classe" no momento
+   da criação do objeto (RN-01 da TASK-004): `--object-soft` pisca uma
+   vez (~300ms) nos `.node-row` de valor, controlado pela prop
+   `justCreated` de `ObjectCard.tsx`/estado em `ObjectDiagramCanvas.tsx`.
+   RN-01/RN-02 da própria task: dispara só na criação (nunca ao reabrir
+   um diagrama existente nem depois de editar um valor manualmente) e
+   usa `--object-soft` (identidade estrutural do Diagrama de Objetos),
+   nunca o selo genérico `--accent`. */
+@keyframes node-row-inherited-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  25% {
+    background-color: var(--object-soft);
+  }
+}
+
+.diagram-shell-canvas .node-row.inherited-flash {
+  animation: node-row-inherited-flash 300ms ease-out;
 }
 
 .diagram-shell-canvas .node-empty-row {
@@ -2094,6 +2129,90 @@ button.ov-flag {
   padding: 10px;
 }
 
+/* TASK-045 — abrir/fechar animado do `Modal` genérico (beneficia todos os
+   usos de uma vez: `ClassPickerModal`, exportar/importar, gestão de
+   acesso, confirmações de exclusão). Entrada via `@keyframes`/`animation`
+   pura (mesmo padrão de `ov-detail-in`, TASK-035) — não depende de
+   nenhuma classe adicionada via JS para chegar ao estado visível, então o
+   conteúdo permanece visível no estado padrão mesmo se o script de
+   animação falhar. `.closing` (adicionada por `Modal.tsx` só para manter
+   o modal montado durante a transição de saída) toca uma segunda
+   animação, mais rápida e sem o atraso do painel (RN-01: fechar nunca
+   mais lento que abrir). */
+@keyframes modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modal-panel-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+.modal-overlay.show {
+  animation: modal-overlay-in 150ms ease-out;
+}
+
+.modal-overlay.show.closing {
+  animation: modal-overlay-out 100ms ease-in;
+}
+
+.modal-overlay.show .modal {
+  animation: modal-panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1) 20ms backwards;
+}
+
+.modal-overlay.show .modal.closing {
+  animation: modal-panel-out 100ms ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay.show,
+  .modal-overlay.show .modal {
+    animation-name: modal-overlay-in;
+    animation-duration: 100ms;
+    animation-delay: 0ms;
+    animation-timing-function: ease-out;
+  }
+
+  .modal-overlay.show.closing,
+  .modal-overlay.show .modal.closing {
+    animation-name: modal-overlay-out;
+    animation-duration: 80ms;
+    animation-delay: 0ms;
+    animation-timing-function: ease-in;
+  }
+}
+
 /* TASK-011 — campo de confirmação por nome (`DeleteConfirmModal`), mesmo
    padrão visual do `.inline-create-form .field` usado nas telas de
    criação (Organizações/Projetos), reaproveitado dentro de um modal. */
@@ -2207,6 +2326,12 @@ button.ov-flag {
   color: var(--text-faint);
   cursor: pointer;
   white-space: nowrap;
+  /* TASK-040 — o carimbo desliza de preenchimento (cor), nunca de
+     tamanho/posição (evita reflow), ao trocar de papel. */
+  transition:
+    background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .role-picker-opt:hover:not(:disabled):not(.active) {
@@ -2223,6 +2348,14 @@ button.ov-flag {
 .role-picker-opt:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* TASK-040 — bloco de reduced-motion local (não o global do arquivo):
+   mantém a troca de estado, remove só a transição do carimbo. */
+@media (prefers-reduced-motion: reduce) {
+  .role-picker-opt {
+    transition: none;
+  }
 }
 
 /* TASK-026/027 — grid de 2 colunas, não flex: com a legenda de papel
@@ -2347,6 +2480,12 @@ button.ov-flag {
 }
 
 /* ---- toast ---- */
+/* TASK-039 (ADR-011) — entrada com slide-up + fade (150ms, curva própria),
+   saída só com fade, mais rápida (100ms), sem deslocamento vertical. A
+   entrada usa `animation` (própria de `.toast.show`, dispara a cada vez que
+   a classe é adicionada) e a saída usa `transition` (própria de `.toast`
+   base, dispara quando a classe é removida) — assim a saída nunca reaplica
+   o `translateY` da entrada, sem "pulo" de posição antes de sumir. */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -2361,22 +2500,269 @@ button.ov-flag {
   box-shadow: var(--shadow);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.1s ease;
   z-index: 60;
 }
 
 .toast.show {
   opacity: 1;
-  transform: translateX(-50%) translateY(-4px);
+  animation: toast-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* TASK-044 (ADR-011) — transição de profundidade na navegação
+   Organizações→Projetos→Diagramas: `AppLayout.tsx` remonta o wrapper de
+   `children` por `key={location.pathname}` (mesmo mecanismo do
+   `ov-detail-in` da TASK-035) a cada troca de rota, e escolhe a classe
+   de direção pela heurística de profundidade do path — "forward" ao
+   descer um nível (entra da direita), "back" ao subir (entra da
+   esquerda). Sutil de propósito: não é uma page-transition de site de
+   marketing, só uma pista de direção/profundidade. */
+@keyframes app-page-in-forward {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes app-page-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes app-page-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.app-page-transition,
+.app-page-transition-back {
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.app-page-transition {
+  animation-name: app-page-in-forward;
+}
+
+.app-page-transition-back {
+  animation-name: app-page-in-back;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast {
-    transition: none;
+  .toast.show {
+    animation: none;
+    transition: opacity 0.15s ease;
   }
 
   .ov-detail > .ov-header,
   .ov-detail > .ov-section {
     animation: none;
+  }
+
+  /* TASK-044 — mantém só o fade, remove o `translateX`. */
+  .app-page-transition,
+  .app-page-transition-back {
+    animation-name: app-page-in-fade;
+  }
+}
+
+/* TASK-042 (ADR-011) — bloco próprio de `prefers-reduced-motion` para os
+   2 efeitos desta task (CA-05): seleção de card de objeto vira troca
+   instantânea de cor; o destaque de herança some (sem flash), a borda
+   `--object-accent` da seleção já comunica "algo mudou" o suficiente. */
+@media (prefers-reduced-motion: reduce) {
+  .diagram-shell-canvas .node-box.object {
+    transition: none;
+  }
+
+  .diagram-shell-canvas .node-row.inherited-flash {
+    animation: none;
+  }
+}
+
+/* TASK-038 (ADR-011) — "o carimbo bate no papel": único momento autoral
+   desta rodada de animação (ver .agents/context/CONTEXT.md, seção
+   "Animação do sistema"), aplicado nos 5 pontos de confirmação/sucesso
+   do app (indicadores "Salvo" do Diagrama de Classes/Objetos/Visão do
+   Sistema, botão "Copiar" do export, bloco "Conta criada..." do modal
+   de acesso). Scale-in de 0.94→1 + rotação sutil corrigindo para 0°,
+   chegada confiante (nunca bounce/elástico), mais um halo curto na
+   borda do próprio elemento (via ::after, já que CSS não tem seletor de
+   pai) reforçando "isso acabou de ser certificado". Usa sempre
+   `--accent` (selo, cor de ação — RN-02), nunca `--class-accent`/
+   `--object-accent`, mesmo dentro de uma tela de diagrama. A classe é
+   aplicada só no momento real da transição para o estado de sucesso
+   (RN-01) — nunca em todo re-render — então o próprio React
+   monta/desmonta ou alterna a classe apenas nesse instante. */
+@keyframes seal-confirm-stamp {
+  from {
+    opacity: 0;
+    transform: scale(0.94) rotate(-3.5deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes seal-confirm-halo {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.seal-confirm {
+  position: relative;
+  animation: seal-confirm-stamp 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.seal-confirm::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid var(--accent);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  animation: seal-confirm-halo 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-confirm {
+    animation: seal-confirm-fade 200ms ease-out both;
+  }
+
+  .seal-confirm::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+@keyframes seal-confirm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* TASK-041 (ADR-011) — Diagrama de Classes: conector "nascendo" ao ser
+   criado no modo de conexão (`ClassDiagramCanvas.tsx` marca a relação
+   recém-criada como `justCreated`, `Connector.tsx` aplica a classe
+   `just-created` no <g> e avisa o canvas via onAnimationEnd para
+   limpar o estado — RN-01: nunca dispara em relação carregada de um
+   diagrama existente, só na criação de fato).
+   `.connector-path` só ganha `pathLength="1"` (normaliza dash/offset
+   para 0..1, independente do comprimento real do traço em pixels)
+   enquanto `just-created` — depois volta ao padrão real em pixels.
+   RN-02: usa --class-accent (tinta do próprio Diagrama de Classes),
+   nunca --accent (selo genérico). */
+@keyframes connector-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes connector-symbol-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes connector-fade-once {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.connector.just-created .connector-path {
+  stroke-dasharray: 1;
+  animation: connector-draw 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Losango/triângulo/seta (ponta da relação) só aparecem depois que o
+   traço termina de se desenhar — nunca durante. */
+.connector.just-created .connector-symbol {
+  opacity: 0;
+  animation: connector-symbol-in 120ms ease-out 200ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem "desenho" — a relação aparece pronta de uma vez, com um único
+     fade curto no grupo inteiro (traço + símbolos juntos) só para
+     comunicar "algo novo apareceu", sem a coreografia em 2 etapas. */
+  .connector.just-created {
+    animation: connector-fade-once 150ms ease-out;
+  }
+
+  .connector.just-created .connector-path,
+  .connector.just-created .connector-symbol {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* TASK-043 (ADR-011) — assentamento do "ajustar à tela" (⤢), compartilhado
+   pelo Diagrama de Classes e pelo Diagrama de Objetos: o wrapper com o
+   `transform` inline (`.canvas-viewport`, ver `ClassDiagramCanvas.tsx`/
+   `ObjectDiagramCanvas.tsx`) ganha a classe `settling` só pelos ~150ms
+   sinalizados por `useCanvasZoomPan` depois de `fitToScreen` (nunca
+   durante pan/zoom contínuo por gesto do usuário — a classe nem é
+   aplicada nesse caso, ver RN-01 da task). A regra fica restrita a essa
+   classe, nunca no `.canvas-viewport` como um todo, para não introduzir
+   lag em nenhum gesto 1:1. Duração espelha `SETTLE_DURATION_MS` em
+   `useCanvasZoomPan.ts` — mudar uma exige mudar a outra. */
+.canvas-viewport.settling {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* O "pulo" imediato já é aceitável como alternativa reduzida — é uma
+     mudança de posição, não uma perda de feedback funcional (RN da
+     seção "Comportamento esperado" da task). */
+  .canvas-viewport.settling {
+    transition: none;
   }
 }
