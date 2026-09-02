@@ -2,7 +2,17 @@
 // (Diagrama de Classes/Objetos, Visão do Sistema), fundação de ADR-002.
 // Só a estrutura de grid (topbar/sidebar/canvas/inspector) + marca —
 // nenhuma lógica de diagrama aqui, isso é TASK-007/008/009.
-import type { ComponentPropsWithRef, ReactNode } from 'react'
+//
+// TASK-046 — recolher/expandir sidebar e inspector independentemente
+// (botões nas bordas do canvas, sempre visíveis mesmo com o painel
+// recolhido) + um atalho de "tela cheia" que recolhe os dois de uma vez
+// (não é Fullscreen API do navegador — só esconde o chrome do ClassMap,
+// pedido explícito do usuário: "ver só os diagramas"). Estado é local a
+// cada montagem do shell (não persiste entre diagramas/reload) —
+// simplicidade deliberada, mesmo padrão de outras preferências efêmeras
+// deste projeto.
+import { useState, type ComponentPropsWithRef, type ReactNode } from 'react'
+import { ChevronGlyph, FullscreenEnterGlyph, FullscreenExitGlyph } from './Icons'
 import { ThemeToggle } from '../theme/ThemeToggle'
 
 export interface DiagramShellProps {
@@ -32,8 +42,20 @@ export function DiagramShell({
 }: DiagramShellProps) {
   const { className: canvasClassName, ...restCanvasProps } = canvasProps ?? {}
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false)
+  const isFullscreen = sidebarCollapsed && inspectorCollapsed
+
+  function toggleFullscreen() {
+    const next = !isFullscreen
+    setSidebarCollapsed(next)
+    setInspectorCollapsed(next)
+  }
+
+  const shellClassName = `diagram-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}${inspectorCollapsed ? ' inspector-collapsed' : ''}`
+
   return (
-    <div className="diagram-shell">
+    <div className={shellClassName}>
       <div className="diagram-shell-topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
@@ -46,6 +68,15 @@ export function DiagramShell({
           </>
         ) : null}
         <div className="topbar-actions">{topbarActions}</div>
+        <button
+          type="button"
+          className="fullscreen-toggle"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? 'Sair da tela cheia' : 'Modo tela cheia (só o diagrama)'}
+          title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+        >
+          {isFullscreen ? <FullscreenExitGlyph /> : <FullscreenEnterGlyph />}
+        </button>
         {/* TASK-019 (ADR-007): fixo aqui (não via `topbarActions`) para
             cobrir Diagrama de Classes/Objetos de uma vez só, sem exigir
             que cada consumidor do shell se lembre de montá-lo. */}
@@ -59,6 +90,24 @@ export function DiagramShell({
         {...restCanvasProps}
       >
         {canvas}
+        <button
+          type="button"
+          className="panel-toggle left"
+          onClick={() => setSidebarCollapsed((v) => !v)}
+          aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+          title={sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+        >
+          <ChevronGlyph direction={sidebarCollapsed ? 'right' : 'left'} />
+        </button>
+        <button
+          type="button"
+          className="panel-toggle right"
+          onClick={() => setInspectorCollapsed((v) => !v)}
+          aria-label={inspectorCollapsed ? 'Expandir inspector' : 'Recolher inspector'}
+          title={inspectorCollapsed ? 'Expandir inspector' : 'Recolher inspector'}
+        >
+          <ChevronGlyph direction={inspectorCollapsed ? 'left' : 'right'} />
+        </button>
       </div>
 
       <div className="diagram-shell-inspector">{inspector}</div>

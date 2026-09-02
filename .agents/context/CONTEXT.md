@@ -172,7 +172,18 @@ Pedido do usuário: validar visualmente as 8 animações antes de decidir o merg
 
 **TASK-042 (destaque de herança)**: confirmado funcionando tecnicamente (mecânica correta, limpa sozinho, não vaza para objetos existentes) — decisão de manter/reverter esse efeito especificamente (era a ideia mais especulativa da rodada) ainda é do usuário, com base em como ele *parece* na prática, não só se funciona.
 
-**Próximo passo, pendente de decisão do usuário**: decidir sobre o destaque de herança da TASK-042 (manter ou reverter) e então decidir mesclar `feature/animacoes-sistema` em `main` (e enviar ao remoto) ou não. Tecnicamente a branch está pronta — 8/8 animações validadas, 1 bug real encontrado e corrigido, 221/221 testes.
+**Atualização**: usuário decidiu mesclar sem pedir mudança no destaque de herança (TASK-042 aceito como está). `feature/animacoes-sistema` mesclada em `main` (merge `8940a93`) e enviada ao remoto (`origin/main`) — dispara o deploy automático na Vercel. Branch de feature não apagada (decisão do usuário, quando quiser).
+
+## TASK-046 — ajustes pós-deploy da rodada de animação (2026-09-02)
+
+Usuário testou o deploy em produção e reportou 4 problemas (3 bugs + 1 pedido de funcionalidade) — task completa em `.agents/tasks/active/TASK-046-ajustes-pos-deploy-animacao.md`:
+
+1. **Overflow horizontal no card de relação** (inspector do Diagrama de Classes) — nome de classe longo sem truncamento. Corrigido com `min-width: 0` + `text-overflow: ellipsis`.
+2. **Ícone do `ThemeToggle` invisível** em Organizações/Projetos/Diagramas — `.app-header button` (genérico) vencia `.theme-toggle` por especificidade, esmagando o ícone com padding de 16px numa caixa de 30px. Corrigido com `:not(.theme-toggle)`.
+3. **Bug sério: botões de zoom (+/−/ajustar à tela) não respondiam a clique real de mouse.** Causa raiz (achada via listener de eventos + `elementFromPoint`, não óbvia): `isBackgroundTarget()` (nos 2 canvas) só excluía `.node-box` do "clique no fundo" — um `pointerdown` num botão flutuante (zoom-controls) borbulhava até o handler de fundo, que chama `setPointerCapture` em si mesmo, redirecionando todo `pointerup`/`click` seguinte pro fundo em vez do botão. Corrigido excluindo qualquer `<button>` também. **Achado relevante para sessões futuras**: esse bug não tinha como ser pego por nenhuma validação anterior desta rodada de animação, porque toda validação de zoom/pan até aqui usou `elemento.click()` programático (que não passa pelo ciclo real `pointerdown→pointerup→click`), nunca um clique simulado de verdade — só apareceu quando o usuário usou um mouse real.
+4. **Funcionalidade nova**: `DiagramShell` (Diagrama de Classes/Objetos) ganhou recolher/expandir independente de sidebar e inspector (botões na borda do canvas, sempre visíveis) + um botão de "tela cheia" que recolhe os dois juntos. `grid-template-columns` transicionado via custom property (técnica de grid, não largura crua). Um segundo bug de overflow apareceu no caminho (mesma família do item 1, agora em CSS Grid) e foi corrigido junto (`min-width: 0` nos itens do grid + padding/borda zerados no estado recolhido, senão o piso visual do padding em `border-box` deixa uma faixa visível mesmo com a coluna em `0px`).
+
+Não afeta Visão do Sistema (shell próprio, fora de escopo/não pedido). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (231 testes, 10 novos). Validado ao vivo contra produção real (ELIMS), dois temas, dois diagramas — commitado direto em `main` (2 commits: correções + funcionalidade), ainda não enviado ao remoto nesta atualização.
 
 ## Decisões recentes
 

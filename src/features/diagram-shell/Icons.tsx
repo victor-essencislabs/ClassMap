@@ -29,6 +29,59 @@ export function FitToScreenGlyph() {
   )
 }
 
+// TASK-046 — recolher/expandir sidebar/inspector: um chevron só, espelhado
+// via `direction` (nunca dois SVGs quase idênticos para a mesma forma).
+export function ChevronGlyph({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      aria-hidden="true"
+      style={direction === 'right' ? { transform: 'scaleX(-1)' } : undefined}
+    >
+      <path
+        d="M10 3.5 5.5 8l4.5 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+// TASK-046 — modo tela cheia do canvas (recolhe sidebar + inspector de
+// uma vez): cantos abrindo para fora (entrar) / fechando para dentro
+// (sair) — vocabulário distinto do `FitToScreenGlyph` (que ajusta o
+// zoom do conteúdo, não a visibilidade dos painéis).
+export function FullscreenEnterGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1.5 5.5v-4h4" />
+        <path d="M14.5 5.5v-4h-4" />
+        <path d="M1.5 10.5v4h4" />
+        <path d="M14.5 10.5v4h-4" />
+      </g>
+    </svg>
+  )
+}
+
+export function FullscreenExitGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5.5 1.5v4h-4" />
+        <path d="M10.5 1.5v4h4" />
+        <path d="M5.5 14.5v-4h-4" />
+        <path d="M10.5 14.5v-4h4" />
+      </g>
+    </svg>
+  )
+}
+
 // TASK-036 (ADR-011) — "selo de validação no estado de sucesso": marca de
 // confirmação usada onde uma ação acaba de ser validada (ex.: JSON
 // copiado com sucesso em `ImportExportControls`).
