@@ -20,12 +20,22 @@ const WHEEL_ZOOM_IN_FACTOR = 1.08
 const WHEEL_ZOOM_OUT_FACTOR = 0.93
 const BUTTON_ZOOM_IN_FACTOR = 1.2
 const BUTTON_ZOOM_OUT_FACTOR = 0.8
+// TASK-043 (ADR-011) — janela de "assentamento" do fitToScreen, espelha
+// a duração da transição CSS aplicada pelo consumidor (`.settling`,
+// ver `src/index.css`). Mudar aqui exige mudar lá também.
+const SETTLE_DURATION_MS = 150
 
 export interface UseCanvasZoomPanResult {
   zoom: number
   pan: { x: number; y: number }
   /** Pronto para `style={{ transform }}` no elemento que deve mover/escalar com o canvas. */
   transform: string
+  /** TASK-043 — `true` por ~150ms depois de `fitToScreen`, para o
+   * consumidor (`ClassDiagramCanvas`/`ObjectDiagramCanvas`) ligar uma
+   * transição CSS só nesse gesto pontual. Nunca fica `true` durante
+   * pan/zoom contínuo por gesto do usuário (RN-01: qualquer interação
+   * durante o assentamento o interrompe sem erro). */
+  settling: boolean
   zoomIn: () => void
   zoomOut: () => void
   fitToScreen: (bounds: CanvasBounds | null) => void
@@ -45,24 +55,62 @@ export function useCanvasZoomPan(containerRef: RefObject<HTMLElement | null>): U
   const [transform, setTransform] = useState<CanvasTransform>(DEFAULT_TRANSFORM)
   const panDrag = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
+  // TASK-043 — sinalizador de "assentamento" (ver `settling` na
+  // interface acima) e o timeout que o desliga sozinho depois de
+  // SETTLE_DURATION_MS.
+  const [settling, setSettling] = useState(false)
+  const settlingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearSettling = useCallback(() => {
+    if (settlingTimeoutRef.current !== null) {
+      clearTimeout(settlingTimeoutRef.current)
+      settlingTimeoutRef.current = null
+    }
+    setSettling(false)
+  }, [])
+
+  // RN-01: nenhum timeout pendente sobrevive ao desmonte do componente.
+  useEffect(() => {
+    return () => {
+      if (settlingTimeoutRef.current !== null) clearTimeout(settlingTimeoutRef.current)
+    }
+  }, [])
+
   function viewport() {
     const rect = containerRef.current?.getBoundingClientRect()
     return { width: rect?.width ?? 0, height: rect?.height ?? 0 }
   }
 
-  const zoomIn = useCallback(() => setTransform((prev) => zoomByFactor(prev, BUTTON_ZOOM_IN_FACTOR)), [])
-  const zoomOut = useCallback(() => setTransform((prev) => zoomByFactor(prev, BUTTON_ZOOM_OUT_FACTOR)), [])
+  const zoomIn = useCallback(() => {
+    clearSettling()
+    setTransform((prev) => zoomByFactor(prev, BUTTON_ZOOM_IN_FACTOR))
+  }, [clearSettling])
+  const zoomOut = useCallback(() => {
+    clearSettling()
+    setTransform((prev) => zoomByFactor(prev, BUTTON_ZOOM_OUT_FACTOR))
+  }, [clearSettling])
 
   const fitToScreen = useCallback(
-    (bounds: CanvasBounds | null) => setTransform(fitToScreenTransform(bounds, viewport())),
+    (bounds: CanvasBounds | null) => {
+      setTransform(fitToScreenTransform(bounds, viewport()))
+      setSettling(true)
+      if (settlingTimeoutRef.current !== null) clearTimeout(settlingTimeoutRef.current)
+      settlingTimeoutRef.current = setTimeout(() => {
+        settlingTimeoutRef.current = null
+        setSettling(false)
+      }, SETTLE_DURATION_MS)
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
 
   const panToNode = useCallback(
-    (node: BoundedNode) => setTransform((prev) => panToNodeTransform(node, prev.zoom, viewport())),
+    (node: BoundedNode) => {
+      clearSettling()
+      setTransform((prev) => panToNodeTransform(node, prev.zoom, viewport()))
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [clearSettling],
   )
 
   const screenDeltaToWorld = useCallback(
@@ -79,6 +127,7 @@ export function useCanvasZoomPan(containerRef: RefObject<HTMLElement | null>): U
 
     function handleWheel(ev: WheelEvent) {
       ev.preventDefault()
+      clearSettling()
       const rect = el!.getBoundingClientRect()
       const pointerX = ev.clientX - rect.left
       const pointerY = ev.clientY - rect.top
@@ -94,6 +143,7 @@ export function useCanvasZoomPan(containerRef: RefObject<HTMLElement | null>): U
   }, [])
 
   function onBackgroundPointerDown(e: ReactPointerEvent) {
+    clearSettling()
     panDrag.current = { startX: e.clientX, startY: e.clientY, origX: transform.pan.x, origY: transform.pan.y }
     e.currentTarget.setPointerCapture?.(e.pointerId)
   }
@@ -115,6 +165,7 @@ export function useCanvasZoomPan(containerRef: RefObject<HTMLElement | null>): U
     zoom: transform.zoom,
     pan: transform.pan,
     transform: cssTransform(transform),
+    settling,
     zoomIn,
     zoomOut,
     fitToScreen,

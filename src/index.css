@@ -2743,3 +2743,26 @@ button.ov-flag {
     opacity: 1;
   }
 }
+
+/* TASK-043 (ADR-011) — assentamento do "ajustar à tela" (⤢), compartilhado
+   pelo Diagrama de Classes e pelo Diagrama de Objetos: o wrapper com o
+   `transform` inline (`.canvas-viewport`, ver `ClassDiagramCanvas.tsx`/
+   `ObjectDiagramCanvas.tsx`) ganha a classe `settling` só pelos ~150ms
+   sinalizados por `useCanvasZoomPan` depois de `fitToScreen` (nunca
+   durante pan/zoom contínuo por gesto do usuário — a classe nem é
+   aplicada nesse caso, ver RN-01 da task). A regra fica restrita a essa
+   classe, nunca no `.canvas-viewport` como um todo, para não introduzir
+   lag em nenhum gesto 1:1. Duração espelha `SETTLE_DURATION_MS` em
+   `useCanvasZoomPan.ts` — mudar uma exige mudar a outra. */
+.canvas-viewport.settling {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* O "pulo" imediato já é aceitável como alternativa reduzida — é uma
+     mudança de posição, não uma perda de feedback funcional (RN da
+     seção "Comportamento esperado" da task). */
+  .canvas-viewport.settling {
+    transition: none;
+  }
+}
