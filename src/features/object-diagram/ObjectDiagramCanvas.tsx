@@ -229,7 +229,7 @@ export function ObjectDiagramCanvas({
             )}
 
             <div
-              className="canvas-viewport"
+              className={`canvas-viewport${zoomPan.settling ? ' settling' : ''}`}
               style={{ position: 'absolute', inset: 0, transformOrigin: '0 0', transform: zoomPan.transform }}
             >
               <svg className="connectors-layer" style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
