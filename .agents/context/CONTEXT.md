@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-01 (planejamento TASK-038..045 — animação do sistema, `bootstrap-plan`)
+ultima-revisao: 2026-09-01 (TASK-038..045 implementadas e mescladas em feature/animacoes-sistema — animação do sistema)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -145,6 +145,20 @@ Pedido do usuário: a partir de um levantamento de 11 ideias de animação feito
 **Branch única pedida pelo usuário**: `feature/animacoes-sistema`, criada a partir de `main` antes do dispatch. Nenhuma task mescla direto em `main` nem é enviada ao remoto sem pedido explícito — desvio deliberado, só para esta rodada, do fluxo padrão do projeto ("branch única main, sem PR", ver "Fluxo de git ajustado" acima).
 
 **Próximo passo, pendente de confirmação do usuário**: disparar os subagentes das 8 tasks (mesmo mecanismo da rodada TASK-011..017 — worktree isolado por task, branch própria a partir de `feature/animacoes-sistema`).
+
+## Animação do sistema — implementada (2026-09-01)
+
+As 8 tasks (TASK-038..045) foram implementadas por subagentes em paralelo (worktrees isolados) e mescladas sequencialmente em `feature/animacoes-sistema`, em 2 ondas conforme planejado: onda 1 (TASK-038, 039, 040, 041, 042, 044, 045, todas em paralelo) e onda 2 (TASK-043, disparada só depois de 041/042 mescladas, por causa do overlap de arquivo documentado no planejamento). Todos os 8 merges foram limpos (nenhum precisou de resolução manual de conflito, nem os overlaps conhecidos em `ClassDiagramCanvas.tsx`/`ObjectDiagramCanvas.tsx`/`src/index.css`). Validação após cada merge: `npm run build`/`npm run lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` — build e lint sempre limpos; testes progrediram de 198 (base) para **219/219** ao final. Nenhuma branch foi enviada ao remoto (`push`) nem mesclada em `main` — segue só em `feature/animacoes-sistema`, aguardando decisão do usuário.
+
+**Achado operacional novo, importante para futuras rodadas com múltiplos worktrees simultâneos**: `git stash`/`git stash pop` usados dentro de um subagente atingem `refs/stash`, que é **compartilhado entre todos os worktrees linked de um mesmo `.git`** (diferente de `HEAD`/index, que são isolados por worktree). Isso causou 2 colisões reais nesta rodada — os subagentes de TASK-038 e TASK-045 (rodando em paralelo) trocaram acidentalmente o WIP um do outro via `git stash pop`. Os dois se recuperaram sozinhos sem perda de trabalho (um salvando o diff alheio em patch antes de descartar, outro recuperando via commit dangling), mas o instrutor desta rodada passou a instruir explicitamente os subagentes seguintes (TASK-043) a nunca usar `git stash`, preferindo commits intermediários na própria branch. **Recomendação para o futuro**: nunca instruir um subagente em worktree paralelo a usar `git stash` — o isolamento do próprio `git worktree` já cobre a necessidade, e `stash` reintroduz um ponto de colisão global.
+
+**Divergências/pendências registradas pelos subagentes, nenhuma corrigida nesta rodada (fora de escopo de cada task individual)**:
+- Bug pré-existente, não desta rodada: `src/features/import-export/agentPrompt.ts` (TASK-037) tem uma regex de remoção do frontmatter YAML que não é CRLF-safe — em checkout Windows (`core.autocrlf=true`, sem `.gitattributes`), o frontmatter do `SKILL.md` vaza para o markdown gerado. Achado por 4 subagentes diferentes desta rodada (todos confirmaram via `git stash`/isolamento que já falhava na base, antes de qualquer mudança de animação). Dono: `contrato-ia-diagrama`.
+- **Nenhuma validação visual ao vivo rodou** em nenhuma das 8 tasks — todas as sessões concorrentes disputaram a mesma porta padrão do dev server (5173), e nenhuma tinha credencial de produção disponível. A cobertura real veio de testes automatizados (jsdom) + inspeção de CSSOM/harnesses estáticos, caso a caso. **Recomendado**: uma sessão dedicada, sem outros worktrees ativos ao mesmo tempo, para confirmar visualmente as 8 animações (dark/light, `prefers-reduced-motion` ligado e desligado) antes de decidir mesclar em `main`.
+- **TASK-042 (destaque de herança no Diagrama de Objetos)** é a ideia mais especulativa da rodada (sinalizada como tal desde o levantamento original do `/impeccable animate`) — o subagente implementou a mecânica corretamente e testou por código, mas não viu o efeito rodando de verdade num navegador; recomendou confirmação visual do usuário antes de considerar o efeito definitivamente aprovado (pode parecer ruído em vez de esclarecimento).
+- Um teste (`DiagramsRouteDispatcher.test.tsx`) mostrou flakiness intermitente sob carga de execução paralela em pelo menos 3 subagentes diferentes, sem reproduzir isolado nem em reexecução — não investigado a fundo, não parece relacionado a nenhuma mudança desta rodada.
+
+**Próximo passo, pendente de decisão do usuário**: validar visualmente as 8 animações (idealmente numa sessão sem outros worktrees concorrentes), decidir sobre o destaque de herança da TASK-042, e então decidir mesclar `feature/animacoes-sistema` em `main` (e enviar ao remoto) ou não.
 
 ## Decisões recentes
 
