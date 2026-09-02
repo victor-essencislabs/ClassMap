@@ -33,6 +33,8 @@ interface ClassDiagramCanvasProps {
   topbarCenter?: ReactNode
   /** Controles extras da topbar, antes de "+ Classe" — hoje só `ImportExportControls` (TASK-005; o visual de modal é da TASK-010). */
   topbarActions?: ReactNode
+  /** TASK-047 — conteúdo extra sobreposto ao canvas (ex.: `RemoteUpdateBanner`), no mesmo nível do `connect-banner`/`zoom-controls`. */
+  canvasOverlay?: ReactNode
 }
 
 type Selection = { type: 'class'; id: string } | { type: 'relationship'; id: string } | null
@@ -59,6 +61,7 @@ export function ClassDiagramCanvas({
   onChange,
   topbarCenter,
   topbarActions,
+  canvasOverlay,
 }: ClassDiagramCanvasProps) {
   const [selection, setSelection] = useState<Selection>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -228,6 +231,8 @@ export function ClassDiagramCanvas({
         }}
         canvas={
           <>
+            {canvasOverlay}
+
             {connectMode && (
               <div className="connect-banner show">
                 <span>Clique na classe de origem, depois na de destino</span>

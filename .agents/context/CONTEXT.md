@@ -1,12 +1,12 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-01 (TASK-038..045 implementadas e mescladas em feature/animacoes-sistema — animação do sistema)
+ultima-revisao: 2026-09-02 (TASK-047 — presença + aviso passivo de atualização remota)
 ---
 
 # Contexto Atual do Projeto — ClassMap
 
-Última atualização: 2026-09-01
+Última atualização: 2026-09-02
 
 ## Estado atual
 
@@ -183,7 +183,23 @@ Usuário testou o deploy em produção e reportou 4 problemas (3 bugs + 1 pedido
 3. **Bug sério: botões de zoom (+/−/ajustar à tela) não respondiam a clique real de mouse.** Causa raiz (achada via listener de eventos + `elementFromPoint`, não óbvia): `isBackgroundTarget()` (nos 2 canvas) só excluía `.node-box` do "clique no fundo" — um `pointerdown` num botão flutuante (zoom-controls) borbulhava até o handler de fundo, que chama `setPointerCapture` em si mesmo, redirecionando todo `pointerup`/`click` seguinte pro fundo em vez do botão. Corrigido excluindo qualquer `<button>` também. **Achado relevante para sessões futuras**: esse bug não tinha como ser pego por nenhuma validação anterior desta rodada de animação, porque toda validação de zoom/pan até aqui usou `elemento.click()` programático (que não passa pelo ciclo real `pointerdown→pointerup→click`), nunca um clique simulado de verdade — só apareceu quando o usuário usou um mouse real.
 4. **Funcionalidade nova**: `DiagramShell` (Diagrama de Classes/Objetos) ganhou recolher/expandir independente de sidebar e inspector (botões na borda do canvas, sempre visíveis) + um botão de "tela cheia" que recolhe os dois juntos. `grid-template-columns` transicionado via custom property (técnica de grid, não largura crua). Um segundo bug de overflow apareceu no caminho (mesma família do item 1, agora em CSS Grid) e foi corrigido junto (`min-width: 0` nos itens do grid + padding/borda zerados no estado recolhido, senão o piso visual do padding em `border-box` deixa uma faixa visível mesmo com a coluna em `0px`).
 
-Não afeta Visão do Sistema (shell próprio, fora de escopo/não pedido). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (231 testes, 10 novos). Validado ao vivo contra produção real (ELIMS), dois temas, dois diagramas — commitado direto em `main` (2 commits: correções + funcionalidade), ainda não enviado ao remoto nesta atualização.
+Não afeta Visão do Sistema (shell próprio, fora de escopo/não pedido). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (231 testes, 10 novos). Validado ao vivo contra produção real (ELIMS), dois temas, dois diagramas — commitado em `main` (2 commits: correções + funcionalidade) e enviado ao remoto (pedido do usuário), disparando o deploy automático na Vercel.
+
+## TASK-047 — presença + aviso passivo de atualização remota (2026-09-02)
+
+Pedido do usuário: discussão sobre o painel de "quem está vendo o diagrama agora" (já previsto em `PRODUCT.md`, nunca implementado) e sobre o comportamento do ClassMap com 2+ pessoas no mesmo diagrama ao mesmo tempo. Investigação prévia confirmou: nenhuma presença existia, nenhuma sincronização de conteúdo entre sessões existia (autosave sobrescreve o objeto de conteúdo inteiro, sem merge). Usuário confirmou que edição concorrente é rara e pediu 2 dos 3 níveis de ambição discutidos — presença, e um aviso passivo (nunca sobrescrita automática). Task completa em `.agents/tasks/active/TASK-047-presenca-aviso-atualizacao-remota.md`.
+
+**Sem ritual de 3 opções/ADR**: a direção já estava integralmente documentada como regra do produto (`.claude/rules/global.md`, `.claude/agents/supabase-multitenant.md`, `PRODUCT.md`) — só faltava construir. A escolha entre os 3 níveis de ambição foi decidida em conversa direta com o usuário.
+
+**Implementado**: `useDiagramPresence` (canal Supabase Realtime Presence por diagrama, `presence:diagram:{id}`, estado 100% efêmero — nunca grava em tabela) + `PresenceAvatars` (iniciais, até 4 + "+N") nas 3 telas de diagrama (Classes/Objetos/Visão do Sistema); `useDiagramRemoteUpdate` (canal Postgres Changes na tabela `diagrams`, compara `content` recebido contra o local mais atual via `JSON.stringify` — só sinaliza quando diverge, nunca no eco do próprio autosave) + `RemoteUpdateBanner` ("Recarregar"/"Ignorar por agora", nunca substitui sozinho). Migration nova (`20260902140000_realtime_diagrams_updates.sql`, `alter publication supabase_realtime add table public.diagrams`) aplicada manualmente em produção via SQL Editor (mesmo processo já documentado em `supabase/README.md` — este projeto não usa `supabase db push`).
+
+**Achado de ambiente durante os testes** (não é bug de produto): `.env.local` deste ambiente é carregado mesmo em `npx vitest run` (mode `test`) — qualquer código que chame `supabase.channel(...)` direto de `client.ts` (sem passar por `queries.ts`) tentava abrir WebSocket de verdade contra produção durante os testes automatizados. Corrigido mockando `../../lib/supabase/client` explicitamente nos 4 arquivos de teste afetados (que também precisaram de `vi.mock('../auth/AuthContext', ...)`, mesmo padrão já usado em `OrganizationsPage.test.tsx`, por causa da dependência nova em `useAuth()`).
+
+**Validado ao vivo contra produção real, cenário real de concorrência**: 2 abas do mesmo diagrama de teste ("teste de classes", ELIMS) editadas ao mesmo tempo (uma delas por acidente, durante a própria verificação) reproduziram exatamente o cenário de "2 pessoas no mesmo diagrama" — as duas abas mostraram o aviso de atualização uma para a outra (nunca a própria aba se auto-avisando pelo próprio save), e "Recarregar" funcionou nas duas. Presença confirmada nas 3 telas, dois temas.
+
+`npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (250 testes, 19 novos).
+
+**Pendência real, não técnica**: isolamento multi-tenant do Postgres Changes (uma pessoa de fora nunca deveria receber eventos de um diagrama que não é dela) não foi validado com uma segunda conta real — só uma conta disponível nesta sessão. A garantia teórica (RLS já existente se aplica ao Realtime) é a mesma que sustenta todo o resto do isolamento deste projeto, mas fica registrado como não confirmado empiricamente, mesma lacuna estrutural já registrada para outras tasks.
 
 ## Decisões recentes
 

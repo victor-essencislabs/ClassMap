@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { isClassDiagramContent } from '../class-diagram/types'
+import { useAuth } from '../auth/AuthContext'
+import { meFromSession, useDiagramPresence } from '../diagram-shell/useDiagramPresence'
+import { useDiagramRemoteUpdate } from '../diagram-shell/useDiagramRemoteUpdate'
+import { PresenceAvatars } from '../diagram-shell/PresenceAvatars'
+import { RemoteUpdateBanner } from '../diagram-shell/RemoteUpdateBanner'
 import {
   getCurrentUserId,
   getDiagram,
@@ -33,20 +38,19 @@ export function ObjectDiagramPage() {
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nameSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // TASK-047 — presença (quem está vendo agora) + aviso passivo de
+  // atualização remota (nunca substitui o conteúdo sozinho).
+  const { session } = useAuth()
+  const viewers = useDiagramPresence(diagramId, meFromSession(session))
+  const { remoteUpdateAvailable, dismiss: dismissRemoteUpdate } = useDiagramRemoteUpdate(diagramId, content)
+
   useEffect(() => {
     if (!diagramId || !projectId) return
     Promise.all([getDiagram(diagramId), getCurrentUserId(), listDiagrams(projectId)])
       .then(([loadedDiagram, userId, projectDiagrams]) => {
         setDiagram(loadedDiagram)
         setNameInput(loadedDiagram.name)
-        setContent(
-          isObjectDiagramContent(loadedDiagram.content)
-            ? // TASK-017: diagramas salvos antes desta task não têm `links`
-              // no JSONB persistido — normaliza para `[]` em vez de deixar
-              // `undefined` (mudança aditiva, ver ADR-006).
-              { ...loadedDiagram.content, links: loadedDiagram.content.links ?? [] }
-            : emptyObjectDiagramContent(),
-        )
+        setContent(normalizeContent(loadedDiagram.content))
         setClassDiagrams(projectDiagrams.filter((d) => d.type === 'classes'))
         return userId ? getMyProjectRole(projectId, userId) : null
       })
@@ -97,6 +101,21 @@ export function ObjectDiagramPage() {
     if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
   }
 
+  // TASK-047 — busca de novo o diagrama e substitui o conteúdo local
+  // (a pessoa decidiu, no banner, que quer a versão de outra pessoa —
+  // nunca acontece sozinho).
+  function handleReloadFromRemote() {
+    if (!diagramId) return
+    getDiagram(diagramId)
+      .then((loaded) => {
+        setDiagram(loaded)
+        setNameInput(loaded.name)
+        setContent(normalizeContent(loaded.content))
+        dismissRemoteUpdate()
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao recarregar diagrama.'))
+  }
+
   async function loadClasses(sourceDiagramId: string) {
     const sourceDiagram = await getDiagram(sourceDiagramId)
     if (!isClassDiagramContent(sourceDiagram.content)) return []
@@ -145,10 +164,25 @@ export function ObjectDiagramPage() {
           )}
         </div>
       }
+      topbarActions={<PresenceAvatars viewers={viewers} />}
+      canvasOverlay={
+        remoteUpdateAvailable && (
+          <RemoteUpdateBanner onReload={handleReloadFromRemote} onDismiss={dismissRemoteUpdate} />
+        )
+      }
     />
   )
 }
 
 function isObjectDiagramContent(value: unknown): value is ObjectDiagramContent {
   return typeof value === 'object' && value !== null && Array.isArray((value as ObjectDiagramContent).objects)
+}
+
+// TASK-017: diagramas salvos antes dessa task não têm `links` no JSONB
+// persistido — normaliza para `[]` em vez de deixar `undefined` (mudança
+// aditiva, ver ADR-006). Extraído (TASK-047) pra ser reaproveitado tanto
+// no carregamento inicial quanto no "recarregar" do aviso de atualização
+// remota.
+function normalizeContent(raw: unknown): ObjectDiagramContent {
+  return isObjectDiagramContent(raw) ? { ...raw, links: raw.links ?? [] } : emptyObjectDiagramContent()
 }

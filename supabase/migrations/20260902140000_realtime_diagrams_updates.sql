@@ -1,0 +1,12 @@
+-- TASK-047 — habilita Postgres Changes (Supabase Realtime) na tabela
+-- diagrams, para a notificação passiva de "atualizado por outra
+-- pessoa" no ClassMap (item 2 da discussão de colaboração, 2026-09-02).
+--
+-- Não é preciso nenhuma política de RLS nova: o Realtime avalia as
+-- policies de SELECT já existentes de public.diagrams com o JWT de
+-- quem assinou o canal, então cada cliente só recebe eventos de
+-- diagramas que já poderia ler (mesmo isolamento multi-tenant de
+-- sempre, ver .claude/rules/global.md). Presença (item 1, "quem está
+-- vendo agora") não precisa de nada aqui — usa só o canal Presence do
+-- Realtime, que é estado efêmero e nunca passa por esta publication.
+alter publication supabase_realtime add table public.diagrams;

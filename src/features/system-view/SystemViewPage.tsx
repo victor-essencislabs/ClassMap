@@ -8,6 +8,11 @@
 // tela não é um canvas (ver decisão na TASK-009).
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { meFromSession, useDiagramPresence } from '../diagram-shell/useDiagramPresence'
+import { useDiagramRemoteUpdate } from '../diagram-shell/useDiagramRemoteUpdate'
+import { PresenceAvatars } from '../diagram-shell/PresenceAvatars'
+import { RemoteUpdateBanner } from '../diagram-shell/RemoteUpdateBanner'
 import { Modal } from '../diagram-shell/Modal'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import {
@@ -84,6 +89,12 @@ export function SystemViewPage() {
   // sem nenhum componente chamando. Guarda também `moduleId`, já que
   // `removeEntity(content, moduleId, entityId)` precisa dos dois.
   const [deletingEntity, setDeletingEntity] = useState<{ moduleId: string; entity: SystemViewEntity } | null>(null)
+
+  // TASK-047 — presença (quem está vendo agora) + aviso passivo de
+  // atualização remota (nunca substitui o conteúdo sozinho).
+  const { session } = useAuth()
+  const viewers = useDiagramPresence(diagramId, meFromSession(session))
+  const { remoteUpdateAvailable, dismiss: dismissRemoteUpdate } = useDiagramRemoteUpdate(diagramId, content)
 
   useEffect(() => {
     if (!diagramId || !projectId) return
@@ -177,6 +188,21 @@ export function SystemViewPage() {
     if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
   }
 
+  // TASK-047 — busca de novo o diagrama e substitui o conteúdo local
+  // (a pessoa decidiu, no banner, que quer a versão de outra pessoa —
+  // nunca acontece sozinho).
+  function handleReloadFromRemote() {
+    if (!diagramId) return
+    getDiagram(diagramId)
+      .then((loaded) => {
+        setDiagram(loaded)
+        setNameInput(loaded.name)
+        setContent(isSystemViewContent(loaded.content) ? loaded.content : emptySystemViewContent())
+        dismissRemoteUpdate()
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao recarregar diagrama.'))
+  }
+
   if (error) return <p className="error">{error}</p>
   if (!diagram || !content) return <p>Carregando…</p>
 
@@ -221,6 +247,7 @@ export function SystemViewPage() {
           )}
         </div>
         <div className="topbar-actions">
+          <PresenceAvatars viewers={viewers} />
           {!readOnly && (
             <button type="button" className="btn primary" onClick={openCreateModuleModal}>
               + Módulo
@@ -234,6 +261,9 @@ export function SystemViewPage() {
       </div>
 
       <div className="ov-body">
+        {remoteUpdateAvailable && (
+          <RemoteUpdateBanner onReload={handleReloadFromRemote} onDismiss={dismissRemoteUpdate} />
+        )}
         <nav className="ov-nav">
           {content.modules.map((module) => (
             <div key={module.id} className="ov-module">

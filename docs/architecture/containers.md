@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026), seção 6; infraestrutura provisionada em 2026-08-28 (Supabase `classmap`, Vercel `class-map`) — ver `.agents/context/CONTEXT.md`
-ultima-revisao: 2026-08-29 (bootstrap-audit — atualizado de "planejado" para "real": infraestrutura já provisionada desde 2026-08-28)
+ultima-revisao: 2026-09-02 (TASK-047 — Realtime Presence + Postgres Changes implementados no frontend, deixaram de ser "planejado")
 ---
 
 # Containers
@@ -19,7 +19,7 @@ Processos/serviços implantáveis de forma independente (sentido C4), mais servi
 - Projeto Supabase real `classmap` (organização Essencislabs, plano Free, região `sa-east-1`).
 - **Postgres**: organizações, usuários, projetos, diagramas. Autorização garantida por Row Level Security (RLS) — ver `security/README.md`.
 - **Auth**: login por e-mail com confirmação habilitada, integrado à hierarquia de permissão por organização/projeto.
-- **Realtime (Presence)**: lista de "quem está vendo o diagrama agora" — estado efêmero, não persistido em tabela. Ainda planejado no código do frontend (roadmap "Colaboração"), o recurso já existe no projeto Supabase.
+- **Realtime**: implementado no frontend desde a TASK-047 (2026-09-02), 2 usos — **Presence**: lista de "quem está vendo o diagrama agora" por diagrama (`useDiagramPresence`), estado efêmero, nunca persistido em tabela. **Postgres Changes**: assina `UPDATE` na tabela `diagrams` (`useDiagramRemoteUpdate`) para avisar (nunca sobrescrever sozinho) quando outra sessão salvou uma alteração no diagrama aberto — exige `public.diagrams` na publication `supabase_realtime` (`supabase/migrations/20260902140000_realtime_diagrams_updates.sql`), sem política de RLS nova (o Realtime respeita as políticas de SELECT já existentes).
 
 ## 3. Banco de dados
 

@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { meFromSession, useDiagramPresence } from '../diagram-shell/useDiagramPresence'
+import { useDiagramRemoteUpdate } from '../diagram-shell/useDiagramRemoteUpdate'
+import { PresenceAvatars } from '../diagram-shell/PresenceAvatars'
+import { RemoteUpdateBanner } from '../diagram-shell/RemoteUpdateBanner'
 import {
   getCurrentUserId,
   getDiagram,
@@ -31,6 +36,12 @@ export function DiagramEditorPage() {
   const [nameInput, setNameInput] = useState('')
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nameSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // TASK-047 — presença (quem está vendo agora) + aviso passivo de
+  // atualização remota (nunca substitui o conteúdo sozinho).
+  const { session } = useAuth()
+  const viewers = useDiagramPresence(diagramId, meFromSession(session))
+  const { remoteUpdateAvailable, dismiss: dismissRemoteUpdate } = useDiagramRemoteUpdate(diagramId, content)
 
   useEffect(() => {
     if (!diagramId || !projectId) return
@@ -92,6 +103,21 @@ export function DiagramEditorPage() {
     if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
   }
 
+  // TASK-047 — busca de novo o diagrama e substitui o conteúdo local
+  // (a pessoa decidiu, no banner, que quer a versão de outra pessoa —
+  // nunca acontece sozinho).
+  function handleReloadFromRemote() {
+    if (!diagramId) return
+    getDiagram(diagramId)
+      .then((loaded) => {
+        setDiagram(loaded)
+        setNameInput(loaded.name)
+        setContent(isClassDiagramContent(loaded.content) ? loaded.content : emptyClassDiagramContent())
+        dismissRemoteUpdate()
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao recarregar diagrama.'))
+  }
+
   if (error) return <p className="error">{error}</p>
   if (!diagram || !content) return <p>Carregando diagrama…</p>
 
@@ -133,12 +159,20 @@ export function DiagramEditorPage() {
         </div>
       }
       topbarActions={
-        <ImportExportControls
-          content={content}
-          fileName={diagram.name}
-          canImport={!readOnly}
-          onImport={handleChange}
-        />
+        <>
+          <PresenceAvatars viewers={viewers} />
+          <ImportExportControls
+            content={content}
+            fileName={diagram.name}
+            canImport={!readOnly}
+            onImport={handleChange}
+          />
+        </>
+      }
+      canvasOverlay={
+        remoteUpdateAvailable && (
+          <RemoteUpdateBanner onReload={handleReloadFromRemote} onDismiss={dismissRemoteUpdate} />
+        )
       }
     />
   )

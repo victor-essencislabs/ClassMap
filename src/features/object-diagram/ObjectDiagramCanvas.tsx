@@ -30,6 +30,10 @@ interface ObjectDiagramCanvasProps {
   loadClasses: (diagramId: string) => Promise<DiagramClass[]>
   /** Breadcrumb/título/indicador de salvamento da página (`ObjectDiagramPage`) — vai entre a marca e os botões deste componente na topbar do shell. */
   topbarCenter?: ReactNode
+  /** Controles extras da topbar, ex. painel de presença (TASK-047). */
+  topbarActions?: ReactNode
+  /** TASK-047 — conteúdo extra sobreposto ao canvas (ex.: `RemoteUpdateBanner`), no mesmo nível do `connect-banner`/`zoom-controls`. */
+  canvasOverlay?: ReactNode
 }
 
 type Selection = { type: 'object'; id: string } | { type: 'link'; id: string } | null
@@ -51,6 +55,8 @@ export function ObjectDiagramCanvas({
   classDiagrams,
   loadClasses,
   topbarCenter,
+  topbarActions,
+  canvasOverlay,
 }: ObjectDiagramCanvasProps) {
   const [selection, setSelection] = useState<Selection>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -184,6 +190,7 @@ export function ObjectDiagramCanvas({
         topbarCenter={topbarCenter}
         topbarActions={
           <>
+            {topbarActions}
             {!readOnly && (
               <button
                 type="button"
@@ -221,6 +228,8 @@ export function ObjectDiagramCanvas({
         }
         canvas={
           <>
+            {canvasOverlay}
+
             {connectMode && (
               <div className="connect-banner show">
                 <span>Clique no objeto de origem, depois no de destino</span>

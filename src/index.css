@@ -658,6 +658,8 @@ button.link-button {
   grid-template-columns: 280px 1fr;
   overflow: hidden;
   background: var(--bg);
+  /* TASK-047 — ponto de ancoragem do .remote-update-banner. */
+  position: relative;
 }
 
 .ov-nav {
@@ -1323,6 +1325,38 @@ button.ov-flag {
   background: var(--surface-alt);
 }
 
+/* TASK-047 — "quem está vendo este diagrama agora" (Realtime Presence,
+   estado efêmero, nunca persistido). Só iniciais — sem foto/avatar_url. */
+.presence-avatars {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.presence-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 2px solid var(--surface);
+  margin-left: -8px;
+}
+
+.presence-avatar:first-child {
+  margin-left: 0;
+}
+
+.presence-avatar-more {
+  background: var(--text-faint);
+}
+
 /* ---- topbar ---- */
 /* TASK-035 (ADR-011) — mesmo masthead do `.app-header` (TASK-032):
    régua cinza + régua fina na tinta do selo. Estende o "cabeçalho
@@ -1704,6 +1738,35 @@ button.ov-flag {
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* TASK-047 — "atualizado por outra pessoa" (Postgres Changes). Tom mais
+   sóbrio que `.connect-banner` (laudo avisando um fato, não pedindo uma
+   ação de modo) — papel/tinta neutros, não `--accent` sólido. */
+.diagram-shell-canvas .remote-update-banner,
+.ov-body .remote-update-banner {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--accent-soft-border);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+.remote-update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
 }
 
 .diagram-shell-canvas .empty-hint {

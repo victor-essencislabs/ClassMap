@@ -29,6 +29,19 @@ vi.mock('../../lib/supabase/queries', () => ({
   signOut: vi.fn(async () => undefined),
 }))
 
+// TASK-047: as páginas de diagrama passaram a usar `useAuth()` (presença)
+// — mock simples, mesmo padrão de `OrganizationsPage.test.tsx`, sem
+// precisar montar `<AuthProvider>`/Supabase real nestes testes.
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({ session: { user: { id: 'user-1', email: 'user-1@essencislabs.com', user_metadata: {} } }, loading: false }),
+}))
+
+// TASK-047: `useDiagramPresence`/`useDiagramRemoteUpdate` chamam
+// `supabase.channel(...)` direto (não passam por `queries.ts`) — sem
+// isso, o client real (`.env.local` deste ambiente) tentava abrir um
+// WebSocket de verdade contra o Supabase de produção durante o teste.
+vi.mock('../../lib/supabase/client', () => ({ supabase: null, isSupabaseConfigured: false }))
+
 function renderAt(diagramIdOrType: string) {
   return render(
     <MemoryRouter initialEntries={[`/orgs/org-1/projects/project-1/diagrams/${diagramIdOrType}`]}>
