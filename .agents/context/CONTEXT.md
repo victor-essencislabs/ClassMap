@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-03 (TASK-053 — comentário e Delete/Backspace também no Diagrama de Objetos)
+ultima-revisao: 2026-09-03 (TASK-054/055 planejadas — foco na classe selecionada e suas relacionadas)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -248,6 +248,20 @@ Pedido do usuário, mesma sessão: TASK-051/052 (cards de comentário, redimensi
 **TASK-053 implementada** (mesma sessão): `NoteInspector` extraído de dentro de `ClassDiagramCanvas.tsx` para `class-diagram/NoteInspector.tsx` (sem mudar comportamento), pra ser reaproveitado pelos dois diagramas — `DiagramNote`/`NoteCard`/`ClassColorGrid` já eram genéricos, e `object-diagram/` já importava de `class-diagram/` antes desta task (`DiagramClass`, `resolveConnectClick`), mesmo precedente de dependência entre os dois módulos. `ObjectDiagramContent` ganhou `notes?: DiagramNote[]`; `ObjectDiagramCanvas.tsx` ganhou botão "+ Nota", atalho `Delete`/`Backspace` (idêntico ao da TASK-052, agora cobrindo objeto/link/comentário) e a condição do `.empty-hint` já nasceu corrigida (checando `notes` desde o início, em vez de esperar redescobrir a mesma sobreposição achada na TASK-051). CSS não precisou de nenhuma mudança — os seletores já eram compartilhados via `DiagramShell`. `removeObject` ganhou a mesma correção de `removeClass` (preservar `notes`, antes descartado por falta de spread). 23 testes novos (9 em `contentOperations.test.ts`, 14 em `ObjectDiagramCanvas.test.tsx`), espelhando os equivalentes das TASK-051/052. `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (306 testes, nenhum warning novo).
 
 **Validado ao vivo** (painel de teste descartável no projeto ELIMS, painel real do usuário não tocado): criar comentário sem o aviso "Nenhum objeto ainda" aparecer por cima, escolher cor (azul testado), editar texto em tempo real, excluir com `Delete` — todos funcionando, mesmo comportamento já confirmado no Diagrama de Classes.
+
+## TASK-054/055 — foco na classe selecionada e suas relacionadas (planejadas, 2026-09-03)
+
+Pedido do usuário, mesma sessão da TASK-053, com o diagrama real do ELIMS na tela (85 classes, 190 relações): num diagrama grande continua difícil ver com quais classes uma classe se relaciona, mesmo depois da TASK-049 (destaque por sentido) — as relacionadas ficam espalhadas por todo o canvas. Pediu duas coisas, deliberadamente diferentes entre si: **`V`** abre um modal que renderiza só a classe selecionada e as relacionadas (efêmero, só olhar), e **`N`** cria um **diagrama de classes novo** com esse mesmo recorte (persistido, para trabalhar depois).
+
+**Sem ritual de 3 opções/ADR**: `V` é modo de visualização efêmero, mesmo padrão de UI já aceito em TASK-038..045/049/052; `N` persiste, mas só compõe peças existentes (criação de diagrama do `DiagramTypeListPage`, `content` montado programaticamente como no import, subgrafo da TASK-054) — sem tocar contrato JSON, schema Postgres, RLS ou infraestrutura. O único ponto que merecia debate (reaproveitar ou regenerar os ids das classes copiadas) está decidido e justificado na RN-05 da TASK-055: **reaproveitar** — ids vivem dentro do JSONB, sem unicidade global nem FK, e reaproveitar elimina a classe de bugs de remapear `from`/`to`.
+
+**Definição de recorte compartilhada, de propósito**: as duas tasks consomem o mesmo módulo puro novo `src/features/class-diagram/focusSubgraph.ts` (subgrafo **induzido** — inclui as relações entre duas vizinhas, não só as que tocam a classe focada — + layout próprio: focada ao centro, `incoming` à esquerda, `outgoing` à direita). Se divergirem no que consideram "as classes relacionadas", o produto fica incoerente (o `V` mostra um conjunto, o `N` cria outro). Por isso **TASK-054 vem antes** da TASK-055.
+
+**Branch**: `feature/foco-classe-relacionadas`, a partir de `main`, pedido explícito do usuário — as duas tasks na mesma branch, nada em `main` nem no remoto sem ele pedir. Mesmo desvio deliberado do fluxo padrão do projeto já usado em `feature/animacoes-sistema` (TASK-038..045).
+
+**Fora de escopo nas duas** (registrado para não virar discussão de novo): vizinhança de 2+ níveis; Diagrama de Objetos (nem tem o destaque da TASK-049 ainda); copiar cards de comentário para o recorte (nota não tem vínculo com classe, ADR-013); e, na TASK-055, qualquer vínculo vivo entre o diagrama-mãe e o derivado — é cópia/snapshot, mesmo precedente do Diagrama de Objetos (TASK-004).
+
+Tasks em `.agents/tasks/backlog/` (`TASK-054-modal-foco-classe-relacionadas.md`, `TASK-055-novo-diagrama-a-partir-do-recorte.md`), owner `frontend-diagramas` nas duas. **Nenhuma implementada** — aguardando o usuário mandar começar.
 
 ## Decisões recentes
 
