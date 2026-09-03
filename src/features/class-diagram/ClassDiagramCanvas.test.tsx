@@ -13,12 +13,23 @@ import { emptyClassDiagramContent, NOTE_CARD_WIDTH, NOTE_MIN_HEIGHT, NOTE_MIN_WI
 function ControlledCanvas({
   initial = emptyClassDiagramContent(),
   readOnly = false,
+  onCreateDerivedDiagram,
 }: {
   initial?: ClassDiagramContent
   readOnly?: boolean
+  /** TASK-056 — quem hospeda o canvas de verdade (`DiagramEditorPage`) é
+   * que sabe criar diagrama no Supabase e navegar; aqui entra um duplo. */
+  onCreateDerivedDiagram?: (name: string, content: ClassDiagramContent) => Promise<void>
 }) {
   const [content, setContent] = useState(initial)
-  return <ClassDiagramCanvas content={content} readOnly={readOnly} onChange={setContent} />
+  return (
+    <ClassDiagramCanvas
+      content={content}
+      readOnly={readOnly}
+      onChange={setContent}
+      onCreateDerivedDiagram={onCreateDerivedDiagram}
+    />
+  )
 }
 
 /** Cards do canvas REAL. O `:not(.focus-canvas)` não é detalhe: desde a
@@ -706,5 +717,202 @@ describe('ClassDiagramCanvas — modal de foco (TASK-055)', () => {
     fireEvent.keyDown(window, { key: 'Delete' })
 
     expect(classCards()).toHaveLength(4)
+  })
+})
+
+// TASK-056 — criar um diagrama novo com o recorte (tecla `N`). O conteúdo
+// gerado é testado em `focusSubgraph.test.ts`; aqui, o que é do
+// componente: quando o fluxo dispara, quando NÃO dispara, e o que ele
+// entrega ao host.
+describe('ClassDiagramCanvas — novo diagrama com o recorte (TASK-056)', () => {
+  function graph(): ClassDiagramContent {
+    return {
+      classes: [
+        { id: 'foco', name: 'Pedido', attributes: [], x: 0, y: 0 },
+        { id: 'item', name: 'ItemPedido', attributes: [], x: 400, y: 0 },
+        { id: 'avulsa', name: 'Avulsa', attributes: [], x: 800, y: 800 },
+      ],
+      relationships: [{ id: 'r1', from: 'foco', to: 'item', type: 'composition', controlX: 300 }],
+    }
+  }
+
+  function selectFocusClass() {
+    fireEvent.pointerDown(classCards()[0])
+  }
+
+  function nameModalOpen() {
+    return screen.queryByLabelText('Nome do novo diagrama')
+  }
+
+  it('CA-01: N abre o modal de nome pré-preenchido com a classe focada', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'n' })
+
+    expect(nameModalOpen()).toHaveValue('Foco — Pedido')
+  })
+
+  it('CA-01/CA-02: confirmar entrega ao host o nome e o conteúdo do recorte', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={onCreate} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'N' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1))
+    const [name, derived] = onCreate.mock.calls[0]
+    expect(name).toBe('Foco — Pedido')
+    expect(derived.classes.map((c: { id: string }) => c.id).sort()).toEqual(['foco', 'item'])
+    expect(derived.relationships).toHaveLength(1)
+  })
+
+  it('nome apagado cai na sugestão — `diagrams.name` é not null', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={onCreate} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'n' })
+
+    fireEvent.change(nameModalOpen()!, { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalled())
+    expect(onCreate.mock.calls[0][0]).toBe('Foco — Pedido')
+  })
+
+  it('CA-09: visualizador não tem o caminho — N não faz nada (RN-01)', () => {
+    const onCreate = vi.fn()
+    render(<ControlledCanvas initial={graph()} readOnly onCreateDerivedDiagram={onCreate} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'n' })
+
+    expect(nameModalOpen()).not.toBeInTheDocument()
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('CA-08: sem seleção, ou com uma relação selecionada, N não faz nada (RN-03)', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    fireEvent.keyDown(window, { key: 'n' })
+    expect(nameModalOpen()).not.toBeInTheDocument()
+
+    fireEvent.click(document.querySelectorAll('.connectors-layer > g')[0])
+    fireEvent.keyDown(window, { key: 'n' })
+    expect(nameModalOpen()).not.toBeInTheDocument()
+  })
+
+  it('CA-07: com o foco num campo de texto, N digita a letra e não cria nada (RN-02)', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+
+    const nameInput = screen.getByLabelText('Nome da classe')
+    nameInput.focus()
+    fireEvent.keyDown(nameInput, { key: 'n' })
+
+    expect(nameModalOpen()).not.toBeInTheDocument()
+  })
+
+  it('Ctrl+N (nova janela do navegador) não dispara o fluxo', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'n', ctrlKey: true })
+
+    expect(nameModalOpen()).not.toBeInTheDocument()
+  })
+
+  it('CA-11: falha ao criar mostra o erro e mantém o modal aberto, sem quebrar o diagrama', async () => {
+    const onCreate = vi.fn().mockRejectedValue(new Error('RLS: not authorized'))
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={onCreate} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'n' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(screen.getByText('RLS: not authorized')).toBeInTheDocument())
+    expect(nameModalOpen()).toBeInTheDocument()
+    expect(classCards()).toHaveLength(3)
+  })
+
+  it('CA-12: o botão dentro do modal de foco dispara o mesmo fluxo (RN-07)', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'v' })
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar diagrama com este recorte/ }))
+
+    expect(nameModalOpen()).toHaveValue('Foco — Pedido')
+  })
+
+  it('visualizador não vê o botão dentro do modal de foco (RN-07)', () => {
+    render(<ControlledCanvas initial={graph()} readOnly onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Criar diagrama com este recorte/ })).not.toBeInTheDocument()
+  })
+
+  it('sem host que saiba criar diagrama, o atalho simplesmente não existe', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'n' })
+
+    expect(nameModalOpen()).not.toBeInTheDocument()
+  })
+
+  it('com o modal de nome aberto, Delete não exclui a classe atrás dele', () => {
+    render(<ControlledCanvas initial={graph()} onCreateDerivedDiagram={vi.fn()} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'n' })
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(3)
+  })
+})
+
+// Achado na validação ao vivo da TASK-056 (não estava previsto nas CAs):
+// navegar para o diagrama novo troca só o parâmetro da rota, então o
+// canvas NÃO é remontado — sem fechar o modal de foco explicitamente, ele
+// ficava aberto por cima do diagrama recém-criado.
+describe('ClassDiagramCanvas — TASK-056, estado dos modais após criar', () => {
+  it('criar com sucesso fecha o modal de nome E o modal de foco', async () => {
+    const content: ClassDiagramContent = {
+      classes: [
+        { id: 'foco', name: 'Pedido', attributes: [], x: 0, y: 0 },
+        { id: 'item', name: 'ItemPedido', attributes: [], x: 400, y: 0 },
+      ],
+      relationships: [{ id: 'r1', from: 'foco', to: 'item', type: 'association', controlX: 200 }],
+    }
+    render(<ControlledCanvas initial={content} onCreateDerivedDiagram={vi.fn().mockResolvedValue(undefined)} />)
+    fireEvent.pointerDown(classCards()[0])
+    fireEvent.keyDown(window, { key: 'v' })
+    fireEvent.keyDown(window, { key: 'n' })
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(screen.queryByLabelText('Nome do novo diagrama')).not.toBeInTheDocument())
+    expect(screen.queryByText('Foco: Pedido')).not.toBeInTheDocument()
+  })
+
+  it('falhar mantém os dois abertos, para a pessoa não perder o contexto', async () => {
+    const content: ClassDiagramContent = {
+      classes: [{ id: 'foco', name: 'Pedido', attributes: [], x: 0, y: 0 }],
+      relationships: [],
+    }
+    const onCreate = vi.fn().mockRejectedValue(new Error('sem rede'))
+    render(<ControlledCanvas initial={content} onCreateDerivedDiagram={onCreate} />)
+    fireEvent.pointerDown(classCards()[0])
+    fireEvent.keyDown(window, { key: 'v' })
+    fireEvent.keyDown(window, { key: 'n' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(screen.getByText('sem rede')).toBeInTheDocument())
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
   })
 })

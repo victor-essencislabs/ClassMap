@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-03 (TASK-055/056 planejadas — foco na classe selecionada e suas relacionadas)
+ultima-revisao: 2026-09-03 (TASK-055/056 implementadas — foco na classe selecionada e suas relacionadas)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -267,7 +267,13 @@ Pedido do usuário, mesma sessão da TASK-053, com o diagrama real do ELIMS na t
 
 **A validação ao vivo reprovou o CA-10 e mudou o desenho da feature** (corrigido dentro da task, como o plano previa): contra o diagrama real do ELIMS, `Sample` tem 80 atributos e `AnalysisRequest` 97 — com a altura de card estimada pelos atributos, o card central tinha ~1600px e o enquadramento encolhia o recorte para ~0,2 de escala, ilegível. Resolvido com **card compacto de altura fixa** (cabeçalho + "N atributos", `FOCUS_CARD_HEIGHT = 56`, fixado em CSS porque o número é lido em três lugares) + **mais de uma coluna por lado** acima de 7 vizinhas (mesmo problema de proporção da ADR-012, na escala de um recorte). Depois da correção: escala 0,79, 22 cards e 65 conectores legíveis, com 13 `outgoing`/8 `incoming` batendo exatamente com a contagem que a TASK-049 já tinha medido para `Sample`. Dois achados menores só apareceram ao vivo: os cards renderizando sem estilo (faltava o escopo `.diagram-shell-canvas`) e o `Delete` da TASK-052 continuando armado por trás do modal aberto (desarmado nesta task).
 
-**TASK-056 (tecla `N`) segue em `backlog/`, não iniciada.** Branch `feature/foco-classe-relacionadas`, nada em `main` nem no remoto.
+**TASK-056 implementada** (mesma sessão): tecla `N` (ou o botão dentro do modal de foco) cria um Diagrama de Classes novo no mesmo projeto com o recorte da classe selecionada, e abre ele. `createDiagramWithContent` nova em `queries.ts` (mesmo insert de `createEmptyDiagram`, com `content` preenchido — **nenhuma migration, nenhuma policy nova**, a RLS de insert já cobria). O canvas monta o conteúdo do recorte e a página (`DiagramEditorPage`) decide onde ele vai parar e navega — o canvas continua sem falar com o Supabase (RN-01 da TASK-002). Um modal de nome confirma antes de criar (precedente da TASK-016) e é a rede de segurança do atalho de uma tecla. `flushPendingSave()` grava o que o autosave ainda ia gravar antes de navegar, senão arrastar um card e apertar `N` em seguida perderia a alteração em silêncio. 29 testes novos; build/lint/testes limpos (**365 testes**).
+
+**De novo, dois defeitos que só a validação ao vivo pegou** (nenhum previsto nas CAs, os dois corrigidos com teste de regressão): (1) o modal de foco continuava aberto **por cima** do diagrama recém-criado — navegar troca só o parâmetro `:diagramId`, então o React Router não remonta o canvas e o estado sobrevive; (2) o diagrama criado nascia com **os cards sobrepostos** — o layout posicionava com a altura do card *compacto* do modal (56px) enquanto o diagrama real desenha o card inteiro (até 749px no ELIMS). Resolvido com um parâmetro `FocusLayoutMode` (`'compact'` para o modal, `'full'` para o diagrama criado): mesmo recorte, mesmo algoritmo, só a altura de quem vai desenhar muda. **Padrão que se repetiu nas duas tasks**: o que quebrou não foi a lógica (coberta por teste desde o começo), foi sempre a diferença entre o dado sintético do teste e o diagrama real do ELIMS.
+
+Validado ao vivo contra o diagrama real "QC e Calculo Análitico": recorte de `AnalyticalMethod` virou um diagrama de 6 classes/5 relações, sem sobreposição, sobrevivendo a reload, com o diagrama de origem inalterado. Os 2 diagramas de teste criados foram excluídos ao final.
+
+**As duas tasks estão prontas na branch `feature/foco-classe-relacionadas`** — nada em `main` nem no remoto, aguardando a decisão do usuário sobre mesclar.
 
 ## Decisões recentes
 

@@ -1,7 +1,7 @@
 ---
 id: TASK-056
 title: Criar diagrama novo (tecla N) com a classe selecionada e as relacionadas
-status: backlog
+status: active
 type: feature
 owner: frontend-diagramas
 created_at: 2026-09-03
@@ -64,20 +64,20 @@ Com uma classe selecionada, `N` cria no **mesmo projeto** um diagrama de classes
 - **RN-10**: o recorte de uma classe sem relação nenhuma cria um diagrama com uma classe só. É inútil, mas é o que o usuário pediu, é consistente e não corrompe nada — não bloquear (no máximo, deixar claro no texto do modal quantas classes serão criadas).
 
 ## Critérios de aceitação
-- [ ] CA-01: Com uma classe selecionada, `N` abre o modal de nome pré-preenchido; confirmando, um diagrama novo é criado no mesmo projeto e o app navega para ele.
-- [ ] CA-02: O diagrama criado contém exatamente a classe focada + as diretamente relacionadas, e todas as relações entre essas classes — o mesmo conjunto que a TASK-055 mostra no modal para a mesma classe.
-- [ ] CA-03: As classes do diagrama novo aparecem posicionadas e sem sobreposição, com os conectores UML corretos (tipo e multiplicidade preservados) e os cotovelos em lugar coerente (RN-06).
-- [ ] CA-04: Atributos, `stereotype` e `color` de cada classe copiada estão preservados.
-- [ ] CA-05: O diagrama de origem fica **inalterado** — mesmas classes, mesmas posições, mesmo `content` (a comparação depois da criação não pode acusar diff).
-- [ ] CA-06: O diagrama novo aparece na lista de Diagramas de Classes do projeto e reabre corretamente depois de um reload de página (persistiu de verdade).
-- [ ] CA-07: `N` com o foco num campo de texto digita a letra normalmente e não cria nada (RN-02).
-- [ ] CA-08: `N` sem seleção, ou com relação/comentário selecionado, não faz nada (RN-03).
-- [ ] CA-09: Usuário `visualizador` não tem o caminho na UI e, se o atalho for disparado, nada é criado (RN-01).
-- [ ] CA-10: Arrastar um card e apertar `N` imediatamente (dentro da janela de 800 ms do autosave) não perde a posição arrastada (RN-08).
-- [ ] CA-11: Falha na criação (simulável mockando `queries`) mostra erro, não navega e não deixa o diagrama de origem num estado estranho.
-- [ ] CA-12: O botão dentro do modal de foco cria o mesmo diagrama que o atalho (RN-07).
-- [ ] CA-13: `npm run build`, `npm run lint` e `npm test` limpos, sem warning novo.
-- [ ] CA-14: Validação ao vivo contra o Supabase real: recorte de uma classe de alta conectividade do diagrama real do ELIMS (ex.: `Sample`, 21 relações) criado, aberto, conferido e **excluído ao final** — sem tocar em nenhum diagrama real do usuário (mesmo protocolo de painel descartável das TASK-048..053).
+- [x] CA-01: Com uma classe selecionada, `N` abre o modal de nome pré-preenchido; confirmando, um diagrama novo é criado no mesmo projeto e o app navega para ele.
+- [x] CA-02: O diagrama criado contém exatamente a classe focada + as diretamente relacionadas, e todas as relações entre essas classes — o mesmo conjunto que a TASK-055 mostra no modal para a mesma classe.
+- [x] CA-03: As classes do diagrama novo aparecem posicionadas e sem sobreposição, com os conectores UML corretos (tipo e multiplicidade preservados) e os cotovelos em lugar coerente (RN-06).
+- [x] CA-04: Atributos, `stereotype` e `color` de cada classe copiada estão preservados.
+- [x] CA-05: O diagrama de origem fica **inalterado** — mesmas classes, mesmas posições, mesmo `content` (a comparação depois da criação não pode acusar diff).
+- [x] CA-06: O diagrama novo aparece na lista de Diagramas de Classes do projeto e reabre corretamente depois de um reload de página (persistiu de verdade).
+- [x] CA-07: `N` com o foco num campo de texto digita a letra normalmente e não cria nada (RN-02).
+- [x] CA-08: `N` sem seleção, ou com relação/comentário selecionado, não faz nada (RN-03).
+- [x] CA-09: Usuário `visualizador` não tem o caminho na UI e, se o atalho for disparado, nada é criado (RN-01).
+- [x] CA-10: Arrastar um card e apertar `N` imediatamente (dentro da janela de 800 ms do autosave) não perde a posição arrastada (RN-08).
+- [x] CA-11: Falha na criação (simulável mockando `queries`) mostra erro, não navega e não deixa o diagrama de origem num estado estranho.
+- [x] CA-12: O botão dentro do modal de foco cria o mesmo diagrama que o atalho (RN-07).
+- [x] CA-13: `npm run build`, `npm run lint` e `npm test` limpos, sem warning novo.
+- [x] CA-14: Validação ao vivo contra o Supabase real: recorte de uma classe de alta conectividade do diagrama real do ELIMS (ex.: `Sample`, 21 relações) criado, aberto, conferido e **excluído ao final** — sem tocar em nenhum diagrama real do usuário (mesmo protocolo de painel descartável das TASK-048..053).
 
 ## Impacto técnico
 ### Backend
@@ -97,22 +97,22 @@ Nenhuma. O contrato JSON de import/export (`src/features/import-export/schema.ts
 Nenhuma superfície nova: um INSERT a mais na mesma tabela, com a mesma policy já existente. O gate de UI por papel é reforço, não a garantia — a garantia é a RLS (mesma postura de todo o projeto).
 
 ## Plano de implementação
-- [ ] Confirmar que a TASK-055 já está implementada e commitada na branch (esta task depende de `focusSubgraph.ts`).
-- [ ] `createDiagramWithContent` em `queries.ts` + teste.
-- [ ] Função pura que monta o `content` do recorte a partir do subgrafo já posicionado (reaproveitando `focusSubgraph.ts`), com `notes` ausente e `controlX` recalculado (RN-06). Testes primeiro.
-- [ ] Modal de nome (sugestão pré-preenchida, contagem de classes do recorte no texto de apoio).
-- [ ] Fluxo de criação + navegação em `DiagramEditorPage.tsx`, com a garantia de save pendente da RN-08 e o tratamento de erro da CA-11.
-- [ ] `useEffect` do atalho `N` em `ClassDiagramCanvas.tsx` (guardas RN-01/02/03) chamando o callback.
-- [ ] Botão no `ClassFocusModal` (RN-07), só para `editor`.
-- [ ] Testes de componente.
-- [ ] Validar ao vivo contra o ELIMS real, com diagrama descartável, excluído ao final (CA-14).
+- [x] Confirmar que a TASK-055 já está implementada e commitada na branch (esta task depende de `focusSubgraph.ts`).
+- [x] `createDiagramWithContent` em `queries.ts` + teste.
+- [x] Função pura que monta o `content` do recorte a partir do subgrafo já posicionado (reaproveitando `focusSubgraph.ts`), com `notes` ausente e `controlX` recalculado (RN-06). Testes primeiro.
+- [x] Modal de nome (sugestão pré-preenchida, contagem de classes do recorte no texto de apoio).
+- [x] Fluxo de criação + navegação em `DiagramEditorPage.tsx`, com a garantia de save pendente da RN-08 e o tratamento de erro da CA-11.
+- [x] `useEffect` do atalho `N` em `ClassDiagramCanvas.tsx` (guardas RN-01/02/03) chamando o callback.
+- [x] Botão no `ClassFocusModal` (RN-07), só para `editor`.
+- [x] Testes de componente.
+- [x] Validar ao vivo contra o ELIMS real, com diagrama descartável, excluído ao final (CA-14).
 
 ## Estratégia de testes
-- [ ] Unitários: montagem do `content` do recorte (conjunto correto de classes/relações; `notes` ausente; `controlX` recalculado; atributos/`stereotype`/`color` preservados; ids reaproveitados conforme RN-05; o `content` de origem não é mutado).
-- [ ] Integração (mock de `src/lib/supabase/queries`, padrão já usado em `system-view/SystemViewPage.test.tsx`): sucesso cria com os argumentos certos (`projectId` correto, `type: 'classes'`, nome do modal) e navega para o id retornado; falha mostra erro e não navega (CA-11).
-- [ ] Componente (`ClassDiagramCanvas.test.tsx`): atalho respeita as 3 guardas (RN-01/02/03); botão do modal de foco dispara o mesmo caminho (CA-12).
+- [x] Unitários: montagem do `content` do recorte (conjunto correto de classes/relações; `notes` ausente; `controlX` recalculado; atributos/`stereotype`/`color` preservados; ids reaproveitados conforme RN-05; o `content` de origem não é mutado).
+- [x] Integração (mock de `src/lib/supabase/queries`, padrão já usado em `system-view/SystemViewPage.test.tsx`): sucesso cria com os argumentos certos (`projectId` correto, `type: 'classes'`, nome do modal) e navega para o id retornado; falha mostra erro e não navega (CA-11).
+- [x] Componente (`ClassDiagramCanvas.test.tsx`): atalho respeita as 3 guardas (RN-01/02/03); botão do modal de foco dispara o mesmo caminho (CA-12).
 - [ ] E2E: não aplicável (o repositório não tem E2E — ver `.claude/rules/global.md`).
-- [ ] Manual: contra o Supabase real (ELIMS), classe `Sample` — criar, conferir conteúdo/posições/conectores, reabrir depois de reload (CA-06), confirmar que o diagrama de origem não mudou (CA-05), excluir o diagrama de teste ao final. Testar também o caso da CA-10 (arrastar um card e apertar `N` imediatamente).
+- [x] Manual: contra o Supabase real (ELIMS), classe `Sample` — criar, conferir conteúdo/posições/conectores, reabrir depois de reload (CA-06), confirmar que o diagrama de origem não mudou (CA-05), excluir o diagrama de teste ao final. Testar também o caso da CA-10 (arrastar um card e apertar `N` imediatamente).
 
 ## Riscos e rollback
 Risco maior que o da TASK-055, porque **escreve no banco**. Três pontos de atenção, todos com CA dedicada:
@@ -128,14 +128,65 @@ As duas nascem do mesmo pedido e compartilham a definição de recorte. A **font
 Se por algum motivo o usuário decidir implementar só uma das duas, esta (`N`) ainda funciona sozinha — mas então o módulo `focusSubgraph.ts` e seus testes passam a fazer parte **desta** task, e a RN-07 (botão no modal de foco) cai por não haver modal.
 
 ## Registro de execução
+
 ### Alterações realizadas
+- **`queries.ts`** — `createDiagramWithContent(projectId, type, name, content)` nova: mesmo insert de `createEmptyDiagram`, com `content` preenchido. Nenhuma migration, nenhuma policy (RN-09 cumprida).
+- **`focusSubgraph.ts`** (da TASK-055) — `focusSubgraphToContent` (o recorte como `ClassDiagramContent`, sem `notes`, ids reaproveitados), `suggestedFocusDiagramName`, e o parâmetro `FocusLayoutMode` (`'compact' | 'full'`) no layout — ver "Divergências".
+- **`ClassDiagramCanvas.tsx`** — `useEffect` do atalho `N` (guardas de `readOnly`, campo de texto e modificador), modal de nome com texto que descreve o que será criado, e `onCreateDerivedDiagram` novo na interface do componente. O canvas monta o "o quê"; a página sabe o "onde" — o canvas continua sem falar com o Supabase.
+- **`DiagramEditorPage.tsx`** — `flushPendingSave()` (RN-08) e `handleCreateDerivedDiagram` (cria + navega); `useNavigate` (segundo uso no app, depois de `AppLayout`).
+- **`ClassFocusModal.tsx`** — botão "Criar diagrama com este recorte" (RN-07), só quando o host sabe criar e o usuário é `editor`.
+- **`src/index.css`** — bloco `TASK-056` (botão no cabeçalho do modal de foco + a dica de tecla, unificada com a da TASK-055).
+
 ### Arquivos principais
+- `src/lib/supabase/queries.ts`
+- `src/features/class-diagram/focusSubgraph.ts` + `focusSubgraph.test.ts`
+- `src/features/class-diagram/ClassDiagramCanvas.tsx` + `ClassDiagramCanvas.test.tsx`
+- `src/features/class-diagram/DiagramEditorPage.tsx` + `DiagramEditorPage.test.tsx`
+- `src/features/class-diagram/ClassFocusModal.tsx`
+- `src/index.css`
+
 ### Decisões
+- **O canvas entrega o conteúdo pronto; a página decide onde ele vai parar.** `onCreateDerivedDiagram(name, content)` em vez de passar `focusClassId` para a página: o canvas é quem entende de diagrama, a página é quem entende de projeto/rota/Supabase. Mantém a regra da TASK-002 (componente nunca chama o SDK direto) sem inverter responsabilidade.
+- **Prop opcional, não obrigatória** — sem `onCreateDerivedDiagram`, o atalho e os botões simplesmente não existem. É o que deixa o canvas montável em teste (e em qualquer host que não saiba criar diagrama) sem stub de Supabase.
+- **`flushPendingSave` em vez de bloquear a navegação** — a alternativa seria avisar "há alterações não salvas". Mas o autosave é o contrato deste produto: o usuário não sabe que existe um debounce de 800ms e não deveria precisar saber. Gravar e seguir é o que ele já espera que aconteça.
+- **Modal de nome como confirmação obrigatória** — além de nomear (precedente da TASK-016), é o que separa um atalho de uma tecla de "criar diagrama sem querer ao digitar". O texto diz quantas classes e relações serão criadas e avisa que é cópia independente, para a confirmação não ser às cegas.
+- **Ids reaproveitados** (RN-05), conforme planejado. Efeito colateral observado ao vivo, positivo: como os ids são os mesmos, a seleção e o foco continuam válidos no diagrama recém-aberto.
+
 ### Divergências
+Dois defeitos reais apareceram **só na validação ao vivo**, nenhum previsto nas CAs; os dois corrigidos aqui, com teste de regressão:
+
+1. **O modal de foco ficava aberto por cima do diagrama recém-criado.** Navegar para o diagrama novo troca só o parâmetro da rota (`:diagramId`), então o React Router **não remonta** `DiagramEditorPage`/`ClassDiagramCanvas` — o estado `focusClassId` sobrevivia à navegação. Corrigido fechando os dois modais no sucesso (e mantendo os dois abertos no erro, para não perder o contexto).
+2. **O diagrama criado nascia com os cards sobrepostos.** O layout da TASK-055 posiciona assumindo `FOCUS_CARD_HEIGHT` (56px), que é a altura do card **compacto do modal** — mas o diagrama de verdade renderiza o card inteiro, que no ELIMS real chega a 749px. Corrigido com o parâmetro `FocusLayoutMode`: `'compact'` (modal, altura fixa) e `'full'` (diagrama criado, `estimateClassCardHeight` por classe). O padrão continua `'compact'`, então a TASK-055 não muda de comportamento. **É o mesmo recorte e o mesmo algoritmo — só a altura de quem vai desenhar muda.**
+
+Fora isso: **CA-09 não foi exercitada ao vivo** (exige um segundo usuário `visualizador` — mesma lacuna estrutural registrada desde a TASK-001), só por teste automatizado, em dois níveis (componente e página).
+
 ### Pendências
+Nenhuma.
 
 ## Validação
-Comandos e resultados.
+
+```
+npm run build
+✓ built in 211ms (tsc -b limpo)
+
+npm run lint
+8 warnings — os mesmos 8 pré-existentes, nenhum novo
+
+npx vitest run --exclude "**/.claude/worktrees/**"
+✓ 36 arquivos, 365 testes (336 ao fim da TASK-055 + 29 novos:
+  11 em focusSubgraph.test.ts, 14 em ClassDiagramCanvas.test.tsx,
+  4 em DiagramEditorPage.test.tsx)
+```
+
+**Validação ao vivo** (dev server local contra o Supabase real, projeto ELIMS, diagrama real "QC e Calculo Análitico" — 17 classes, 14 relações):
+
+- `AnalyticalMethod` selecionada → `N` → modal com o nome sugerido e o texto correto ("AnalyticalMethod + 5 classes relacionadas (5 relações)... cópia independente").
+- Confirmado → diagrama criado e aberto: 6 classes, 5 relações, nome aplicado, rota trocada para o id novo (CA-01/CA-02).
+- **Zero pares de cards sobrepostos** conferido por `getBoundingClientRect` depois da correção do `FocusLayoutMode` — alturas reais de 109px a 749px, com o empilhamento respeitando cada uma (CA-03). Atributos, estereótipo e conectores UML com multiplicidade preservados (CA-04).
+- **Reload completo da página**: o diagrama continuou lá, íntegro (CA-06) — persistiu de verdade, não era só estado local.
+- **Diagrama de origem inalterado** (CA-05): 17 classes / 14 relações, indicador de salvamento vazio — nenhuma gravação disparada nele durante todo o teste.
+- **Botão dentro do modal de foco** confirmado abrindo o mesmo fluxo (CA-12).
+- **Limpeza**: os 2 diagramas de teste criados nesta sessão (`TESTE-056 descartavel` e um `Foco — AnalyticalMethod` da rodada anterior à correção) foram excluídos ao final, cada um com a confirmação conferida pelo nome antes de apertar. Os 11 diagramas reais do projeto seguem intactos.
 
 ## Handoff
-Link para o handoff ativo, quando aplicável.
+Nenhum handoff necessário — task implementada de ponta a ponta nesta sessão. As duas tasks da branch `feature/foco-classe-relacionadas` (TASK-055 e TASK-056) estão prontas; falta a decisão do usuário sobre mesclar em `main`.

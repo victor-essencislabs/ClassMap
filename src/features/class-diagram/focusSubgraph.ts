@@ -7,7 +7,26 @@
 // qualquer contexto de renderização. As duas tasks compartilham este
 // módulo de propósito — se cada uma calculasse o recorte por conta
 // própria, o `V` mostraria um conjunto e o `N` criaria outro.
-import { CLASS_CARD_WIDTH, type ClassDiagramContent, type DiagramClass, type DiagramRelationship } from './types'
+import {
+  CLASS_CARD_WIDTH,
+  estimateClassCardHeight,
+  type ClassDiagramContent,
+  type DiagramClass,
+  type DiagramRelationship,
+} from './types'
+
+/** Para qual superfície o recorte está sendo posicionado — os dois
+ * consumidores desenham o MESMO recorte com cards de altura diferente, e
+ * o empilhamento tem que seguir a altura de quem vai renderizar:
+ * - `'compact'`: o modal de foco (TASK-055), que usa `ClassCard compact`,
+ *   de altura fixa;
+ * - `'full'`: um diagrama de verdade (TASK-056), onde o card mostra a
+ *   lista inteira de atributos e cresce com ela.
+ *
+ * Achado na validação ao vivo da TASK-056: posicionar o diagrama criado
+ * com a altura compacta empilha os cards a cada 82px enquanto eles
+ * renderizam com centenas — o diagrama nasce com os cards sobrepostos. */
+export type FocusLayoutMode = 'compact' | 'full'
 
 /** Altura fixa do card no modal de foco — o card lá é compacto
  * (`ClassCard compact`: cabeçalho + contagem de atributos), não a lista
@@ -89,9 +108,13 @@ const MAX_ROWS_PER_COLUMN = 7
  * para caber sem encolher, e o ganho vira perda. */
 const MAX_COLUMNS_PER_SIDE = 3
 
-function columnHeight(count: number): number {
-  if (count === 0) return 0
-  return count * FOCUS_CARD_HEIGHT + ROW_GAP * (count - 1)
+function heightFn(mode: FocusLayoutMode): (cls: DiagramClass) => number {
+  return mode === 'compact' ? () => FOCUS_CARD_HEIGHT : estimateClassCardHeight
+}
+
+function columnHeight(classes: DiagramClass[], heightOf: (cls: DiagramClass) => number): number {
+  if (classes.length === 0) return 0
+  return classes.reduce((sum, cls) => sum + heightOf(cls), 0) + ROW_GAP * (classes.length - 1)
 }
 
 /** Quebra um lado em colunas equilibradas (nunca uma coluna cheia e outra
@@ -108,11 +131,16 @@ function splitIntoColumns(classes: DiagramClass[]): DiagramClass[][] {
 }
 
 /** Empilha uma coluna verticalmente, centrada na altura total do recorte. */
-function stackColumn(classes: DiagramClass[], x: number, totalHeight: number): DiagramClass[] {
-  let y = (totalHeight - columnHeight(classes.length)) / 2
+function stackColumn(
+  classes: DiagramClass[],
+  x: number,
+  totalHeight: number,
+  heightOf: (cls: DiagramClass) => number,
+): DiagramClass[] {
+  let y = (totalHeight - columnHeight(classes, heightOf)) / 2
   return classes.map((cls) => {
     const positioned = { ...cls, x, y }
-    y += FOCUS_CARD_HEIGHT + ROW_GAP
+    y += heightOf(cls) + ROW_GAP
     return positioned
   })
 }
@@ -128,8 +156,9 @@ function stackColumn(classes: DiagramClass[], x: number, totalHeight: number): D
  * `controlX` de cada relação também é recalculado (RN-06) — reaproveitar o
  * `controlX` do diagrama de origem com posições novas põe o cotovelo do
  * conector em lugar absurdo. */
-export function layoutFocusSubgraph(subgraph: FocusSubgraph): FocusSubgraph {
+export function layoutFocusSubgraph(subgraph: FocusSubgraph, mode: FocusLayoutMode = 'compact'): FocusSubgraph {
   const { focusClassId } = subgraph
+  const heightOf = heightFn(mode)
   const focusClass = subgraph.classes.find((c) => c.id === focusClassId)
   if (!focusClass) return subgraph
 
@@ -161,17 +190,21 @@ export function layoutFocusSubgraph(subgraph: FocusSubgraph): FocusSubgraph {
   const centerX = leftColumns.length * columnStep
 
   const totalHeight = Math.max(
-    ...leftColumns.map((c) => columnHeight(c.length)),
-    ...rightColumns.map((c) => columnHeight(c.length)),
-    FOCUS_CARD_HEIGHT,
+    ...leftColumns.map((c) => columnHeight(c, heightOf)),
+    ...rightColumns.map((c) => columnHeight(c, heightOf)),
+    heightOf(focusClass),
   )
 
   const positioned = [
     // A coluna mais próxima do centro é a primeira do lado esquerdo, para
     // as vizinhas ficarem "lendo" na direção do foco.
-    ...leftColumns.flatMap((column, i) => stackColumn(column, (leftColumns.length - 1 - i) * columnStep, totalHeight)),
-    ...stackColumn([focusClass], centerX, totalHeight),
-    ...rightColumns.flatMap((column, i) => stackColumn(column, centerX + (i + 1) * columnStep, totalHeight)),
+    ...leftColumns.flatMap((column, i) =>
+      stackColumn(column, (leftColumns.length - 1 - i) * columnStep, totalHeight, heightOf),
+    ),
+    ...stackColumn([focusClass], centerX, totalHeight, heightOf),
+    ...rightColumns.flatMap((column, i) =>
+      stackColumn(column, centerX + (i + 1) * columnStep, totalHeight, heightOf),
+    ),
   ]
   const positionById = new Map(positioned.map((c) => [c.id, c]))
 
@@ -199,7 +232,44 @@ function controlXBetween(from: DiagramClass, to: DiagramClass): number {
 
 /** Conveniência para os dois consumidores (modal da TASK-055, criação de
  * diagrama da TASK-056): monta e posiciona de uma vez. */
-export function focusSubgraphFor(content: ClassDiagramContent, focusClassId: string): FocusSubgraph | null {
+export function focusSubgraphFor(
+  content: ClassDiagramContent,
+  focusClassId: string,
+  mode: FocusLayoutMode = 'compact',
+): FocusSubgraph | null {
   const subgraph = buildFocusSubgraph(content, focusClassId)
-  return subgraph ? layoutFocusSubgraph(subgraph) : null
+  return subgraph ? layoutFocusSubgraph(subgraph, mode) : null
+}
+
+/** TASK-056 — o recorte como conteúdo de um diagrama novo, pronto para
+ * `createDiagramWithContent`. É o MESMO recorte que o modal de foco
+ * mostra: o diagrama criado abre parecido com o que a pessoa acabou de
+ * ver, e não há duas definições de "as classes relacionadas" para
+ * divergirem.
+ *
+ * Os ids de classe/atributo/relação são **reaproveitados**, não
+ * regenerados (RN-05): eles vivem dentro do JSONB, sem unicidade global
+ * nem FK, e `relationships.from`/`to` só precisam ser válidos dentro do
+ * próprio `content`. Reaproveitar elimina a classe inteira de bugs de
+ * remapear `from`/`to` errado e preserva a rastreabilidade "esta classe é
+ * a mesma classe do diagrama-mãe".
+ *
+ * Nasce sem `notes`: comentário é anotação livre no canvas, sem vínculo
+ * com nenhuma classe (ADR-013) — não há critério para dizer que uma nota
+ * pertence ao recorte.
+ *
+ * O diagrama criado é uma CÓPIA independente, um snapshot — editar o
+ * derivado não altera o original, nem o contrário (mesmo precedente dos
+ * atributos herdados por snapshot no Diagrama de Objetos, TASK-004). */
+export function focusSubgraphToContent(subgraph: FocusSubgraph): ClassDiagramContent {
+  return {
+    classes: subgraph.classes.map((cls) => ({ ...cls })),
+    relationships: subgraph.relationships.map((rel) => ({ ...rel })),
+  }
+}
+
+/** Nome sugerido para o diagrama derivado — o usuário pode trocar antes
+ * de confirmar. */
+export function suggestedFocusDiagramName(className: string): string {
+  return `Foco — ${className}`
 }

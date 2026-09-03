@@ -246,6 +246,31 @@ export async function createEmptyDiagram(
 }
 
 /**
+ * Cria um diagrama já com conteúdo (TASK-056) — mesmo insert de
+ * `createEmptyDiagram`, só que `content` chega preenchido em vez de `{}`.
+ * Existe porque até aqui a única forma de um diagrama nascer com conteúdo
+ * era criar vazio e deixar o autosave gravar depois: dois passos, com uma
+ * janela em que um diagrama vazio já está salvo. Nenhuma migration e
+ * nenhuma policy nova — `diagrams_insert` já exige `editor` do projeto,
+ * mesma autorização de `createEmptyDiagram`.
+ */
+export async function createDiagramWithContent(
+  projectId: string,
+  type: DiagramType,
+  name: string,
+  content: Record<string, unknown>,
+): Promise<Diagram> {
+  const client = requireClient()
+  const { data, error } = await client
+    .from('diagrams')
+    .insert({ project_id: projectId, type, name, content })
+    .select('id, project_id, type, name, content, created_at, updated_at')
+    .single()
+  if (error) throw error
+  return data as Diagram
+}
+
+/**
  * Renomeia um diagrama já criado (TASK-020) — até aqui só era possível
  * definir o nome na criação (TASK-016). Mesma política RLS de
  * `updateDiagramContent` (`diagrams` update exige `editor` do projeto,

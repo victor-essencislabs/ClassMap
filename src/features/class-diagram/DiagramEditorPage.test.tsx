@@ -1,7 +1,7 @@
 // TASK-020 — testa o nome do diagrama editável na topbar, mockando a
 // camada de Supabase (mesmo padrão de `SystemViewPage.test.tsx`).
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DiagramEditorPage } from './DiagramEditorPage'
 import { emptyClassDiagramContent } from './types'
@@ -19,13 +19,17 @@ const diagram: Diagram = {
 
 const getMyProjectRole = vi.fn(async (): Promise<ProjectRole> => 'editor')
 const renameDiagram = vi.fn(async () => undefined)
+// TASK-056
+const updateDiagramContent = vi.fn(async () => undefined)
+const createDiagramWithContent = vi.fn(async () => ({ ...diagram, id: 'diagram-novo' }))
 
 vi.mock('../../lib/supabase/queries', () => ({
   getDiagram: vi.fn(async () => diagram),
   getCurrentUserId: vi.fn(async () => 'user-1'),
   getMyProjectRole: () => getMyProjectRole(),
-  updateDiagramContent: vi.fn(async () => undefined),
+  updateDiagramContent: (...args: unknown[]) => updateDiagramContent(...(args as [])),
   renameDiagram: (...args: Parameters<typeof renameDiagram>) => renameDiagram(...args),
+  createDiagramWithContent: (...args: unknown[]) => createDiagramWithContent(...(args as [])),
 }))
 
 // TASK-047: `DiagramEditorPage` passou a usar `useAuth()` (presença) —
@@ -110,3 +114,98 @@ describe('DiagramEditorPage — TASK-038 selo de validação no indicador "Salvo
     await waitFor(() => expect(screen.getByText('Salvo')).toHaveClass('seal-confirm'))
   })
 })
+
+// TASK-056 — o que é responsabilidade DESTA página no fluxo de criar um
+// diagrama com o recorte: onde ele é criado, para onde navega, e o que
+// acontece com uma alteração ainda não salva. O recorte em si é testado
+// em `focusSubgraph.test.ts`; o gatilho, em `ClassDiagramCanvas.test.tsx`.
+describe('DiagramEditorPage — TASK-056 criar diagrama com o recorte', () => {
+  function renderPageWithLocation() {
+    return render(
+      <MemoryRouter initialEntries={['/orgs/org-1/projects/project-1/diagrams/diagram-1']}>
+        <LocationProbe />
+        <Routes>
+          <Route path="/orgs/:orgId/projects/:projectId/diagrams/:diagramId" element={<DiagramEditorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  async function abrirModalDeNome() {
+    renderPageWithLocation()
+    await screen.findByRole('button', { name: '+ Classe' })
+    fireEvent.click(screen.getByRole('button', { name: '+ Classe' }))
+    fireEvent.keyDown(window, { key: 'n' })
+    return screen.getByLabelText('Nome do novo diagrama')
+  }
+
+  beforeEach(() => {
+    getMyProjectRole.mockClear()
+    getMyProjectRole.mockResolvedValue('editor')
+    updateDiagramContent.mockClear()
+    createDiagramWithContent.mockClear()
+    createDiagramWithContent.mockResolvedValue({ ...diagram, id: 'diagram-novo' })
+  })
+
+  it('CA-01: cria no mesmo projeto, com type "classes", e navega para o diagrama novo', async () => {
+    await abrirModalDeNome()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(createDiagramWithContent).toHaveBeenCalledTimes(1))
+    const [projectId, type, name] = createDiagramWithContent.mock.calls[0] as unknown as [string, string, string]
+    expect(projectId).toBe('project-1')
+    expect(type).toBe('classes')
+    expect(name).toBe('Foco — NovaClasse')
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/orgs/org-1/projects/project-1/diagrams/diagram-novo',
+      ),
+    )
+  })
+
+  // RN-08 — o modo de falha aqui é silencioso: navegar dentro da janela
+  // do debounce de 800ms desmonta a página e a alteração pendente some
+  // sem nenhum aviso. O teste não espera o debounce de propósito: se a
+  // gravação não fosse forçada antes de navegar, `updateDiagramContent`
+  // não teria sido chamada a esta altura.
+  it('CA-10: grava a alteração ainda pendente do autosave antes de navegar', async () => {
+    await abrirModalDeNome()
+    expect(updateDiagramContent).not.toHaveBeenCalled() // ainda dentro do debounce
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(updateDiagramContent).toHaveBeenCalledTimes(1))
+    const [diagramId, saved] = updateDiagramContent.mock.calls[0] as unknown as [
+      string,
+      { classes: unknown[] },
+    ]
+    expect(diagramId).toBe('diagram-1')
+    expect(saved.classes).toHaveLength(1) // a classe recém-criada foi salva, não perdida
+  })
+
+  it('CA-11: falha ao criar mostra o erro e NÃO navega', async () => {
+    createDiagramWithContent.mockRejectedValue(new Error('RLS: not authorized'))
+    await abrirModalDeNome()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar e abrir' }))
+
+    await waitFor(() => expect(screen.getByText('RLS: not authorized')).toBeInTheDocument())
+    expect(screen.getByTestId('location')).toHaveTextContent('/diagrams/diagram-1')
+  })
+
+  it('CA-09: visualizador não dispara o fluxo nem por atalho (RN-01)', async () => {
+    getMyProjectRole.mockResolvedValue('visualizador')
+    renderPageWithLocation()
+    await screen.findByText('Diagrama de Classes')
+
+    fireEvent.keyDown(window, { key: 'n' })
+
+    expect(screen.queryByLabelText('Nome do novo diagrama')).not.toBeInTheDocument()
+    expect(createDiagramWithContent).not.toHaveBeenCalled()
+  })
+})
+
+function LocationProbe() {
+  return <span data-testid="location">{useLocation().pathname}</span>
+}

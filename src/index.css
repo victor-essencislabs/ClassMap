@@ -3215,6 +3215,18 @@ button.ov-flag {
   margin-bottom: 8px;
 }
 
+
+/* ── TASK-056 — criar diagrama novo com o recorte ────────────────────── */
+
+/* Botão no cabeçalho do modal de foco (`ClassFocusModal`): o recorte na
+   tela é exatamente o que será criado, então a ação mora ao lado dele. */
+.focus-summary .btn {
+  margin-left: auto;
+}
+
+/* Dica do atalho, nos dois caminhos descobertos (botão do inspector,
+   TASK-055; botão do modal de foco, TASK-056). */
+.focus-summary .btn kbd,
 .diagram-shell-inspector .focus-open-btn kbd {
   font: inherit;
   font-size: 10px;

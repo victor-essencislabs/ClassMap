@@ -27,9 +27,18 @@ interface ClassFocusModalProps {
   content: ClassDiagramContent
   focusClassId: string
   onClose: () => void
+  /** TASK-056 (RN-07) — quando presente, mostra o botão que transforma
+   * este recorte num diagrama novo. Ausente para `visualizador` (não
+   * cria diagrama) e onde o host não sabe criar. */
+  onCreateDerivedDiagram?: () => void
 }
 
-export function ClassFocusModal({ content, focusClassId, onClose }: ClassFocusModalProps) {
+export function ClassFocusModal({
+  content,
+  focusClassId,
+  onClose,
+  onCreateDerivedDiagram,
+}: ClassFocusModalProps) {
   const areaRef = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState(FALLBACK_VIEWPORT)
 
@@ -91,6 +100,11 @@ export function ClassFocusModal({ content, focusClassId, onClose }: ClassFocusMo
               <span className="rel-dir-dot incoming" aria-hidden="true" /> chega aqui
             </span>
           </>
+        )}
+        {onCreateDerivedDiagram && (
+          <button type="button" className="btn ghost" onClick={onCreateDerivedDiagram}>
+            Criar diagrama com este recorte <kbd>N</kbd>
+          </button>
         )}
       </div>
 
