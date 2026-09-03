@@ -14,6 +14,9 @@ Mantido automaticamente por `bootstrap-audit` a cada execução — não edite e
 | ADR-008 | Agrupamento da listagem de diagramas por tipo — rotas dedicadas, mesmo componente decide pelo valor do parâmetro | accepted | 2026-08-31 | [ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md](ADR-008-agrupamento-diagramas-por-tipo-via-rotas.md) |
 | ADR-009 | Autocadastro de usuário sem solicitação de acesso dentro do produto — aviso ao admin fora de banda | superseded | 2026-08-31 | [ADR-009-autocadastro-sem-solicitacao-em-produto.md](ADR-009-autocadastro-sem-solicitacao-em-produto.md) |
 | ADR-010 | Provisionamento de usuário pelo admin via Edge Function (Admin API) — substitui autocadastro público | accepted | 2026-08-31 | [ADR-010-provisionamento-usuario-pelo-admin-edge-function.md](ADR-010-provisionamento-usuario-pelo-admin-edge-function.md) |
+| ADR-011 | Redesign visual "Certificado de Ensaio" | accepted | 2026-09-01 | [ADR-011-redesign-laudo-certificado-ensaio.md](ADR-011-redesign-laudo-certificado-ensaio.md) |
+| ADR-012 | Layout inicial de import do Diagrama de Classes — colunas adaptativas ao tamanho do diagrama | accepted | 2026-09-03 | [ADR-012-colunas-adaptativas-import-classes.md](ADR-012-colunas-adaptativas-import-classes.md) |
+| ADR-013 | Cards de comentário no Diagrama de Classes — internos ao ClassMap, fora do contrato JSON | accepted | 2026-09-03 | [ADR-013-cards-de-comentario-diagrama-classes.md](ADR-013-cards-de-comentario-diagrama-classes.md) |
 <!-- bootstrap-audit preenche uma linha por arquivo em .agents/decisions/*.md, lendo o frontmatter (id, title, status, date). Não remova este comentário — é o marcador de onde a regeneração insere as linhas. -->
 
 ## Status possíveis

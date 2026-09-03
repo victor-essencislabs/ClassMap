@@ -1,12 +1,12 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-02 (TASK-047 — presença + aviso passivo de atualização remota)
+ultima-revisao: 2026-09-03 (TASK-051 — cards de comentário no Diagrama de Classes)
 ---
 
 # Contexto Atual do Projeto — ClassMap
 
-Última atualização: 2026-09-02
+Última atualização: 2026-09-03
 
 ## Estado atual
 
@@ -203,6 +203,36 @@ Pedido do usuário: discussão sobre o painel de "quem está vendo o diagrama ag
 
 **Correção pós-implementação, mesmo dia**: usuário reportou o aviso disparando mesmo editando sozinho (criar uma classe e movê-la). Causa raiz confirmada ao vivo no SQL Editor do Supabase: `jsonb` do Postgres reordena as chaves de um objeto (`{"z":1,"a":2}` volta como `{"a":2,"z":1}`) — o `content` que chega pelo Realtime nunca tem a mesma ordem de chaves do objeto JS local, então a comparação original (`JSON.stringify` cru, sensível à ordem) reportava "diferente" mesmo sendo o mesmo conteúdo. Corrigido com `stableStringify` (ordena chaves de objetos antes de comparar, preserva ordem de arrays — essa sim significativa). Revalidado ao vivo: o cenário exato relatado (criar classe + mover) não dispara mais o aviso. `npx vitest run` limpo (255 testes, 5 novos desta correção). Detalhe completo em `TASK-047`, seção "Correção pós-implementação".
 
+## TASK-048 — colunas adaptativas no layout inicial de import (2026-09-03)
+
+Achado testando ao vivo o diagrama real do ELIMS (85 classes, 190 relações, JSON gerado via skill `gerar-diagrama-classmap`, anexado pelo usuário) importado no ClassMap local: o resultado era visualmente ruim — layout em ~4 colunas fixas e estreitas, ~21 cards de altura cada, "ajustar à tela" produzindo texto ilegível e espaço em branco enorme nas laterais. Causa raiz: `IMPORT_GRID_COLUMNS = 4` fixo em `classDiagramConversion.ts`, independente do tamanho do diagrama importado. `ADR-012` decide colunas adaptativas ao conteúdo (rejeitou, por ora, um motor de layout de grafo real e uma heurística de ordenação por conectividade — ambas sem evidência concreta de necessidade além de proporção/legibilidade, mesmo padrão de decisão já usado neste projeto em ADR-004/007/009).
+
+**TASK-048 implementada** (mesma sessão): `computeImportGridColumns` (nova, `classDiagramConversion.ts`) substitui a constante fixa — soma a altura estimada real de todas as classes (`estimateClassCardHeight`, cuja assinatura foi afrouxada em `types.ts` para aceitar classes ainda sem `id`/posição) e resolve o número de colunas que aproxima a proporção largura:altura de `IMPORT_TARGET_ASPECT_RATIO = 1.6` (calibrado simulando contra os dados reais do ELIMS antes de implementar: 14 colunas para 85 classes, contra 4 antes). O algoritmo de empacotamento em si (masonry, coluna mais curta) não mudou. 2 testes novos em `classDiagramConversion.test.ts` (diagrama sintético de 85 classes confirmando >4 colunas e ausência de sobreposição; diagrama de 5 classes confirmando não-regressão do caso pequeno). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (257 testes, 2 novos).
+
+**Validado ao vivo contra o próprio JSON real do ELIMS**: reimportado (via um painel de teste descartável, excluído ao final — o painel original "Diagrama completo do ELIMS" não foi tocado) já com o algoritmo corrigido. Resultado confirmado visualmente: 14 colunas preenchendo a largura do canvas, texto legível num zoom moderado depois de "ajustar à tela", sem sobreposição entre cards — mudança perceptível e direta em relação ao antes.
+
+## TASK-049 — destaque por sentido das relações da classe selecionada (2026-09-03)
+
+Pedido do usuário, mesma sessão da TASK-048: ao selecionar um card no Diagrama de Classes, não dava pra ver quais outras classes ela se relaciona sem abrir a lista "Relações" do inspector — os conectores no canvas não reagiam à seleção de uma classe (só à seleção direta de uma relação). Ideia original do usuário era colorir por "pertence a"/"é dono de"; refinada para colorir por **sentido cru da seta** (`from`/`to` relativo à classe selecionada), porque os 5 tipos de relação não têm uma direção de posse consistente entre si (agregação e herança apontam `from`/`to` em sentidos opostos de "quem contém quem") — ver a task para o raciocínio completo.
+
+**Sem ritual de 3 opções/ADR**: comportamento de seleção 100% efêmero (nada persistido), sem tocar contrato/schema — mesmo padrão já aceito para decisões de UI de `frontend-diagramas` (TASK-038..045).
+
+**TASK-049 implementada** (mesma sessão): `Connector.tsx` ganhou `ConnectorEmphasis` (`'selected' | 'outgoing' | 'incoming' | 'dimmed' | 'normal'`) no lugar do antigo `selected: boolean`; `connectorEmphasis()` novo em `ClassDiagramCanvas.tsx` computa o estado de cada conector a partir da seleção atual. Selecionar uma classe pinta as relações que a tocam por sentido (`outgoing` reaproveita `--class-accent`; `incoming` usa o token novo `--rel-incoming`, dourado) e recua as demais (opacidade 0.35). A lista "Relações" do inspector ganhou uma bolinha (`.rel-dir-dot`) na mesma cor, como legenda embutida — sem elemento novo no canvas. 2 testes novos em `ClassDiagramCanvas.test.tsx`. `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (259 testes, 2 novos, nenhum warning novo).
+
+**Validado ao vivo contra o diagrama real do ELIMS** (classe `Sample`, 21 relações de 190 no total): confirmado por inspeção de estilo computado — 13 `outgoing` (`--class-accent`), 8 `incoming` (`--rel-incoming`), 169 `dimmed`, números batendo exatamente com a lista do inspector — e visualmente no canvas (card `Sample` com linhas escuras saindo dele, resto do diagrama nitidamente mais claro).
+
+## TASK-050 — texto de multiplicidade invisível no tema escuro (2026-09-03)
+
+Reportado pelo usuário com print do diagrama real do ELIMS em tema escuro: o valor de multiplicidade (ex. "1") no conector não aparecia. Causa: os `<text>` de `fromMultiplicity`/`toMultiplicity` em `Connector.tsx` nunca tinham `fill` definido — SVG cai no preto padrão, invisível em fundo escuro. **Corrigido** (trivial, sem ADR): `fill="currentColor"`, mesma técnica já usada pelo `stroke` do conector no estado normal (herda `var(--text)`, tema-aware). `npm run build`/`npx vitest run src/features/class-diagram` limpos (202 testes). Validado ao vivo no painel "Certificados" do ELIMS real (mesmo diagrama do print do usuário), tema escuro: o "1" aparece em branco/claro, legível.
+
+## TASK-051 — cards de comentário no Diagrama de Classes (2026-09-03)
+
+Pedido do usuário, mesma sessão: poder colocar cards de comentário no diagrama — texto livre + cor (mesma paleta do card de classe) — para documentar o que uma cor significa (ex.: card vermelho = "classes que precisam ser excluídas"). `ADR-013` decide: comentário é anotação interna ao ClassMap, nunca entra no contrato JSON de import/export (confirmado diretamente com o usuário, mesmo precedente de posição/cor de classe da ADR-005) — rejeitou tanto entrar no contrato (Alternativa B) quanto virar uma legenda fixa fora do canvas em vez de um card livre (Alternativa C, não bate com o pedido literal do usuário).
+
+**TASK-051 implementada** (mesma sessão): `DiagramNote` novo (`types.ts`, campo opcional `notes?` em `ClassDiagramContent` — backward-compatible com diagramas já salvos), `addNote`/`updateNote`/`removeNote`/`noteToBoundedNode` em `contentOperations.ts` (mesmo padrão de `addClass`/etc.), `NoteCard.tsx` novo (arrastável, mesmo padrão de `ClassCard`), botão "+ Nota" + `NoteInspector` (texto livre + `ClassColorGrid` reaproveitado, mesma paleta do card de classe) em `ClassDiagramCanvas.tsx`. Notas entram no cálculo de bounds do "ajustar à tela". **Bug latente corrigido no caminho**: `removeClass` retornava um objeto sem espalhar `...content` — inofensivo enquanto o conteúdo só tinha `classes`/`relationships`, mas descartaria `notes` silenciosamente ao excluir qualquer classe; corrigido com teste de regressão. 15 testes novos (`contentOperations.test.ts`, `classDiagramConversion.test.ts` — export nunca inclui `notes`, `ClassDiagramCanvas.test.tsx`). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (274 testes, nenhum warning novo).
+
+**Achado e corrigido durante a validação visual ao vivo**: num diagrama sem nenhuma classe, o aviso "Nenhuma classe ainda" (`.empty-hint`, centralizado no canvas) cobria visualmente a primeira nota criada, porque as duas caem na mesma posição padrão centralizada. Corrigido checando também `notes` na condição de exibição do aviso. Validado ao vivo (painel de teste descartável no projeto ELIMS, nenhum diagrama real tocado): criar comentário, editar texto, escolher cor (vermelho testado, tingindo o card imediatamente) e excluir — todos funcionando.
+
 ## Decisões recentes
 
 - **ADR-001** — Fatiamento do MVP de produção por camada técnica (dados → frontend → integração). Ver `.agents/decisions/README.md`.
@@ -216,6 +246,8 @@ Pedido do usuário: discussão sobre o painel de "quem está vendo o diagrama ag
 - **ADR-009** — Autocadastro de usuário: só criação de conta (Supabase Auth `signUp`), sem tabela/tela de solicitação de acesso em produto — aviso ao admin fora de banda, gestão de acesso continua 100% no fluxo já existente (TASK-013). Rejeitou solicitação roteada por organização (exigiria RLS pública nova) e solicitação sem organização (sem admin global para rotear). **`superseded` por ADR-010** (ver abaixo). Ver `.agents/decisions/README.md`.
 - **ADR-010** — Provisionamento de usuário pelo admin via Edge Function (Admin API): substitui o autocadastro público (ADR-009) depois de esbarrar no limite real de 2 e-mails/hora do serviço de e-mail padrão do Supabase (achado ao vivo, produção real). Admin cria a conta com senha temporária, sem nenhum e-mail disparado — **primeira Edge Function/backend próprio do ClassMap**. Rejeitou link mágico (não bate com o fluxo pedido) e desligar confirmação de e-mail sem backend novo (rouba a sessão do admin ao criar outro usuário, e piora a postura de segurança do projeto). Escopo de acesso mantido em 2 níveis (organização e projeto, separados) — decisão tomada junto, sem mudar RLS além do necessário para a function. Ver `.agents/decisions/README.md`.
 - **ADR-011** — Redesign visual "Certificado de Ensaio": substitui os tokens/geometria do artefato-protótipo (ADR-002) por uma direção derivada do domínio real do produto (laudo técnico de ensaio), escolhida pelo usuário numa rodada de decisão visual do `/impeccable` entre 7 direções próprias e 6 desafiantes de catálogo. Fatiada em 5 tasks (fundação primeiro), mesmo padrão do ADR-002. Ver `.agents/decisions/README.md`.
+- **ADR-012** — Layout inicial de import do Diagrama de Classes: número de colunas do empacotamento masonry passa a ser calculado a partir do tamanho real do diagrama importado, em vez de fixo em 4 (achado testando o diagrama real do ELIMS, 85 classes). Rejeitou, por ora, um motor de layout de grafo real e uma ordenação por conectividade — ambos sem evidência concreta de necessidade além do problema de proporção/legibilidade observado, mesmo padrão de decisão já usado em ADR-004/007/009. Ver `.agents/decisions/README.md`.
+- **ADR-013** — Cards de comentário no Diagrama de Classes: anotação livre (texto + cor, mesma paleta do card de classe) interna ao ClassMap, nunca entra no contrato JSON de import/export — mesmo precedente da ADR-005 (posição/cor de classe), confirmado diretamente com o usuário. Rejeitou tanto incluir no contrato (custo de coordenação com `contrato-ia-diagrama` desproporcional a uma anotação humana) quanto uma legenda fixa fora do canvas (não bate com o pedido literal do usuário — ele quer o card dentro do painel). Ver `.agents/decisions/README.md`.
 
 ## TASK-025/026 implementadas — pendentes de deploy e validação em produção (2026-08-31)
 

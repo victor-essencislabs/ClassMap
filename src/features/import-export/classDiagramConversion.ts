@@ -37,10 +37,32 @@ export function exportClassDiagram(content: ClassDiagramContent): DiagramExportF
   }
 }
 
-const IMPORT_GRID_COLUMNS = 4
 const IMPORT_GRID_GAP_X = 60
 const IMPORT_GRID_GAP_Y = 40
 const IMPORT_GRID_MARGIN = 40
+
+// TASK-048/ADR-012 — proporção largura:altura desejada para o diagrama
+// resultante depois do empacotamento. Calibrada visualmente contra o
+// diagrama real do ELIMS (85 classes) e contra diagramas pequenos — não
+// é um valor "correto" universal, só o que ficou razoável nos dois
+// extremos testados.
+const IMPORT_TARGET_ASPECT_RATIO = 1.6
+
+/** Número de colunas do layout inicial de import, calculado a partir do
+ * próprio conteúdo (antes de fixo em 4, independente do tamanho do
+ * diagrama — ver ADR-012). Estima a altura total que o empacotamento vai
+ * ocupar (soma da altura de cada card + gap vertical) e escolhe colunas
+ * o suficiente para que largura/altura resultante se aproxime de
+ * `IMPORT_TARGET_ASPECT_RATIO`, em vez de crescer só na vertical conforme
+ * o diagrama tem mais classes. */
+function computeImportGridColumns(classes: { stereotype?: string; attributes: { length: number } }[]): number {
+  const columnPitch = CLASS_CARD_WIDTH + IMPORT_GRID_GAP_X
+  const totalEstimatedHeight = classes.reduce(
+    (sum, c) => sum + estimateClassCardHeight(c) + IMPORT_GRID_GAP_Y,
+    0,
+  )
+  return Math.max(1, Math.round(Math.sqrt((IMPORT_TARGET_ASPECT_RATIO * totalEstimatedHeight) / columnPitch)))
+}
 
 export interface ImportResult {
   ok: boolean
@@ -72,14 +94,22 @@ export function importClassDiagram(json: unknown): ImportResult {
   // ancorar conectores, `estimateClassCardHeight`), então nenhum card
   // sobrepõe outro. O layout continua 100% livre depois — o usuário
   // arrasta os cards à vontade; isto só evita a sobreposição inicial.
+  //
+  // TASK-048/ADR-012: o número de colunas usado no empacotamento agora
+  // cresce com o tamanho do diagrama (`computeImportGridColumns`) — antes
+  // era fixo em 4, o que fazia diagramas grandes (dezenas de classes)
+  // virarem uma faixa estreita e altíssima (achado testando o diagrama
+  // real do ELIMS, 85 classes: só 4 colunas resultava em ~21 cards de
+  // altura por coluna, ilegível depois de "ajustar à tela").
   const idByName = new Map<string, string>()
-  const columnHeights = new Array(IMPORT_GRID_COLUMNS).fill(IMPORT_GRID_MARGIN)
+  const columnCount = computeImportGridColumns(parsed.data.classes)
+  const columnHeights = new Array(columnCount).fill(IMPORT_GRID_MARGIN)
   const classes: DiagramClass[] = parsed.data.classes.map((c) => {
     const id = newId()
     idByName.set(c.name, id)
 
     let col = 0
-    for (let i = 1; i < IMPORT_GRID_COLUMNS; i++) {
+    for (let i = 1; i < columnCount; i++) {
       if (columnHeights[i] < columnHeights[col]) col = i
     }
 

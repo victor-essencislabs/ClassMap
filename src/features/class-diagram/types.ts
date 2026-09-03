@@ -61,13 +61,32 @@ export interface DiagramRelationship {
   controlX: number
 }
 
+/** Card de comentário (TASK-051, ver ADR-013) — anotação livre no canvas,
+ * sem relação com nenhuma classe específica. Reaproveita a mesma paleta
+ * `CLASS_COLORS` do card de classe (reforça visualmente "esta cor de
+ * comentário é a mesma cor que aparece nos cards"), nunca uma paleta
+ * própria. Puramente interno ao ClassMap: NUNCA entra no schema Zod de
+ * import/export (RN-01 da ADR-013) — mesmo precedente já usado para
+ * posição/cor de classe (ADR-005). */
+export interface DiagramNote {
+  id: string
+  text: string
+  x: number
+  y: number
+  color?: string
+}
+
 export interface ClassDiagramContent {
   classes: DiagramClass[]
   relationships: DiagramRelationship[]
+  /** Opcional (TASK-051) — diagramas salvos antes da ADR-013 não têm
+   * este campo no JSONB persistido; toda leitura trata como `[]`
+   * (`content.notes ?? []`), nunca lança por causa de um campo ausente. */
+  notes?: DiagramNote[]
 }
 
 export function emptyClassDiagramContent(): ClassDiagramContent {
-  return { classes: [], relationships: [] }
+  return { classes: [], relationships: [], notes: [] }
 }
 
 export function isClassDiagramContent(value: unknown): value is ClassDiagramContent {
@@ -129,12 +148,30 @@ export const CLASS_COLORS: ClassColorOption[] = [
 
 export const CLASS_CARD_WIDTH = 200
 
-/** Estimativa da altura renderizada do card (sem medir o DOM) — usada só
- * para ancorar o ponto vertical de onde um conector sai/chega. Não
- * precisa ser exata: o card cresce com mais atributos e o conector
- * mira aproximadamente o centro dele. */
-export function estimateClassCardHeight(cls: DiagramClass): number {
+/** Estimativa da altura renderizada do card (sem medir o DOM) — usada
+ * para ancorar o ponto vertical de onde um conector sai/chega, e (desde
+ * a TASK-048) para calibrar o número de colunas do layout inicial de
+ * import antes de as classes terem `id`/posição atribuídos — por isso o
+ * parâmetro aceita qualquer objeto com `stereotype`/`attributes`, não só
+ * um `DiagramClass` completo. Não precisa ser exata: o card cresce com
+ * mais atributos e o conector mira aproximadamente o centro dele. */
+export function estimateClassCardHeight(cls: { stereotype?: string; attributes: { length: number } }): number {
   const headerHeight = cls.stereotype ? 52 : 36
   const attributesHeight = Math.max(cls.attributes.length, 1) * 20
   return headerHeight + attributesHeight
+}
+
+// TASK-051 — card de comentário: mesma largura do card de classe (unidade
+// visual consistente no canvas), altura estimada a partir do tamanho do
+// texto (usada só para o cálculo de bounds do "ajustar à tela" — a altura
+// real renderizada cresce com `white-space: pre-wrap`, não precisa bater
+// exatamente).
+export const NOTE_CARD_WIDTH = 200
+const NOTE_CHARS_PER_LINE = 26
+const NOTE_LINE_HEIGHT = 18
+const NOTE_PADDING = 24
+
+export function estimateNoteCardHeight(note: { text: string }): number {
+  const lines = Math.max(1, Math.ceil(note.text.length / NOTE_CHARS_PER_LINE))
+  return NOTE_PADDING + lines * NOTE_LINE_HEIGHT
 }

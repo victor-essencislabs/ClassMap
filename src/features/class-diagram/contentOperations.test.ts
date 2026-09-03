@@ -3,12 +3,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   addClass,
+  addNote,
   addRelationship,
   filterClassesByQuery,
+  noteToBoundedNode,
   removeClass,
+  removeNote,
   removeRelationship,
   toBoundedNode,
   updateClass,
+  updateNote,
   updateRelationship,
 } from './contentOperations'
 import { emptyClassDiagramContent, type ClassDiagramContent } from './types'
@@ -57,6 +61,16 @@ describe('removeClass', () => {
 
     content = removeClass(content, c.id)
     expect(content.relationships).toHaveLength(1)
+  })
+
+  it('TASK-051: preserva os comentários do diagrama (antes retornava um objeto sem spread, que os descartava)', () => {
+    let content = withTwoClasses()
+    content = addNote(content)
+    const [a] = content.classes
+
+    content = removeClass(content, a.id)
+
+    expect(content.notes).toHaveLength(1)
   })
 })
 
@@ -139,6 +153,68 @@ describe('cor do card de classe (TASK-014, ver ADR-005)', () => {
 
     const roundTripped = JSON.parse(JSON.stringify(content)) as ClassDiagramContent
     expect(roundTripped.classes[0].color).toBe('#10b981')
+    expect(roundTripped).toEqual(content)
+  })
+})
+
+describe('cards de comentário (TASK-051, ver ADR-013)', () => {
+  it('addNote cria um comentário com texto vazio e sem cor', () => {
+    const content = addNote(emptyClassDiagramContent())
+    expect(content.notes).toHaveLength(1)
+    expect(content.notes![0].text).toBe('')
+    expect(content.notes![0].color).toBeUndefined()
+  })
+
+  it('gera ids únicos entre comentários', () => {
+    let content = addNote(emptyClassDiagramContent())
+    content = addNote(content)
+    const [a, b] = content.notes!
+    expect(a.id).not.toBe(b.id)
+  })
+
+  it('funciona mesmo quando `notes` nunca existiu no conteúdo (diagrama salvo antes da ADR-013)', () => {
+    const legacyContent = { classes: [], relationships: [] } as ClassDiagramContent // sem `notes`
+    const content = addNote(legacyContent)
+    expect(content.notes).toHaveLength(1)
+  })
+
+  it('updateNote atualiza texto/cor só do comentário alvo, preservando os demais', () => {
+    let content = addNote(emptyClassDiagramContent())
+    content = addNote(content)
+    const [a, b] = content.notes!
+
+    content = updateNote(content, a.id, { text: 'Vermelho: excluir', color: '#ef4444' })
+
+    expect(content.notes!.find((n) => n.id === a.id)).toMatchObject({ text: 'Vermelho: excluir', color: '#ef4444' })
+    expect(content.notes!.find((n) => n.id === b.id)?.text).toBe('')
+  })
+
+  it('removeNote remove só o comentário indicado, sem afetar classes/relações', () => {
+    let content = withTwoClasses()
+    content = addNote(content)
+    content = addNote(content)
+    const [a] = content.notes!
+
+    content = removeNote(content, a.id)
+
+    expect(content.notes).toHaveLength(1)
+    expect(content.classes).toHaveLength(2)
+  })
+
+  it('noteToBoundedNode usa a largura fixa do card e estima a altura pelo texto', () => {
+    const content = addNote(emptyClassDiagramContent())
+    const note = updateNote(content, content.notes![0].id, { text: 'um comentário razoavelmente longo' }).notes![0]
+    const node = noteToBoundedNode(note)
+    expect(node).toMatchObject({ x: note.x, y: note.y })
+    expect(node.w).toBeGreaterThan(0)
+    expect(node.h).toBeGreaterThan(0)
+  })
+
+  it('sobrevive a JSON.stringify/JSON.parse (mesma garantia de persistência de classe/cor)', () => {
+    let content = addNote(emptyClassDiagramContent())
+    content = updateNote(content, content.notes![0].id, { text: 'Amarelo: precisa de ajuste', color: '#eab308' })
+
+    const roundTripped = JSON.parse(JSON.stringify(content)) as ClassDiagramContent
     expect(roundTripped).toEqual(content)
   })
 })

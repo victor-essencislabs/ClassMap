@@ -16,12 +16,15 @@ import { ClassColorGrid } from './ClassColorGrid'
 import { resolveConnectClick } from './connectMode'
 import * as ops from './contentOperations'
 import { EdgeTypeGrid } from './EdgeTypeGrid'
-import { Connector } from './Connector'
+import { Connector, type ConnectorEmphasis } from './Connector'
+import { NoteCard } from './NoteCard'
 import {
   CLASS_CARD_WIDTH,
+  NOTE_CARD_WIDTH,
   RELATIONSHIP_LABELS,
   type ClassDiagramContent,
   type DiagramClass,
+  type DiagramNote,
   type DiagramRelationship,
 } from './types'
 
@@ -37,14 +40,19 @@ interface ClassDiagramCanvasProps {
   canvasOverlay?: ReactNode
 }
 
-type Selection = { type: 'class'; id: string } | { type: 'relationship'; id: string } | null
+type Selection =
+  | { type: 'class'; id: string }
+  | { type: 'relationship'; id: string }
+  | { type: 'note'; id: string } // TASK-051
+  | null
 
 const CLICK_MOVE_THRESHOLD_PX = 4
 
 /** Um clique conta como "no fundo do canvas" (pan/deselect) quando não
  * pousa dentro de um card — mesmo critério do artefato
  * (`ev.target.closest('.node-box')`) — nem dentro de um `<button>`
- * (zoom-controls, connect-banner, etc.): sem essa exclusão, o
+ * (zoom-controls, connect-banner, etc.), nem dentro de um card de
+ * comentário (`.note-card`, TASK-051): sem essa exclusão, o
  * `pointerdown` num botão flutuante borbulha até aqui,
  * `zoomPan.onBackgroundPointerDown` chama `setPointerCapture` no fundo
  * do canvas, e todo `pointerup`/`click` seguinte é redirecionado pro
@@ -52,7 +60,7 @@ const CLICK_MOVE_THRESHOLD_PX = 4
  * produção, 2026-09-02 (relatado pelo usuário: +/−/ajustar à tela sem
  * efeito). */
 export function isBackgroundTarget(target: EventTarget | null): boolean {
-  return !(target instanceof Element) || !target.closest('.node-box, button')
+  return !(target instanceof Element) || !target.closest('.node-box, .note-card, button')
 }
 
 export function ClassDiagramCanvas({
@@ -83,10 +91,17 @@ export function ClassDiagramCanvas({
   // Ajusta zoom/pan para caber o diagrama carregado assim que ele chega
   // (equivalente ao `fitToScreen()` do artefato ao restaurar do
   // localStorage) — só uma vez, não a cada alteração de conteúdo.
+  // TASK-051 — cards de comentário entram no bounds do "ajustar à tela"
+  // junto com as classes, senão uma nota fora da área das classes fica
+  // cortada de fora da vista ao ajustar.
+  function allBoundedNodes() {
+    return [...content.classes.map(ops.toBoundedNode), ...(content.notes ?? []).map(ops.noteToBoundedNode)]
+  }
+
   useEffect(() => {
     if (didInitialFit.current) return
     didInitialFit.current = true
-    zoomPan.fitToScreen(computeBounds(content.classes.map(ops.toBoundedNode)))
+    zoomPan.fitToScreen(computeBounds(allBoundedNodes()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -94,6 +109,27 @@ export function ClassDiagramCanvas({
     selection?.type === 'class' ? content.classes.find((c) => c.id === selection.id) : undefined
   const selectedRelationship =
     selection?.type === 'relationship' ? content.relationships.find((r) => r.id === selection.id) : undefined
+  const selectedNote =
+    selection?.type === 'note' ? (content.notes ?? []).find((n) => n.id === selection.id) : undefined
+
+  /** TASK-049 — estado visual de cada conector a partir da seleção atual.
+   * Clicar numa relação (comportamento já existente) continua marcando só
+   * ela como `'selected'`. Clicar num CARD passa a destacar por sentido
+   * todas as relações que tocam aquela classe (`'outgoing'` quando a
+   * classe é `from`, `'incoming'` quando é `to` — desempate para
+   * `outgoing` numa auto-relação, caso raro) e recuar as demais
+   * (`'dimmed'`) — ver discussão de por que é por sentido cru da seta, não
+   * por semântica de posse, no comentário de `ConnectorEmphasis` em
+   * `Connector.tsx`. */
+  function connectorEmphasis(rel: DiagramRelationship): ConnectorEmphasis {
+    if (selection?.type === 'relationship' && selection.id === rel.id) return 'selected'
+    if (selectedClass) {
+      if (rel.from === selectedClass.id) return 'outgoing'
+      if (rel.to === selectedClass.id) return 'incoming'
+      return 'dimmed'
+    }
+    return 'normal'
+  }
 
   function handleAddClass() {
     const rect = canvasRef.current?.getBoundingClientRect()
@@ -114,6 +150,31 @@ export function ClassDiagramCanvas({
 
   function removeClass(id: string) {
     onChange(ops.removeClass(content, id))
+    setSelection(null)
+  }
+
+  // TASK-051 — mesmo padrão de handleAddClass/updateClass/removeClass,
+  // sem a parte de conector (uma nota nunca é origem/destino de relação).
+  function handleAddNote() {
+    const rect = canvasRef.current?.getBoundingClientRect()
+    const origin = rect
+      ? {
+          x: (rect.width / 2 - zoomPan.pan.x) / zoomPan.zoom - NOTE_CARD_WIDTH / 2,
+          y: (rect.height / 2 - zoomPan.pan.y) / zoomPan.zoom - 40,
+        }
+      : undefined
+    const next = ops.addNote(content, origin)
+    onChange(next)
+    const notes = next.notes ?? []
+    setSelection({ type: 'note', id: notes[notes.length - 1].id })
+  }
+
+  function updateNote(id: string, patch: Partial<DiagramNote>) {
+    onChange(ops.updateNote(content, id, patch))
+  }
+
+  function removeNote(id: string) {
+    onChange(ops.removeNote(content, id))
     setSelection(null)
   }
 
@@ -205,6 +266,11 @@ export function ClassDiagramCanvas({
               </button>
             )}
             {!readOnly && (
+              <button type="button" className="btn ghost" onClick={handleAddNote}>
+                + Nota
+              </button>
+            )}
+            {!readOnly && (
               <button type="button" className="btn primary" onClick={handleAddClass}>
                 + Classe
               </button>
@@ -257,7 +323,7 @@ export function ClassDiagramCanvas({
                       relationship={rel}
                       fromClass={fromClass}
                       toClass={toClass}
-                      selected={selection?.type === 'relationship' && selection.id === rel.id}
+                      emphasis={connectorEmphasis(rel)}
                       readOnly={readOnly}
                       zoom={zoomPan.zoom}
                       justCreated={rel.id === justCreatedRelationshipId}
@@ -283,9 +349,29 @@ export function ClassDiagramCanvas({
                   onMove={(id, x, y) => updateClass(id, { x, y })}
                 />
               ))}
+
+              {/* TASK-051 — depois das classes, para um comentário
+                  sobreposto a uma classe (raro, mas possível) ficar
+                  visualmente por cima, mais fácil de notar. */}
+              {(content.notes ?? []).map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  selected={selection?.type === 'note' && selection.id === note.id}
+                  readOnly={readOnly}
+                  zoom={zoomPan.zoom}
+                  connectMode={connectMode}
+                  onSelect={(id) => setSelection({ type: 'note', id })}
+                  onMove={(id, x, y) => updateNote(id, { x, y })}
+                />
+              ))}
             </div>
 
-            {content.classes.length === 0 && (
+            {/* TASK-051: achado ao vivo — sem checar `notes`, este aviso
+                (centralizado, mesma posição padrão de card novo) cobria
+                visualmente o primeiro comentário criado num diagrama
+                ainda sem nenhuma classe. */}
+            {content.classes.length === 0 && (content.notes ?? []).length === 0 && (
               <div className="empty-hint">
                 <div className="empty-hint-card">
                   <h3>Nenhuma classe ainda</h3>
@@ -304,7 +390,7 @@ export function ClassDiagramCanvas({
                 type="button"
                 title="Ajustar à tela"
                 aria-label="Ajustar à tela"
-                onClick={() => zoomPan.fitToScreen(computeBounds(content.classes.map(ops.toBoundedNode)))}
+                onClick={() => zoomPan.fitToScreen(computeBounds(allBoundedNodes()))}
               >
                 <FitToScreenGlyph />
               </button>
@@ -339,6 +425,13 @@ export function ClassDiagramCanvas({
               readOnly={readOnly}
               onChange={(patch) => updateRelationship(selectedRelationship.id, patch)}
               onDelete={() => removeRelationship(selectedRelationship.id)}
+            />
+          ) : selectedNote ? (
+            <NoteInspector
+              note={selectedNote}
+              readOnly={readOnly}
+              onChange={(patch) => updateNote(selectedNote.id, patch)}
+              onDelete={() => removeNote(selectedNote.id)}
             />
           ) : (
             <div className="insp-empty">Selecione uma classe ou relação no diagrama para editar seus detalhes aqui.</div>
@@ -545,12 +638,18 @@ function ClassInspector({
                 role="button"
                 tabIndex={0}
               >
+                {/* TASK-049 — mesma cor do conector destacado no canvas
+                    quando esta classe está selecionada (ver
+                    `connectorEmphasis` em ClassDiagramCanvas.tsx): a
+                    bolinha funciona como legenda das cores, sem precisar
+                    de um elemento novo no canvas. */}
+                <span className={`rel-dir-dot${rel.from === cls.id ? '' : ' incoming'}`} aria-hidden="true" />
                 {rel.from === cls.id ? (
-                  <span>
+                  <span className="rel-chip-label">
                     <b>{cls.name}</b> <span className="arrow">→</span> {otherClassName(rel)}
                   </span>
                 ) : (
-                  <span>
+                  <span className="rel-chip-label">
                     {otherClassName(rel)} <span className="arrow">→</span> <b>{cls.name}</b>
                   </span>
                 )}
@@ -642,6 +741,60 @@ function RelationshipInspector({
         <div className="insp-actions">
           <button type="button" className="btn danger" onClick={onDelete}>
             Excluir relação
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+// TASK-051 (ver ADR-013) — inspector do card de comentário: texto livre +
+// a mesma paleta de cor do card de classe (`ClassColorGrid` reaproveitado,
+// não uma paleta própria).
+function NoteInspector({
+  note,
+  readOnly,
+  onChange,
+  onDelete,
+}: {
+  note: DiagramNote
+  readOnly: boolean
+  onChange: (patch: Partial<DiagramNote>) => void
+  onDelete: () => void
+}) {
+  return (
+    <>
+      <div className="insp-title">Comentário</div>
+      <div className="field">
+        <label htmlFor="note-text-input">Texto</label>
+        {readOnly ? (
+          <div className="mono" style={{ whiteSpace: 'pre-wrap' }}>
+            {note.text || '—'}
+          </div>
+        ) : (
+          <textarea
+            id="note-text-input"
+            rows={5}
+            placeholder="Ex.: classes que precisam ser excluídas"
+            value={note.text}
+            onChange={(e) => onChange({ text: e.target.value })}
+          />
+        )}
+      </div>
+
+      <div className="insp-title">Cor do card (opcional)</div>
+      {readOnly ? (
+        <div className="mono" style={{ marginBottom: 14 }}>
+          {note.color ?? 'Padrão'}
+        </div>
+      ) : (
+        <ClassColorGrid value={note.color} onChange={(color) => onChange({ color })} />
+      )}
+
+      {!readOnly && (
+        <div className="insp-actions">
+          <button type="button" className="btn danger" onClick={onDelete}>
+            Excluir comentário
           </button>
         </div>
       )}

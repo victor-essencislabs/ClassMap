@@ -25,8 +25,16 @@ function classCards() {
   return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
 }
 
+function noteCards() {
+  return Array.from(document.querySelectorAll('.diagram-shell-canvas .note-card'))
+}
+
 function addClassButton() {
   return screen.getByRole('button', { name: '+ Classe' })
+}
+
+function addNoteButton() {
+  return screen.getByRole('button', { name: '+ Nota' })
 }
 
 function startConnectButton() {
@@ -232,6 +240,133 @@ describe('ClassDiagramCanvas — editor', () => {
 
     expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
   })
+
+  it('TASK-049: selecionar uma classe destaca por sentido as relações que a tocam, e recua as demais', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    const [a, b] = classCards()
+
+    // rel0: A -> B (A é `from` — deve ficar "outgoing" quando A for selecionada)
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(a)
+    fireEvent.pointerDown(b)
+
+    // rel1: C -> A (A é `to` — deve ficar "incoming" quando A for selecionada)
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(classCards()[2])
+    fireEvent.pointerDown(classCards()[0])
+
+    // rel2: B -> C (não toca A — deve recuar/"dimmed" quando A for selecionada)
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(classCards()[1])
+    fireEvent.pointerDown(classCards()[2])
+
+    fireEvent.pointerDown(classCards()[0]) // seleciona a classe A
+
+    const groups = document.querySelectorAll('.connectors-layer > g')
+    expect(groups).toHaveLength(3)
+    const strokeOf = (g: Element) => g.querySelector('.connector-path')?.getAttribute('stroke')
+
+    expect(strokeOf(groups[0])).toBe('var(--class-accent)')
+    expect(groups[0]).not.toHaveClass('dimmed')
+
+    expect(strokeOf(groups[1])).toBe('var(--rel-incoming)')
+    expect(groups[1]).not.toHaveClass('dimmed')
+
+    expect(groups[2]).toHaveClass('dimmed')
+    expect(strokeOf(groups[2])).toBe('currentColor')
+
+    // a lista "Relações" do inspector reflete o mesmo sentido, via a
+    // bolinha colorida (mesma cor do conector correspondente no canvas).
+    const chips = document.querySelectorAll('.rel-chip')
+    expect(chips).toHaveLength(2) // só as relações que tocam A (rel0/rel1) aparecem aqui
+    expect(chips[0].querySelector('.rel-dir-dot')).not.toHaveClass('incoming') // A -> B
+    expect(chips[1].querySelector('.rel-dir-dot')).toHaveClass('incoming') // C -> A
+  })
+
+  it('TASK-049: selecionar uma relação diretamente continua marcando só ela (comportamento anterior, sem "dimmed" nas outras)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    const [a, b] = classCards()
+
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(a)
+    fireEvent.pointerDown(b)
+
+    fireEvent.click(startConnectButton())
+    fireEvent.pointerDown(classCards()[1])
+    fireEvent.pointerDown(classCards()[2])
+
+    const groups = document.querySelectorAll('.connectors-layer > g')
+    // seleciona a 1ª relação clicando na sua linha (path de área de clique)
+    fireEvent.click(groups[0].querySelector('path')!)
+
+    const strokeOf = (g: Element) => g.querySelector('.connector-path')?.getAttribute('stroke')
+    expect(strokeOf(groups[0])).toBe('var(--class-accent)')
+    expect(strokeOf(groups[1])).toBe('currentColor')
+    expect(groups[1]).not.toHaveClass('dimmed') // só destaque de classe recua as outras — relação direta não
+  })
+})
+
+describe('ClassDiagramCanvas — cards de comentário (TASK-051, ver ADR-013)', () => {
+  it('"+ Nota" cria um card de comentário vazio, já selecionado', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    expect(noteCards()).toHaveLength(1)
+    expect(screen.getByText('Comentário', { selector: '.insp-title' })).toBeInTheDocument()
+  })
+
+  it('inspector edita o texto do comentário, refletido no card', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    fireEvent.change(screen.getByLabelText('Texto'), {
+      target: { value: 'Vermelho: classes que precisam ser excluídas' },
+    })
+
+    expect(within(noteCards()[0] as HTMLElement).getByText('Vermelho: classes que precisam ser excluídas')).toBeInTheDocument()
+  })
+
+  it('inspector escolhe uma cor (mesma paleta do card de classe), aplicada imediatamente no card', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Vermelho' }))
+
+    const [card] = noteCards()
+    expect(card).toHaveClass('has-color')
+    expect((card as HTMLElement).style.getPropertyValue('--note-color')).toBe('#ef4444')
+  })
+
+  it('"Excluir comentário" remove só a nota, sem afetar classes', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addNoteButton())
+    expect(noteCards()).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir comentário' }))
+
+    expect(noteCards()).toHaveLength(0)
+    expect(classCards()).toHaveLength(1)
+  })
+
+  it('zoom (+/−/ajustar à tela) não quebra o posicionamento absoluto do card de comentário (mesma garantia da TASK-007 CA-01 para classes)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const [note] = noteCards()
+    const originalLeft = (note as HTMLElement).style.left
+
+    fireEvent.click(screen.getByTitle('Aproximar'))
+    fireEvent.click(screen.getByTitle('Afastar'))
+    fireEvent.click(screen.getByTitle('Ajustar à tela'))
+
+    expect((noteCards()[0] as HTMLElement).style.left).toBe(originalLeft)
+  })
 })
 
 describe('ClassDiagramCanvas — visualizador (CA-05)', () => {
@@ -280,6 +415,16 @@ describe('isBackgroundTarget', () => {
   it('continua contando um elemento dentro de um card (.node-box) como não-fundo', () => {
     const card = document.createElement('div')
     card.className = 'node-box'
+    const child = document.createElement('span')
+    card.appendChild(child)
+    document.body.appendChild(card)
+    expect(isBackgroundTarget(child)).toBe(false)
+    document.body.removeChild(card)
+  })
+
+  it('TASK-051: conta um elemento dentro de um card de comentário (.note-card) como não-fundo', () => {
+    const card = document.createElement('div')
+    card.className = 'note-card'
     const child = document.createElement('span')
     card.appendChild(child)
     document.body.appendChild(card)

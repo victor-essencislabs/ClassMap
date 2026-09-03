@@ -31,6 +31,12 @@
   --class-soft-border: #a9c2d9;
   --object-accent: #2f8f5f;
   --object-soft: #e2f2e9;
+  /* TASK-049 — destaque de relações "chegando" na classe selecionada no
+     Diagrama de Classes (`Connector.tsx`): reaproveita `--class-accent`
+     para o sentido "saindo" (a classe selecionada é `from`), e usa este
+     tom dourado, novo, só para o sentido oposto (`to`) — distinto do
+     azul/verde/vermelho já em uso em outro lugar do app. */
+  --rel-incoming: #a6741e;
   --danger: #af2d55;
   --shadow: 0 1px 2px rgba(30, 26, 20, 0.06), 0 8px 22px rgba(30, 26, 20, 0.08);
   --canvas-dot: #ddd7c6;
@@ -61,6 +67,7 @@
     --class-soft-border: #3d5a78;
     --object-accent: #4fbf8f;
     --object-soft: #16332a;
+    --rel-incoming: #d9a441;
     --danger: #e8688a;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.38);
     --canvas-dot: #33352f;
@@ -87,6 +94,7 @@
   --class-soft-border: #3d5a78;
   --object-accent: #4fbf8f;
   --object-soft: #16332a;
+  --rel-incoming: #d9a441;
   --danger: #e8688a;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 8px 24px rgba(0, 0, 0, 0.38);
   --canvas-dot: #33352f;
@@ -1910,6 +1918,54 @@ button.ov-flag {
   color: var(--object-accent);
 }
 
+/* TASK-051 (ADR-013) — card de comentário: anotação livre, visualmente
+   distinta do `.node-box` de classe (borda tracejada por padrão — vira
+   sólida com cor ou seleção, para reforçar "isto é anotação, não é uma
+   classe do modelo" mesmo sem nenhuma cor escolhida). Sem cabeçalho/corpo
+   como o card de classe — só um bloco de texto livre. */
+.diagram-shell-canvas .note-card {
+  background: var(--surface-alt);
+  border: 1.5px dashed var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 120ms ease-out, box-shadow 120ms ease-out, background 120ms ease-out;
+}
+
+.diagram-shell-canvas .note-card.selected {
+  border-style: solid;
+  border-color: var(--class-accent);
+  box-shadow: 0 0 0 3px var(--class-soft);
+}
+
+/* `--note-color` é setado inline por `NoteCard.tsx` só quando
+   `note.color` existe — mesma técnica de `--node-color` no card de
+   classe (TASK-014/ADR-005), reaproveitando a mesma paleta `CLASS_COLORS`. */
+.diagram-shell-canvas .note-card.has-color {
+  border-style: solid;
+  border-color: var(--note-color);
+  background: color-mix(in srgb, var(--note-color) 22%, var(--surface-raised));
+}
+
+.diagram-shell-canvas .note-card.has-color.selected {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--note-color) 40%, transparent);
+}
+
+.diagram-shell-canvas .note-card-text {
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.diagram-shell-canvas .note-card-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 /* TASK-042 (ADR-011) — destaque de "valor herdado da classe" no momento
    da criação do objeto (RN-01 da TASK-004): `--object-soft` pisca uma
    vez (~300ms) nos `.node-row` de valor, controlado pela prop
@@ -1986,7 +2042,8 @@ button.ov-flag {
 }
 
 .diagram-shell-inspector .field input,
-.diagram-shell-inspector .field select {
+.diagram-shell-inspector .field select,
+.diagram-shell-inspector .field textarea {
   width: 100%;
   padding: 7px 9px;
   border-radius: 3px;
@@ -1997,8 +2054,16 @@ button.ov-flag {
   font-size: 12.5px;
 }
 
+/* TASK-051 — `<textarea>` novo (texto do comentário); os demais campos
+   deste inspector são `<input>`, que não crescem verticalmente sozinhos. */
+.diagram-shell-inspector .field textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
 .diagram-shell-inspector .field input:focus,
-.diagram-shell-inspector .field select:focus {
+.diagram-shell-inspector .field select:focus,
+.diagram-shell-inspector .field textarea:focus {
   outline: 2px solid var(--accent-soft-border);
 }
 
@@ -2101,7 +2166,11 @@ button.ov-flag {
   max-width: 100%;
 }
 
-.diagram-shell-inspector .rel-chip > span:first-child {
+/* TASK-049: era `.rel-chip > span:first-child` (bastava ser o 1º filho),
+   mas a bolinha de sentido nova (`.rel-dir-dot`) passou a ocupar essa
+   posição — a regra precisa mirar o span do nome pela classe própria,
+   não mais pela posição. */
+.diagram-shell-inspector .rel-chip .rel-chip-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -2111,6 +2180,23 @@ button.ov-flag {
 
 .diagram-shell-inspector .rel-chip:hover {
   border-color: var(--class-soft-border);
+}
+
+/* TASK-049 — bolinha de sentido (mesma cor do conector destacado no
+   canvas quando esta classe está selecionada, ver `Connector.tsx`):
+   "saindo" (esta classe é `from`) reaproveita `--class-accent`,
+   "chegando" (`to`) usa `--rel-incoming` — dá a legenda das cores sem
+   precisar de um elemento novo flutuante no canvas. */
+.diagram-shell-inspector .rel-chip .rel-dir-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--class-accent);
+}
+
+.diagram-shell-inspector .rel-chip .rel-dir-dot.incoming {
+  background: var(--rel-incoming);
 }
 
 /* TASK-033 (ADR-011) — `.rel-chip` só existe no inspector do Diagrama de
@@ -2921,6 +3007,18 @@ button.ov-flag {
     animation: none;
     opacity: 1;
   }
+}
+
+/* TASK-049 (ADR-011) — destaque das relações da classe selecionada: ao
+   selecionar um card (não uma relação em si), os conectores que tocam
+   aquela classe ganham cor por sentido (ver `Connector.tsx`, `stroke`/
+   `--rel-incoming` acima) e os que não tocam recuam (esta regra) — cria
+   um efeito de foco sem precisar escurecer o resto do canvas. Mesmo
+   valor de opacidade já usado no ponto de controle inativo do conector
+   (`Connector.tsx`, círculo do handle), por consistência. */
+.connector.dimmed {
+  opacity: 0.35;
+  transition: opacity 120ms ease-out;
 }
 
 /* TASK-043 (ADR-011) — assentamento do "ajustar à tela" (⤢), compartilhado

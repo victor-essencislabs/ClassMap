@@ -3,8 +3,8 @@
 // renderizar componentes (ver "Estratégia de testes" da task: "lógica de
 // serialização/desserialização do conteúdo do diagrama").
 import type { BoundedNode } from '../diagram-shell/canvasTransform'
-import { CLASS_CARD_WIDTH, estimateClassCardHeight } from './types'
-import type { ClassDiagramContent, DiagramClass, DiagramRelationship, RelationshipType } from './types'
+import { CLASS_CARD_WIDTH, estimateClassCardHeight, NOTE_CARD_WIDTH, estimateNoteCardHeight } from './types'
+import type { ClassDiagramContent, DiagramClass, DiagramNote, DiagramRelationship, RelationshipType } from './types'
 
 export function newId(): string {
   return crypto.randomUUID()
@@ -43,6 +43,7 @@ export function updateClass(
  * deixa uma relação "solta" apontando para uma classe inexistente. */
 export function removeClass(content: ClassDiagramContent, id: string): ClassDiagramContent {
   return {
+    ...content, // TASK-051: preserva `notes` — antes retornava um objeto literal sem spread, o que descartaria qualquer campo além de classes/relationships (inofensivo até aqui, mas apagaria notas silenciosamente).
     classes: content.classes.filter((c) => c.id !== id),
     relationships: content.relationships.filter((r) => r.from !== id && r.to !== id),
   }
@@ -100,4 +101,38 @@ export function filterClassesByQuery(classes: DiagramClass[], query: string): Di
  * conhece o tipo de conteúdo específico do Diagrama de Classes). */
 export function toBoundedNode(cls: DiagramClass): BoundedNode {
   return { x: cls.x, y: cls.y, w: CLASS_CARD_WIDTH, h: estimateClassCardHeight(cls) }
+}
+
+// TASK-051 (ver ADR-013) — card de comentário: anotação livre, sem
+// relação com nenhuma classe. Mesmo padrão de `addClass`/`updateClass`/
+// `removeClass` acima; sem contraparte em `addRelationship` (uma nota
+// nunca é origem/destino de conector).
+
+export function addNote(content: ClassDiagramContent, origin?: { x: number; y: number }): ClassDiagramContent {
+  const notes = content.notes ?? []
+  const note: DiagramNote = {
+    id: newId(),
+    text: '',
+    x: origin ? origin.x : 40 + ((notes.length * 40) % 320),
+    y: origin ? origin.y : 40 + ((notes.length * 60) % 240),
+  }
+  return { ...content, notes: [...notes, note] }
+}
+
+export function updateNote(content: ClassDiagramContent, id: string, patch: Partial<DiagramNote>): ClassDiagramContent {
+  return {
+    ...content,
+    notes: (content.notes ?? []).map((n) => (n.id === id ? { ...n, ...patch } : n)),
+  }
+}
+
+export function removeNote(content: ClassDiagramContent, id: string): ClassDiagramContent {
+  return { ...content, notes: (content.notes ?? []).filter((n) => n.id !== id) }
+}
+
+/** Converte uma `DiagramNote` num `BoundedNode` genérico — mesmo papel de
+ * `toBoundedNode` acima, para o card de comentário entrar no cálculo de
+ * bounds do "ajustar à tela". */
+export function noteToBoundedNode(note: DiagramNote): BoundedNode {
+  return { x: note.x, y: note.y, w: NOTE_CARD_WIDTH, h: estimateNoteCardHeight(note) }
 }
