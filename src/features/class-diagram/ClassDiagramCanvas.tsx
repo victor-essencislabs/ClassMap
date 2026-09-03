@@ -18,6 +18,7 @@ import * as ops from './contentOperations'
 import { EdgeTypeGrid } from './EdgeTypeGrid'
 import { Connector, type ConnectorEmphasis } from './Connector'
 import { NoteCard } from './NoteCard'
+import { NoteInspector } from './NoteInspector'
 import {
   CLASS_CARD_WIDTH,
   NOTE_CARD_WIDTH,
@@ -772,56 +773,3 @@ function RelationshipInspector({
   )
 }
 
-// TASK-051 (ver ADR-013) — inspector do card de comentário: texto livre +
-// a mesma paleta de cor do card de classe (`ClassColorGrid` reaproveitado,
-// não uma paleta própria).
-function NoteInspector({
-  note,
-  readOnly,
-  onChange,
-  onDelete,
-}: {
-  note: DiagramNote
-  readOnly: boolean
-  onChange: (patch: Partial<DiagramNote>) => void
-  onDelete: () => void
-}) {
-  return (
-    <>
-      <div className="insp-title">Comentário</div>
-      <div className="field">
-        <label htmlFor="note-text-input">Texto</label>
-        {readOnly ? (
-          <div className="mono" style={{ whiteSpace: 'pre-wrap' }}>
-            {note.text || '—'}
-          </div>
-        ) : (
-          <textarea
-            id="note-text-input"
-            rows={5}
-            placeholder="Ex.: classes que precisam ser excluídas"
-            value={note.text}
-            onChange={(e) => onChange({ text: e.target.value })}
-          />
-        )}
-      </div>
-
-      <div className="insp-title">Cor do card (opcional)</div>
-      {readOnly ? (
-        <div className="mono" style={{ marginBottom: 14 }}>
-          {note.color ?? 'Padrão'}
-        </div>
-      ) : (
-        <ClassColorGrid value={note.color} onChange={(color) => onChange({ color })} />
-      )}
-
-      {!readOnly && (
-        <div className="insp-actions">
-          <button type="button" className="btn danger" onClick={onDelete}>
-            Excluir comentário
-          </button>
-        </div>
-      )}
-    </>
-  )
-}

@@ -2,16 +2,20 @@ import { describe, expect, it } from 'vitest'
 import type { DiagramClass } from '../class-diagram/types'
 import {
   addLink,
+  addNote,
   addObject,
   filterObjectsByQuery,
+  noteToBoundedNode,
   removeLink,
+  removeNote,
   removeObject,
   toBoundedNode,
   updateLink,
+  updateNote,
   updateObject,
   updateObjectValue,
 } from './contentOperations'
-import { emptyObjectDiagramContent } from './types'
+import { emptyObjectDiagramContent, type ObjectDiagramContent } from './types'
 
 const pedidoClass: DiagramClass = {
   id: 'class-pedido',
@@ -74,6 +78,16 @@ describe('updateObject / removeObject', () => {
     const [first, second] = content.objects
     content = removeObject(content, first.id)
     expect(content.objects).toEqual([second])
+  })
+
+  it('TASK-053: preserva os comentários do diagrama (antes retornava um objeto sem spread, que os descartava)', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addNote(content)
+    const [obj] = content.objects
+
+    content = removeObject(content, obj.id)
+
+    expect(content.notes).toHaveLength(1)
   })
 })
 
@@ -163,6 +177,75 @@ describe('addLink / removeLink / updateLink (TASK-017, ver ADR-006)', () => {
     expect(content.objects).toEqual([first, third])
     expect(content.links).toHaveLength(1)
     expect(content.links[0]).toMatchObject({ from: first.id, to: third.id })
+  })
+})
+
+describe('cards de comentário (TASK-053, ver ADR-013)', () => {
+  it('addNote cria um comentário com texto vazio e sem cor', () => {
+    const content = addNote(emptyObjectDiagramContent())
+    expect(content.notes).toHaveLength(1)
+    expect(content.notes![0].text).toBe('')
+    expect(content.notes![0].color).toBeUndefined()
+  })
+
+  it('gera ids únicos entre comentários', () => {
+    let content = addNote(emptyObjectDiagramContent())
+    content = addNote(content)
+    const [a, b] = content.notes!
+    expect(a.id).not.toBe(b.id)
+  })
+
+  it('funciona mesmo quando `notes` nunca existiu no conteúdo (diagrama salvo antes da TASK-053)', () => {
+    const legacyContent = { objects: [], links: [] } as ObjectDiagramContent // sem `notes`
+    const content = addNote(legacyContent)
+    expect(content.notes).toHaveLength(1)
+  })
+
+  it('updateNote atualiza texto/cor só do comentário alvo, preservando os demais', () => {
+    let content = addNote(emptyObjectDiagramContent())
+    content = addNote(content)
+    const [a, b] = content.notes!
+
+    content = updateNote(content, a.id, { text: 'Objetos de teste', color: '#ef4444' })
+
+    expect(content.notes!.find((n) => n.id === a.id)).toMatchObject({ text: 'Objetos de teste', color: '#ef4444' })
+    expect(content.notes!.find((n) => n.id === b.id)?.text).toBe('')
+  })
+
+  it('removeNote remove só o comentário indicado, sem afetar objetos/links', () => {
+    let content = addObject(emptyObjectDiagramContent(), pedidoClass)
+    content = addNote(content)
+    content = addNote(content)
+    const [a] = content.notes!
+
+    content = removeNote(content, a.id)
+
+    expect(content.notes).toHaveLength(1)
+    expect(content.objects).toHaveLength(1)
+  })
+
+  it('noteToBoundedNode usa a largura fixa do card e estima a altura pelo texto', () => {
+    const content = addNote(emptyObjectDiagramContent())
+    const note = updateNote(content, content.notes![0].id, { text: 'um comentário razoavelmente longo' }).notes![0]
+    const node = noteToBoundedNode(note)
+    expect(node).toMatchObject({ x: note.x, y: note.y })
+    expect(node.w).toBeGreaterThan(0)
+    expect(node.h).toBeGreaterThan(0)
+  })
+
+  it('noteToBoundedNode usa o tamanho manual quando definido (grip arrastado)', () => {
+    const content = addNote(emptyObjectDiagramContent())
+    const note = updateNote(content, content.notes![0].id, { width: 400, height: 300 }).notes![0]
+    const node = noteToBoundedNode(note)
+    expect(node).toMatchObject({ w: 400, h: 300 })
+  })
+
+  it('sobrevive a JSON.stringify/JSON.parse', () => {
+    let content = addNote(emptyObjectDiagramContent())
+    content = updateNote(content, content.notes![0].id, { text: 'Amarelo: precisa de ajuste', color: '#eab308' })
+
+    const roundTripped = JSON.parse(JSON.stringify(content)) as ObjectDiagramContent
+    expect(roundTripped).toEqual(content)
   })
 })
 

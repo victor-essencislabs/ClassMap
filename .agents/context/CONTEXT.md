@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-03 (TASK-052 — excluir com Delete/Backspace + redimensionar comentário)
+ultima-revisao: 2026-09-03 (TASK-053 — comentário e Delete/Backspace também no Diagrama de Objetos)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -240,6 +240,14 @@ Dois pedidos do usuário, mesma sessão da TASK-051: (1) excluir classe/relaçã
 **TASK-052 implementada** (mesma sessão): novo `useEffect` em `ClassDiagramCanvas.tsx` registra um listener de `keydown` em `window` só quando há seleção e `!readOnly` — ignora quando o foco está num `input`/`textarea`/`select` (RN-01, pra nunca apagar o card inteiro enquanto o usuário edita um campo de texto), senão exclui a classe/relação/nota selecionada. Generalizado pras 3 seleções (não só classe, que era o pedido literal) — mesma raciocínio de generalização já usado na TASK-049. `DiagramNote` ganhou `width?`/`height?` opcionais; `NoteCard.tsx` ganhou um grip no canto inferior direito (`.note-resize-handle`, com `stopPropagation` pra nunca também mover o card) que arrasta pra redimensionar os dois eixos juntos, com piso mínimo (`NOTE_MIN_WIDTH`/`NOTE_MIN_HEIGHT` = 140×50). 9 testes novos. `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (283 testes, nenhum warning novo — 1 falha intermitente numa rodada isolada, já documentada como flakiness pré-existente de `DiagramsRouteDispatcher.test.tsx`, limpo de novo na rodada seguinte).
 
 **Achado durante a validação ao vivo, não é bug do produto**: o ambiente de automação do navegador usado nesta sessão não consegue disparar a exclusão nativa de caractere (Backspace/Delete) dentro de um campo de texto real — só digitar caracteres funciona nesse ambiente. Confirmado que não é o código da task: reproduzido também com zero seleção ativa (cenário em que o listener da TASK-052 nem chega a ser registrado) e via `dispatchEvent` sintético mostrando `defaultPrevented: false`. Validado ao vivo, sem essa limitação de ambiente: excluir classe/relação/comentário por tecla (fora de campo de texto) e redimensionar o comentário arrastando o grip (200×auto → 396×210px, sem mover a posição) — ambos confirmados funcionando, num painel de teste descartável no projeto ELIMS real (excluído ao final).
+
+## TASK-053 — comentário e Delete/Backspace também no Diagrama de Objetos (2026-09-03)
+
+Pedido do usuário, mesma sessão: TASK-051/052 (cards de comentário, redimensionar, excluir por tecla) tinham ficado só no Diagrama de Classes — faltava estender ao Diagrama de Objetos. Sem ADR nova (mesma decisão da ADR-013) nem ritual de 3 opções (mesmo padrão de UI da TASK-052, só alcance maior).
+
+**TASK-053 implementada** (mesma sessão): `NoteInspector` extraído de dentro de `ClassDiagramCanvas.tsx` para `class-diagram/NoteInspector.tsx` (sem mudar comportamento), pra ser reaproveitado pelos dois diagramas — `DiagramNote`/`NoteCard`/`ClassColorGrid` já eram genéricos, e `object-diagram/` já importava de `class-diagram/` antes desta task (`DiagramClass`, `resolveConnectClick`), mesmo precedente de dependência entre os dois módulos. `ObjectDiagramContent` ganhou `notes?: DiagramNote[]`; `ObjectDiagramCanvas.tsx` ganhou botão "+ Nota", atalho `Delete`/`Backspace` (idêntico ao da TASK-052, agora cobrindo objeto/link/comentário) e a condição do `.empty-hint` já nasceu corrigida (checando `notes` desde o início, em vez de esperar redescobrir a mesma sobreposição achada na TASK-051). CSS não precisou de nenhuma mudança — os seletores já eram compartilhados via `DiagramShell`. `removeObject` ganhou a mesma correção de `removeClass` (preservar `notes`, antes descartado por falta de spread). 23 testes novos (9 em `contentOperations.test.ts`, 14 em `ObjectDiagramCanvas.test.tsx`), espelhando os equivalentes das TASK-051/052. `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (306 testes, nenhum warning novo).
+
+**Validado ao vivo** (painel de teste descartável no projeto ELIMS, painel real do usuário não tocado): criar comentário sem o aviso "Nenhum objeto ainda" aparecer por cima, escolher cor (azul testado), editar texto em tempo real, excluir com `Delete` — todos funcionando, mesmo comportamento já confirmado no Diagrama de Classes.
 
 ## Decisões recentes
 

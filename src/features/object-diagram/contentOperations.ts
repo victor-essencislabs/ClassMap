@@ -1,6 +1,6 @@
 // TASK-004 — lógica pura de edição do Diagrama de Objetos, testável sem
 // renderizar componentes (mesmo padrão de `class-diagram/contentOperations.ts`).
-import type { DiagramClass } from '../class-diagram/types'
+import { NOTE_CARD_WIDTH, estimateNoteCardHeight, type DiagramClass, type DiagramNote } from '../class-diagram/types'
 import type { BoundedNode } from '../diagram-shell/canvasTransform'
 import { estimateObjectCardHeight, OBJECT_CARD_WIDTH } from './types'
 import type { DiagramObject, ObjectAttributeValue, ObjectDiagramContent, ObjectLink } from './types'
@@ -68,6 +68,7 @@ export function updateObjectValue(
  * apontando para um objeto inexistente. */
 export function removeObject(content: ObjectDiagramContent, id: string): ObjectDiagramContent {
   return {
+    ...content, // TASK-053: preserva `notes` (mesmo achado/correção já feita em `removeClass`, class-diagram/contentOperations.ts, TASK-051).
     objects: content.objects.filter((o) => o.id !== id),
     links: content.links.filter((l) => l.from !== id && l.to !== id),
   }
@@ -117,4 +118,41 @@ export function filterObjectsByQuery(objects: DiagramObject[], query: string): D
  * zoom/pan compartilhado em `diagram-shell/canvasTransform.ts`). */
 export function toBoundedNode(obj: DiagramObject): BoundedNode {
   return { x: obj.x, y: obj.y, w: OBJECT_CARD_WIDTH, h: estimateObjectCardHeight(obj) }
+}
+
+// TASK-053 (ver ADR-013) — card de comentário: mesmo padrão de
+// `addObject`/`updateObject`/`removeObject` acima, sem contraparte em
+// `addLink` (uma nota nunca é origem/destino de link).
+
+export function addNote(content: ObjectDiagramContent, origin?: { x: number; y: number }): ObjectDiagramContent {
+  const notes = content.notes ?? []
+  const note: DiagramNote = {
+    id: newId(),
+    text: '',
+    x: origin ? origin.x : 40 + ((notes.length * 40) % 320),
+    y: origin ? origin.y : 40 + ((notes.length * 60) % 240),
+  }
+  return { ...content, notes: [...notes, note] }
+}
+
+export function updateNote(
+  content: ObjectDiagramContent,
+  id: string,
+  patch: Partial<DiagramNote>,
+): ObjectDiagramContent {
+  return {
+    ...content,
+    notes: (content.notes ?? []).map((n) => (n.id === id ? { ...n, ...patch } : n)),
+  }
+}
+
+export function removeNote(content: ObjectDiagramContent, id: string): ObjectDiagramContent {
+  return { ...content, notes: (content.notes ?? []).filter((n) => n.id !== id) }
+}
+
+/** Converte uma `DiagramNote` num `BoundedNode` genérico — mesmo papel de
+ * `toBoundedNode` acima, para o card de comentário entrar no cálculo de
+ * bounds do "ajustar à tela". */
+export function noteToBoundedNode(note: DiagramNote): BoundedNode {
+  return { x: note.x, y: note.y, w: note.width ?? NOTE_CARD_WIDTH, h: note.height ?? estimateNoteCardHeight(note) }
 }

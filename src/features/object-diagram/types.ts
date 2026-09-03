@@ -12,6 +12,8 @@
 // carregado, ao custo de o objeto não acompanhar uma renomeação de
 // atributo feita depois na classe original.
 
+import type { DiagramNote } from '../class-diagram/types'
+
 export interface ObjectAttributeValue {
   attributeId: string
   name: string
@@ -49,13 +51,21 @@ export interface ObjectLink {
   controlX: number
 }
 
+// TASK-053 — cards de comentário também no Diagrama de Objetos, mesmo
+// tipo `DiagramNote` do Diagrama de Classes (ver `class-diagram/types.ts`,
+// TASK-051/ADR-013): texto livre + cor, sem relação com nenhum objeto
+// específico, nunca entra no schema Zod de import/export. Reaproveitado
+// em vez de duplicado — é genérico, não amarrado a classe nenhuma.
 export interface ObjectDiagramContent {
   objects: DiagramObject[]
   links: ObjectLink[]
+  /** Opcional — diagramas salvos antes da TASK-053 não têm este campo no
+   * JSONB persistido; toda leitura trata como `[]` (`content.notes ?? []`). */
+  notes?: DiagramNote[]
 }
 
 export function emptyObjectDiagramContent(): ObjectDiagramContent {
-  return { objects: [], links: [] }
+  return { objects: [], links: [], notes: [] }
 }
 
 export const OBJECT_CARD_WIDTH = 220

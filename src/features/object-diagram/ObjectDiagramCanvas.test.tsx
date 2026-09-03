@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
-import type { DiagramClass } from '../class-diagram/types'
+import { NOTE_CARD_WIDTH, NOTE_MIN_HEIGHT, NOTE_MIN_WIDTH, type DiagramClass } from '../class-diagram/types'
 import { isBackgroundTarget, ObjectDiagramCanvas } from './ObjectDiagramCanvas'
 import { emptyObjectDiagramContent, type ObjectDiagramContent } from './types'
 
@@ -37,6 +37,14 @@ function ControlledCanvas({
 
 function objectCards() {
   return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
+}
+
+function noteCards() {
+  return Array.from(document.querySelectorAll('.diagram-shell-canvas .note-card'))
+}
+
+function addNoteButton() {
+  return screen.getByRole('button', { name: '+ Nota' })
 }
 
 /** TASK-042: simula o fim da animação CSS de destaque de herança.
@@ -298,6 +306,213 @@ describe('ObjectDiagramCanvas — visualizador (CA-05)', () => {
   })
 })
 
+describe('ObjectDiagramCanvas — cards de comentário (TASK-053, ver ADR-013)', () => {
+  it('"+ Nota" cria um card de comentário vazio, já selecionado', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    expect(noteCards()).toHaveLength(1)
+    expect(screen.getByText('Comentário', { selector: '.insp-title' })).toBeInTheDocument()
+  })
+
+  it('inspector edita o texto do comentário, refletido no card', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    fireEvent.change(screen.getByLabelText('Texto'), {
+      target: { value: 'Objetos de exemplo — não usar em produção' },
+    })
+
+    expect(
+      within(noteCards()[0] as HTMLElement).getByText('Objetos de exemplo — não usar em produção'),
+    ).toBeInTheDocument()
+  })
+
+  it('inspector escolhe uma cor (mesma paleta do card de classe), aplicada imediatamente no card', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Vermelho' }))
+
+    const [card] = noteCards()
+    expect(card).toHaveClass('has-color')
+    expect((card as HTMLElement).style.getPropertyValue('--note-color')).toBe('#ef4444')
+  })
+
+  it('"Excluir comentário" remove só a nota, sem afetar objetos', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.click(addNoteButton())
+    expect(noteCards()).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir comentário' }))
+
+    expect(noteCards()).toHaveLength(0)
+    expect(objectCards()).toHaveLength(1)
+  })
+
+  it('grip no canto redimensiona o card — encolhe até o mínimo, nunca menos', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const handle = noteCards()[0].querySelector('.note-resize-handle') as HTMLElement
+    expect(handle).toBeInTheDocument()
+
+    fireEvent.pointerDown(handle, { clientX: 1000, clientY: 1000 })
+    fireEvent.pointerMove(handle, { clientX: -9000, clientY: -9000 })
+    fireEvent.pointerUp(handle)
+
+    const resized = noteCards()[0] as HTMLElement
+    expect(resized.style.width).toBe(`${NOTE_MIN_WIDTH}px`)
+    expect(resized.style.height).toBe(`${NOTE_MIN_HEIGHT}px`)
+  })
+
+  it('grip no canto redimensiona o card — cresce além do padrão, sem mover a posição', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const [note] = noteCards()
+    const originalLeft = (note as HTMLElement).style.left
+    const originalTop = (note as HTMLElement).style.top
+    const handle = note.querySelector('.note-resize-handle') as HTMLElement
+
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(handle, { clientX: 5000, clientY: 5000 })
+    fireEvent.pointerUp(handle)
+
+    const resized = noteCards()[0] as HTMLElement
+    expect(parseFloat(resized.style.width)).toBeGreaterThan(NOTE_CARD_WIDTH)
+    expect(resized.style.left).toBe(originalLeft)
+    expect(resized.style.top).toBe(originalTop)
+  })
+
+  it('"ajustar à tela" não quebra o posicionamento absoluto do card de comentário', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const originalLeft = (noteCards()[0] as HTMLElement).style.left
+
+    fireEvent.click(screen.getByTitle('Aproximar'))
+    fireEvent.click(screen.getByTitle('Ajustar à tela'))
+
+    expect((noteCards()[0] as HTMLElement).style.left).toBe(originalLeft)
+  })
+})
+
+describe('ObjectDiagramCanvas — excluir com Delete/Backspace (TASK-053)', () => {
+  it('Delete exclui o objeto selecionado', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.pointerDown(objectCards()[0])
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(objectCards()).toHaveLength(0)
+  })
+
+  it('Backspace exclui o comentário selecionado', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    expect(noteCards()).toHaveLength(1)
+
+    fireEvent.keyDown(window, { key: 'Backspace' })
+
+    expect(noteCards()).toHaveLength(0)
+  })
+
+  it('Delete exclui o link selecionado, sem afetar os objetos', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    await createObjectViaModal()
+    fireEvent.click(startLinkButton())
+    const [from, to] = objectCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+    expect(objectCards()).toHaveLength(2)
+  })
+
+  it('nunca dispara com o foco num campo de texto (não apaga o card ao editar o nome da instância)', async () => {
+    render(<ControlledCanvas />)
+    await createObjectViaModal()
+    fireEvent.pointerDown(objectCards()[0])
+
+    const nameInput = screen.getByLabelText('Nome da instância (opcional)')
+    nameInput.focus()
+    fireEvent.keyDown(nameInput, { key: 'Delete' })
+
+    expect(objectCards()).toHaveLength(1)
+  })
+
+  it('sem nenhuma seleção, não faz nada', async () => {
+    // "+ Objeto" já deixa o objeto recém-criado selecionado — pra testar
+    // "nada selecionado" de verdade, carrega um diagrama já existente sem
+    // nunca clicar nele (mesmo padrão do teste equivalente no Diagrama de
+    // Classes, TASK-052).
+    const existing: ObjectDiagramContent = {
+      objects: [
+        {
+          id: 'existing-1',
+          classId: 'class-pedido',
+          className: 'Pedido',
+          values: [{ attributeId: 'a1', name: 'id', type: 'long', value: '1' }],
+          x: 0,
+          y: 0,
+        },
+      ],
+      links: [],
+    }
+    function PreloadedCanvas() {
+      const [content, setContent] = useState<ObjectDiagramContent>(existing)
+      return (
+        <ObjectDiagramCanvas
+          content={content}
+          readOnly={false}
+          onChange={setContent}
+          classDiagrams={[{ id: 'diagram-classes-1', name: 'Diagrama de Classes' }]}
+          loadClasses={async () => [pedidoClass]}
+        />
+      )
+    }
+    render(<PreloadedCanvas />)
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(objectCards()).toHaveLength(1)
+  })
+
+  it('visualizador: Delete não exclui nada (RN-02 — só editor)', () => {
+    const existing: ObjectDiagramContent = {
+      objects: [
+        {
+          id: 'existing-1',
+          classId: 'class-pedido',
+          className: 'Pedido',
+          values: [{ attributeId: 'a1', name: 'id', type: 'long', value: '1' }],
+          x: 0,
+          y: 0,
+        },
+      ],
+      links: [],
+    }
+    render(
+      <ObjectDiagramCanvas
+        content={existing}
+        readOnly
+        onChange={() => {}}
+        classDiagrams={[]}
+        loadClasses={async () => []}
+      />,
+    )
+    fireEvent.pointerDown(objectCards()[0])
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(objectCards()).toHaveLength(1)
+  })
+})
+
 describe('isBackgroundTarget', () => {
   // Regressão (2026-09-02) — mesmo bug/correção do `ClassDiagramCanvas`
   // (ver o teste equivalente lá para a explicação completa): um clique
@@ -313,6 +528,16 @@ describe('isBackgroundTarget', () => {
   it('continua contando um elemento dentro de um card (.node-box) como não-fundo', () => {
     const card = document.createElement('div')
     card.className = 'node-box object'
+    const child = document.createElement('span')
+    card.appendChild(child)
+    document.body.appendChild(card)
+    expect(isBackgroundTarget(child)).toBe(false)
+    document.body.removeChild(card)
+  })
+
+  it('TASK-053: conta um elemento dentro de um card de comentário (.note-card) como não-fundo', () => {
+    const card = document.createElement('div')
+    card.className = 'note-card'
     const child = document.createElement('span')
     card.appendChild(child)
     document.body.appendChild(card)

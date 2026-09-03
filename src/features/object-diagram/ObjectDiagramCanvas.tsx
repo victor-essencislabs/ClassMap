@@ -7,8 +7,10 @@
 // ids) — sem os 5 tipos UML/multiplicidade, que não fazem sentido
 // semântico entre instâncias concretas.
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import type { DiagramClass } from '../class-diagram/types'
+import type { DiagramClass, DiagramNote } from '../class-diagram/types'
 import { resolveConnectClick } from '../class-diagram/connectMode'
+import { NoteCard } from '../class-diagram/NoteCard'
+import { NoteInspector } from '../class-diagram/NoteInspector'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
 import { FitToScreenGlyph, LinkGlyph } from '../diagram-shell/Icons'
@@ -36,14 +38,19 @@ interface ObjectDiagramCanvasProps {
   canvasOverlay?: ReactNode
 }
 
-type Selection = { type: 'object'; id: string } | { type: 'link'; id: string } | null
+type Selection =
+  | { type: 'object'; id: string }
+  | { type: 'link'; id: string }
+  | { type: 'note'; id: string } // TASK-053
+  | null
 
 /** Um clique conta como "no fundo do canvas" (pan/deselect) quando não
  * pousa dentro de um card — nem dentro de um `<button>` (zoom-controls
- * etc.) — mesmo critério do `ClassDiagramCanvas`, ver o comentário lá
- * para a explicação completa do bug que a exclusão de `button` evita. */
+ * etc.), nem dentro de um card de comentário (`.note-card`, TASK-053) —
+ * mesmo critério do `ClassDiagramCanvas`, ver o comentário lá para a
+ * explicação completa do bug que a exclusão de `button` evita. */
 export function isBackgroundTarget(target: EventTarget | null): boolean {
-  return !(target instanceof Element) || !target.closest('.node-box, button')
+  return !(target instanceof Element) || !target.closest('.node-box, .note-card, button')
 }
 
 const CLICK_MOVE_THRESHOLD_PX = 4
@@ -77,15 +84,24 @@ export function ObjectDiagramCanvas({
   const didInitialFit = useRef(false)
   const clickStart = useRef<{ x: number; y: number } | null>(null)
 
+  // TASK-053 — cards de comentário entram no bounds do "ajustar à tela"
+  // junto com os objetos, mesmo tratamento já dado em
+  // `class-diagram/ClassDiagramCanvas.tsx` (TASK-051).
+  function allBoundedNodes() {
+    return [...content.objects.map(ops.toBoundedNode), ...(content.notes ?? []).map(ops.noteToBoundedNode)]
+  }
+
   useEffect(() => {
     if (didInitialFit.current) return
     didInitialFit.current = true
-    zoomPan.fitToScreen(computeBounds(content.objects.map(ops.toBoundedNode)))
+    zoomPan.fitToScreen(computeBounds(allBoundedNodes()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const selectedObject = selection?.type === 'object' ? content.objects.find((o) => o.id === selection.id) : undefined
   const selectedLink = selection?.type === 'link' ? content.links.find((l) => l.id === selection.id) : undefined
+  const selectedNote =
+    selection?.type === 'note' ? (content.notes ?? []).find((n) => n.id === selection.id) : undefined
 
   function handlePickClass(sourceClass: DiagramClass) {
     const rect = canvasRef.current?.getBoundingClientRect()
@@ -124,6 +140,54 @@ export function ObjectDiagramCanvas({
     onChange(ops.removeLink(content, id))
     setSelection(null)
   }
+
+  // TASK-053 — mesmo padrão de handlePickClass/updateObject/handleRemoveObject
+  // acima, sem a parte de link (uma nota nunca é origem/destino de link).
+  function handleAddNote() {
+    const rect = canvasRef.current?.getBoundingClientRect()
+    const origin = rect
+      ? {
+          x: (rect.width / 2 - zoomPan.pan.x) / zoomPan.zoom - OBJECT_CARD_WIDTH / 2,
+          y: (rect.height / 2 - zoomPan.pan.y) / zoomPan.zoom - 40,
+        }
+      : undefined
+    const next = ops.addNote(content, origin)
+    onChange(next)
+    const notes = next.notes ?? []
+    setSelection({ type: 'note', id: notes[notes.length - 1].id })
+  }
+
+  function updateNote(id: string, patch: Partial<DiagramNote>) {
+    onChange(ops.updateNote(content, id, patch))
+  }
+
+  function handleRemoveNote(id: string) {
+    onChange(ops.removeNote(content, id))
+    setSelection(null)
+  }
+
+  // TASK-053 — Delete/Backspace exclui o que estiver selecionado
+  // (objeto, link ou nota), mesmo atalho já adicionado ao Diagrama de
+  // Classes na TASK-052 — ver o comentário lá (`ClassDiagramCanvas.tsx`)
+  // para o raciocínio completo (guarda de campo de texto, captura de
+  // `selection` numa constante local pro narrowing do TS sobreviver
+  // dentro do closure).
+  useEffect(() => {
+    if (readOnly || !selection) return
+    const current = selection
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      if (current.type === 'object') handleRemoveObject(current.id)
+      else if (current.type === 'link') handleRemoveLink(current.id)
+      else if (current.type === 'note') handleRemoveNote(current.id)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, readOnly, content])
 
   function startConnectMode() {
     setConnectMode(true)
@@ -199,6 +263,11 @@ export function ObjectDiagramCanvas({
                 onClick={() => (connectMode ? endConnectMode() : startConnectMode())}
               >
                 <LinkGlyph /> Link
+              </button>
+            )}
+            {!readOnly && (
+              <button type="button" className="btn ghost" onClick={handleAddNote}>
+                + Nota
               </button>
             )}
             {!readOnly && (
@@ -278,9 +347,31 @@ export function ObjectDiagramCanvas({
                   onJustCreatedShown={() => setJustCreatedId((current) => (current === obj.id ? null : current))}
                 />
               ))}
+
+              {/* TASK-053 — depois dos objetos, pra um comentário
+                  sobreposto a um objeto (raro, mas possível) ficar
+                  visualmente por cima, mais fácil de notar. */}
+              {(content.notes ?? []).map((note) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  selected={selection?.type === 'note' && selection.id === note.id}
+                  readOnly={readOnly}
+                  zoom={zoomPan.zoom}
+                  connectMode={connectMode}
+                  onSelect={(id) => setSelection({ type: 'note', id })}
+                  onMove={(id, x, y) => updateNote(id, { x, y })}
+                  onResize={(id, width, height) => updateNote(id, { width, height })}
+                />
+              ))}
             </div>
 
-            {content.objects.length === 0 && (
+            {/* TASK-053: também checa `notes` — sem isso, o aviso
+                (centralizado, mesma posição padrão de card novo) cobria
+                visualmente o primeiro comentário criado num diagrama
+                ainda sem nenhum objeto (mesmo achado da TASK-051 no
+                Diagrama de Classes). */}
+            {content.objects.length === 0 && (content.notes ?? []).length === 0 && (
               <div className="empty-hint">
                 <div className="empty-hint-card">
                   <h3>Nenhum objeto ainda</h3>
@@ -299,7 +390,7 @@ export function ObjectDiagramCanvas({
                 type="button"
                 title="Ajustar à tela"
                 aria-label="Ajustar à tela"
-                onClick={() => zoomPan.fitToScreen(computeBounds(content.objects.map(ops.toBoundedNode)))}
+                onClick={() => zoomPan.fitToScreen(computeBounds(allBoundedNodes()))}
               >
                 <FitToScreenGlyph />
               </button>
@@ -336,6 +427,13 @@ export function ObjectDiagramCanvas({
               readOnly={readOnly}
               onChange={(patch) => updateLink(selectedLink.id, patch)}
               onDelete={() => handleRemoveLink(selectedLink.id)}
+            />
+          ) : selectedNote ? (
+            <NoteInspector
+              note={selectedNote}
+              readOnly={readOnly}
+              onChange={(patch) => updateNote(selectedNote.id, patch)}
+              onDelete={() => handleRemoveNote(selectedNote.id)}
             />
           ) : (
             <div className="insp-empty">Selecione um objeto ou link no diagrama para editar seus detalhes aqui.</div>
