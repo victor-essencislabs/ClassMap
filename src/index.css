@@ -2065,6 +2065,42 @@ button.ov-flag {
   margin-bottom: 10px;
 }
 
+/* TASK-054 — cabeçalho de "Atributos" recolhível: classe com muitos
+   atributos empurrava "Relações" pra fora da primeira olhada. Reaproveita
+   `.insp-title` (mesmo rótulo) só virando `<button>` com layout em linha. */
+.diagram-shell-inspector .insp-title.insp-title-collapsible {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.diagram-shell-inspector .insp-title.insp-title-collapsible:hover {
+  color: var(--text-muted);
+}
+
+.diagram-shell-inspector .insp-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--text-faint);
+  transition: transform 0.15s ease;
+}
+
+.diagram-shell-inspector .insp-chevron.expanded {
+  transform: rotate(-90deg);
+}
+
+.diagram-shell-inspector .insp-title .count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
 .diagram-shell-inspector .field {
   margin-bottom: 14px;
 }

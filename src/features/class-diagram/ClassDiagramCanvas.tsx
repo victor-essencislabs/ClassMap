@@ -4,10 +4,17 @@
 // substituindo o antigo painel flutuante (ADR-002). Único ponto que sabe
 // editar `ClassDiagramContent` — a página que hospeda este componente só
 // carrega/salva via Supabase (ver `.claude/agents/frontend-diagramas.md`).
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import { computeBounds } from '../diagram-shell/canvasTransform'
 import { DiagramShell } from '../diagram-shell/DiagramShell'
-import { FitToScreenGlyph, LinkGlyph } from '../diagram-shell/Icons'
+import { ChevronGlyph, FitToScreenGlyph, LinkGlyph } from '../diagram-shell/Icons'
 import { InfoTooltip } from '../diagram-shell/InfoTooltip'
 import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
@@ -538,6 +545,43 @@ function Sidebar({
   )
 }
 
+/** TASK-054 — cabeçalho de seção recolhível do inspector, reaproveitado
+ * por "Classe", "Cor do card", "Atributos" e "Relações": um `insp-title`
+ * a mais não justifica quatro botões quase idênticos. */
+function SectionHeader({
+  label,
+  count,
+  collapsed,
+  onToggle,
+  style,
+}: {
+  label: string
+  count?: number
+  collapsed: boolean
+  onToggle: () => void
+  style?: CSSProperties
+}) {
+  return (
+    <button
+      type="button"
+      className="insp-title insp-title-collapsible"
+      style={style}
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+    >
+      {/* Mesmo chevron do recolher/expandir sidebar/inspector
+          (`ChevronGlyph`, TASK-046/ADR-011) — girado -90° para apontar
+          pra baixo quando expandido, em vez de um segundo ícone quase
+          idêntico só para essa direção. */}
+      <span className={`insp-chevron${collapsed ? '' : ' expanded'}`}>
+        <ChevronGlyph direction="right" />
+      </span>
+      {label}
+      {count !== undefined && <span className="count">{count}</span>}
+    </button>
+  )
+}
+
 function ClassInspector({
   cls,
   relationships,
@@ -576,113 +620,156 @@ function ClassInspector({
     return classesById.find((c) => c.id === otherId)?.name ?? '?'
   }
 
+  // "Classe" e "Cor do card" começam sempre abertas (são o ponto de
+  // entrada da edição); "Atributos" e "Relações" recolhem sozinhas
+  // quando a lista já vem grande — evita que o inspector abra exigindo
+  // scroll pra chegar nas seções seguintes. Reavaliado a cada troca de
+  // classe selecionada (não é um "lembrete" por classe, só um ponto de
+  // partida razoável).
+  const [classCollapsed, setClassCollapsed] = useState(false)
+  const [colorCollapsed, setColorCollapsed] = useState(false)
+  const [attributesCollapsed, setAttributesCollapsed] = useState(cls.attributes.length > 6)
+  const [relationsCollapsed, setRelationsCollapsed] = useState(relationships.length > 6)
+  useEffect(() => {
+    setClassCollapsed(false)
+    setColorCollapsed(false)
+    setAttributesCollapsed(cls.attributes.length > 6)
+    setRelationsCollapsed(relationships.length > 6)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cls.id])
+
   return (
     <>
-      <div className="insp-title">Classe</div>
-      <div className="field">
-        <label htmlFor="class-name-input">Nome da classe</label>
-        {readOnly ? (
-          <div className="mono">{cls.name}</div>
-        ) : (
-          <input id="class-name-input" value={cls.name} onChange={(e) => onChange({ name: e.target.value })} />
-        )}
-      </div>
-      <div className="field">
-        <label htmlFor="class-stereotype-input">
-          Estereótipo (opcional)
-          <InfoTooltip text="Classificação UML opcional para a classe (ex.: «entity», «table», «interface», «enumeration») — indica o papel dela no sistema modelado, não é um dado do domínio." />
-        </label>
-        {readOnly ? (
-          <div className="mono">{cls.stereotype || '—'}</div>
-        ) : (
-          <input
-            id="class-stereotype-input"
-            placeholder="ex: entity, table"
-            value={cls.stereotype ?? ''}
-            onChange={(e) => onChange({ stereotype: e.target.value || undefined })}
-          />
-        )}
-      </div>
-
-      <div className="insp-title">Cor do card (opcional)</div>
-      {readOnly ? (
-        <div className="mono" style={{ marginBottom: 14 }}>
-          {cls.color ?? 'Padrão'}
-        </div>
-      ) : (
-        <ClassColorGrid value={cls.color} onChange={(color) => onChange({ color })} />
+      <SectionHeader label="Classe" collapsed={classCollapsed} onToggle={() => setClassCollapsed((v) => !v)} />
+      {!classCollapsed && (
+        <>
+          <div className="field">
+            <label htmlFor="class-name-input">Nome da classe</label>
+            {readOnly ? (
+              <div className="mono">{cls.name}</div>
+            ) : (
+              <input id="class-name-input" value={cls.name} onChange={(e) => onChange({ name: e.target.value })} />
+            )}
+          </div>
+          <div className="field">
+            <label htmlFor="class-stereotype-input">
+              Estereótipo (opcional)
+              <InfoTooltip text="Classificação UML opcional para a classe (ex.: «entity», «table», «interface», «enumeration») — indica o papel dela no sistema modelado, não é um dado do domínio." />
+            </label>
+            {readOnly ? (
+              <div className="mono">{cls.stereotype || '—'}</div>
+            ) : (
+              <input
+                id="class-stereotype-input"
+                placeholder="ex: entity, table"
+                value={cls.stereotype ?? ''}
+                onChange={(e) => onChange({ stereotype: e.target.value || undefined })}
+              />
+            )}
+          </div>
+        </>
       )}
 
-      <div className="insp-title" style={{ marginTop: 16 }}>
-        Atributos
-      </div>
-      {cls.attributes.map((attr) =>
-        readOnly ? (
-          <div className="attr-row" key={attr.id}>
-            <span className="mono">
-              {attr.name}
-              {attr.type ? `: ${attr.type}` : ''}
-            </span>
+      <SectionHeader
+        label="Cor do card (opcional)"
+        collapsed={colorCollapsed}
+        onToggle={() => setColorCollapsed((v) => !v)}
+        style={{ marginTop: 16 }}
+      />
+      {!colorCollapsed &&
+        (readOnly ? (
+          <div className="mono" style={{ marginBottom: 14 }}>
+            {cls.color ?? 'Padrão'}
           </div>
         ) : (
-          <div className="attr-row" key={attr.id}>
-            <input
-              placeholder="nome"
-              value={attr.name}
-              onChange={(e) => updateAttribute(attr.id, { name: e.target.value })}
-            />
-            <input
-              placeholder="tipo"
-              className="val"
-              value={attr.type}
-              onChange={(e) => updateAttribute(attr.id, { type: e.target.value })}
-            />
-            <button type="button" onClick={() => removeAttribute(attr.id)} aria-label="Remover atributo">
-              ×
+          <ClassColorGrid value={cls.color} onChange={(color) => onChange({ color })} />
+        ))}
+
+      <SectionHeader
+        label="Atributos"
+        count={cls.attributes.length}
+        collapsed={attributesCollapsed}
+        onToggle={() => setAttributesCollapsed((v) => !v)}
+        style={{ marginTop: 16 }}
+      />
+      {!attributesCollapsed && (
+        <>
+          {cls.attributes.map((attr) =>
+            readOnly ? (
+              <div className="attr-row" key={attr.id}>
+                <span className="mono">
+                  {attr.name}
+                  {attr.type ? `: ${attr.type}` : ''}
+                </span>
+              </div>
+            ) : (
+              <div className="attr-row" key={attr.id}>
+                <input
+                  placeholder="nome"
+                  value={attr.name}
+                  onChange={(e) => updateAttribute(attr.id, { name: e.target.value })}
+                />
+                <input
+                  placeholder="tipo"
+                  className="val"
+                  value={attr.type}
+                  onChange={(e) => updateAttribute(attr.id, { type: e.target.value })}
+                />
+                <button type="button" onClick={() => removeAttribute(attr.id)} aria-label="Remover atributo">
+                  ×
+                </button>
+              </div>
+            ),
+          )}
+          {!readOnly && (
+            <button type="button" className="add-row-btn" onClick={addAttribute}>
+              + atributo
             </button>
-          </div>
-        ),
-      )}
-      {!readOnly && (
-        <button type="button" className="add-row-btn" onClick={addAttribute}>
-          + atributo
-        </button>
+          )}
+        </>
       )}
 
       <div className="insp-section">
-        <div className="insp-title">Relações</div>
-        <div className="rel-list">
-          {relationships.length === 0 ? (
-            <div className="side-empty">Sem relações.</div>
-          ) : (
-            relationships.map((rel) => (
-              <div
-                key={rel.id}
-                className={`rel-chip${rel.id === selectedRelationshipId ? ' selected' : ''}`}
-                onClick={() => onSelectRelationship(rel.id)}
-                role="button"
-                tabIndex={0}
-              >
-                {/* TASK-049 — mesma cor do conector destacado no canvas
-                    quando esta classe está selecionada (ver
-                    `connectorEmphasis` em ClassDiagramCanvas.tsx): a
-                    bolinha funciona como legenda das cores, sem precisar
-                    de um elemento novo no canvas. */}
-                <span className={`rel-dir-dot${rel.from === cls.id ? '' : ' incoming'}`} aria-hidden="true" />
-                {rel.from === cls.id ? (
-                  <span className="rel-chip-label">
-                    <b>{cls.name}</b> <span className="arrow">→</span> {otherClassName(rel)}
-                  </span>
-                ) : (
-                  <span className="rel-chip-label">
-                    {otherClassName(rel)} <span className="arrow">→</span> <b>{cls.name}</b>
-                  </span>
-                )}
-                <span className="rel-kind">{RELATIONSHIP_LABELS[rel.type]}</span>
-              </div>
-            ))
-          )}
-        </div>
+        <SectionHeader
+          label="Relações"
+          count={relationships.length}
+          collapsed={relationsCollapsed}
+          onToggle={() => setRelationsCollapsed((v) => !v)}
+        />
+        {!relationsCollapsed && (
+          <div className="rel-list">
+            {relationships.length === 0 ? (
+              <div className="side-empty">Sem relações.</div>
+            ) : (
+              relationships.map((rel) => (
+                <div
+                  key={rel.id}
+                  className={`rel-chip${rel.id === selectedRelationshipId ? ' selected' : ''}`}
+                  onClick={() => onSelectRelationship(rel.id)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {/* TASK-049 — mesma cor do conector destacado no canvas
+                      quando esta classe está selecionada (ver
+                      `connectorEmphasis` em ClassDiagramCanvas.tsx): a
+                      bolinha funciona como legenda das cores, sem precisar
+                      de um elemento novo no canvas. */}
+                  <span className={`rel-dir-dot${rel.from === cls.id ? '' : ' incoming'}`} aria-hidden="true" />
+                  {rel.from === cls.id ? (
+                    <span className="rel-chip-label">
+                      <b>{cls.name}</b> <span className="arrow">→</span> {otherClassName(rel)}
+                    </span>
+                  ) : (
+                    <span className="rel-chip-label">
+                      {otherClassName(rel)} <span className="arrow">→</span> <b>{cls.name}</b>
+                    </span>
+                  )}
+                  <span className="rel-kind">{RELATIONSHIP_LABELS[rel.type]}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {!readOnly && (
