@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { meFromSession, useDiagramPresence } from '../diagram-shell/useDiagramPresence'
 import { useDiagramRemoteUpdate } from '../diagram-shell/useDiagramRemoteUpdate'
 import { PresenceAvatars } from '../diagram-shell/PresenceAvatars'
 import { RemoteUpdateBanner } from '../diagram-shell/RemoteUpdateBanner'
 import {
+  createDiagramWithContent,
   getCurrentUserId,
   getDiagram,
   getMyProjectRole,
@@ -34,6 +35,7 @@ export function DiagramEditorPage() {
   // `diagram.name` direto) para não persistir campo vazio enquanto o
   // usuário ainda está digitando (RN-01).
   const [nameInput, setNameInput] = useState('')
+  const navigate = useNavigate()
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nameSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -103,6 +105,36 @@ export function DiagramEditorPage() {
     if (!nameInput.trim()) setNameInput(diagram?.name ?? '')
   }
 
+  /** TASK-056 (RN-08) — grava agora o que o autosave ainda ia gravar daqui
+   * a `AUTOSAVE_DELAY_MS`. Sem isto, arrastar um card e apertar `N` em
+   * seguida navegaria para o diagrama novo dentro da janela do debounce,
+   * desmontando esta página e perdendo a alteração — em silêncio, que é o
+   * pior modo de falha possível. */
+  async function flushPendingSave() {
+    if (!saveTimeout.current || !diagramId || !content) return
+    clearTimeout(saveTimeout.current)
+    saveTimeout.current = null
+    await updateDiagramContent(diagramId, content as unknown as Record<string, unknown>)
+    setSaveState('saved')
+  }
+
+  /** TASK-056 — cria um diagrama novo com o recorte da classe focada e
+   * abre ele. Quem monta o recorte é o canvas (`ClassDiagramCanvas`, via
+   * `focusSubgraph.ts`); esta página só sabe onde ele vai parar — mesmo
+   * projeto, `type: 'classes'` — e como chegar lá. Erro aqui **não**
+   * navega: o diagrama de origem continua aberto e intacto (CA-11). */
+  async function handleCreateDerivedDiagram(name: string, derivedContent: ClassDiagramContent) {
+    if (!projectId) return
+    await flushPendingSave()
+    const created = await createDiagramWithContent(
+      projectId,
+      'classes',
+      name,
+      derivedContent as unknown as Record<string, unknown>,
+    )
+    navigate(`/orgs/${orgId}/projects/${projectId}/diagrams/${created.id}`)
+  }
+
   // TASK-047 — busca de novo o diagrama e substitui o conteúdo local
   // (a pessoa decidiu, no banner, que quer a versão de outra pessoa —
   // nunca acontece sozinho).
@@ -128,6 +160,7 @@ export function DiagramEditorPage() {
       content={content}
       readOnly={readOnly}
       onChange={handleChange}
+      onCreateDerivedDiagram={handleCreateDerivedDiagram}
       topbarCenter={
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, overflow: 'hidden' }}>
           <Link to={`/orgs/${orgId}/projects/${projectId}`} className="breadcrumb" style={{ margin: 0 }}>

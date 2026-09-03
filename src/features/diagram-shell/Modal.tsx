@@ -20,13 +20,17 @@ export interface ModalProps {
   title: string
   onClose: () => void
   children: ReactNode
+  /** TASK-055 — variante de largura/altura, hoje só `'wide'` (modal de
+   * foco, que hospeda um canvas em vez de um formulário). Sem isto, todo
+   * modal fica preso em `width: min(560px, 90vw)`. */
+  className?: string
 }
 
 // Deve bater com a duração da animação `modal-*-out` em `index.css` (não
 // precisa ser exata — só não pode ser menor, para não cortar a saída).
 const CLOSE_TRANSITION_MS = 100
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, className }: ModalProps) {
   const [closing, setClosing] = useState(false)
   const closingRef = useRef(false)
 
@@ -61,7 +65,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       className={`modal-overlay show${closing ? ' closing' : ''}`}
       onClick={handleOverlayClick}
     >
-      <div className={`modal${closing ? ' closing' : ''}`}>
+      <div className={`modal${className ? ` ${className}` : ''}${closing ? ' closing' : ''}`}>
         <div className="modal-head">
           <h3>{title}</h3>
           <button type="button" onClick={requestClose} aria-label="Fechar">

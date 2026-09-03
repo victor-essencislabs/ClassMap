@@ -3115,3 +3115,124 @@ button.ov-flag {
     transition: none;
   }
 }
+
+/* ── TASK-055 — modal de foco (classe selecionada + relacionadas) ────── */
+
+/* O `Modal` genérico é dimensionado para formulário (`min(560px, 90vw)`);
+   este hospeda um canvas, então precisa de área. Não mexe no `.modal`
+   base — todos os outros modais do app continuam iguais. */
+.modal.modal-wide {
+  width: min(1400px, 94vw);
+  max-height: 90vh;
+}
+
+/* Card compacto do modal de foco (`ClassCard compact`): cabeçalho + a
+   contagem de atributos, altura FIXA. A altura fixa não é estética — é o
+   contrato com `FOCUS_CARD_HEIGHT` (`focusSubgraph.ts`), que empilha os
+   cards, calcula os bounds do enquadramento e ancora os conectores a
+   partir desse número. Se esta altura mudar aqui, muda lá. */
+.diagram-shell-canvas .node-box.compact {
+  height: 56px;
+  box-sizing: border-box;
+}
+
+/* Estereótipo escondido no modo compacto: se aparecesse, o card passaria
+   da altura fixa acima. */
+.diagram-shell-canvas .node-box.compact .stereo {
+  display: none;
+}
+
+.diagram-shell-canvas .node-box.compact .node-attr-count {
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.focus-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.focus-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* As bolinhas de sentido da TASK-049 existem só sob
+   `.diagram-shell-inspector .rel-chip` — aqui a legenda é a mesma ideia,
+   nas mesmas tintas, fora daquele escopo. */
+.focus-legend .rel-dir-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--class-accent);
+}
+
+.focus-legend .rel-dir-dot.incoming {
+  background: var(--rel-incoming);
+  margin-left: 8px;
+}
+
+/* Área do canvas do recorte: enquadrada por `fitToScreen` (o mesmo do
+   botão "ajustar à tela"), então nunca precisa de pan — `overflow:
+   hidden` é recorte de segurança, não uma rolagem esperada.
+   O elemento também carrega a classe `.diagram-shell-canvas`: TODO o
+   estilo de card e conector do Diagrama de Classes é escrito sob esse
+   escopo (`.diagram-shell-canvas .node-box`, `.node-head`, `.node-row`,
+   `.connector`...). Sem ela, os cards do modal renderizariam como texto
+   cru — reaproveitar o escopo é o que mantém o recorte visualmente igual
+   ao canvas real, sem duplicar dezenas de regras. */
+.focus-canvas {
+  height: min(64vh, 640px);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.focus-viewport {
+  position: absolute;
+  inset: 0;
+}
+
+/* Cards do modal são leitura: sem cursor de arraste e sem o realce de
+   "clique aqui" que o card tem no canvas. O card da classe focada mantém
+   o `.selected` (é o assunto da janela). */
+.focus-canvas .node-box {
+  cursor: default;
+}
+
+/* Botão de abrir o foco, na seção "Relações" do inspector: largura
+   total, para não competir com o cabeçalho recolhível logo acima. */
+.diagram-shell-inspector .focus-open-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+
+/* ── TASK-056 — criar diagrama novo com o recorte ────────────────────── */
+
+/* Botão no cabeçalho do modal de foco (`ClassFocusModal`): o recorte na
+   tela é exatamente o que será criado, então a ação mora ao lado dele. */
+.focus-summary .btn {
+  margin-left: auto;
+}
+
+/* Dica do atalho, nos dois caminhos descobertos (botão do inspector,
+   TASK-055; botão do modal de foco, TASK-056). */
+.focus-summary .btn kbd,
+.diagram-shell-inspector .focus-open-btn kbd {
+  font: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+}

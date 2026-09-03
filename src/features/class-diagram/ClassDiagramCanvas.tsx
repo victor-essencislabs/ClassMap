@@ -20,10 +20,13 @@ import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassCard } from './ClassCard'
 import { ClassColorGrid } from './ClassColorGrid'
+import { ClassFocusModal } from './ClassFocusModal'
 import { resolveConnectClick } from './connectMode'
 import * as ops from './contentOperations'
 import { EdgeTypeGrid } from './EdgeTypeGrid'
 import { Connector, type ConnectorEmphasis } from './Connector'
+import { focusSubgraphFor, focusSubgraphToContent, suggestedFocusDiagramName } from './focusSubgraph'
+import { Modal } from '../diagram-shell/Modal'
 import { NoteCard } from './NoteCard'
 import { NoteInspector } from './NoteInspector'
 import {
@@ -46,6 +49,13 @@ interface ClassDiagramCanvasProps {
   topbarActions?: ReactNode
   /** TASK-047 — conteúdo extra sobreposto ao canvas (ex.: `RemoteUpdateBanner`), no mesmo nível do `connect-banner`/`zoom-controls`. */
   canvasOverlay?: ReactNode
+  /** TASK-056 — cria um diagrama novo com o recorte da classe focada
+   * (tecla `N`). Este componente monta o "o quê" (o conteúdo do recorte);
+   * quem sabe o "onde" (projeto, rota, Supabase) é a página que o
+   * hospeda — o canvas nunca falou com o Supabase e continua não falando.
+   * Ausente (ex.: em teste, ou num host que não suporte criar diagrama) =
+   * o atalho e o botão simplesmente não existem. */
+  onCreateDerivedDiagram?: (name: string, content: ClassDiagramContent) => Promise<void>
 }
 
 type Selection =
@@ -78,6 +88,7 @@ export function ClassDiagramCanvas({
   topbarCenter,
   topbarActions,
   canvasOverlay,
+  onCreateDerivedDiagram,
 }: ClassDiagramCanvasProps) {
   const [selection, setSelection] = useState<Selection>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -89,6 +100,17 @@ export function ClassDiagramCanvas({
   // carregar um diagrama existente). `Connector` limpa isto sozinho
   // quando a animação termina (`onJustCreatedAnimationEnd`).
   const [justCreatedRelationshipId, setJustCreatedRelationshipId] = useState<string | null>(null)
+  // TASK-055 — id da classe cujo recorte está aberto no modal de foco
+  // (`null` = modal fechado). Separado de `selection` de propósito: fechar
+  // o modal não pode mexer na seleção do canvas (CA-04).
+  const [focusClassId, setFocusClassId] = useState<string | null>(null)
+  // TASK-056 — id da classe cujo recorte vai virar diagrama novo (`null` =
+  // nenhum modal de nome aberto). Nada é criado enquanto este modal não
+  // for confirmado: é a rede de segurança do atalho de uma tecla só.
+  const [derivingClassId, setDerivingClassId] = useState<string | null>(null)
+  const [derivedName, setDerivedName] = useState('')
+  const [creatingDerived, setCreatingDerived] = useState(false)
+  const [derivedError, setDerivedError] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const zoomPan = useCanvasZoomPan(canvasRef)
@@ -201,8 +223,11 @@ export function ClassDiagramCanvas({
   // classe, atributo, multiplicidade, texto do comentário, busca da
   // sidebar, nome do diagrama na topbar) — senão apagar um caractere
   // digitado apagaria o card inteiro junto.
+  // TASK-055/056 — `focusClassId`/`derivingClassId` entram na guarda: com
+  // um modal aberto, `Delete` apagaria a classe atrás dele, sem o usuário
+  // estar vendo o canvas nem ter como perceber o que sumiu.
   useEffect(() => {
-    if (readOnly || !selection) return
+    if (readOnly || !selection || focusClassId || derivingClassId) return
     const current = selection // capturado aqui para o narrowing sobreviver dentro do closure abaixo
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
@@ -216,7 +241,93 @@ export function ClassDiagramCanvas({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, readOnly, content])
+  }, [selection, readOnly, content, focusClassId, derivingClassId])
+
+  // TASK-055 — `V` abre o modal de foco da classe selecionada. Duas
+  // diferenças deliberadas em relação ao atalho de excluir acima:
+  // 1. Sem guarda de `readOnly` — é visualização, não edição: um
+  //    `visualizador` precisa disso tanto quanto um `editor` (RN-03).
+  // 2. Ignora combinações com modificador — `Ctrl+V`/`Cmd+V` é colar em
+  //    qualquer aplicação; abrir um modal em cima disso seria hostil.
+  // A guarda de campo de texto é a mesma da TASK-052 (RN-04): sem ela,
+  // digitar a letra "v" no nome de uma classe abriria o modal.
+  useEffect(() => {
+    if (selection?.type !== 'class') return
+    const classId = selection.id
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'v' && e.key !== 'V') return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      setFocusClassId(classId)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selection])
+
+  // TASK-056 — `N` propõe criar um diagrama novo com o recorte da classe
+  // selecionada. Guardas a mais em relação ao `V`, porque isto ESCREVE no
+  // banco: exige `editor` (RN-01) e um host que saiba criar diagrama. A
+  // guarda de campo de texto (RN-02) é mais crítica aqui do que no `V` ou
+  // no `Delete`: o efeito colateral de digitar "n" no lugar errado seria
+  // uma linha nova no banco, não uma janela que fecha com `Esc`.
+  useEffect(() => {
+    if (readOnly || !onCreateDerivedDiagram) return
+    if (selection?.type !== 'class') return
+    const classId = selection.id
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'n' && e.key !== 'N') return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      openDerivedModal(classId)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, readOnly, onCreateDerivedDiagram, content])
+
+  function openDerivedModal(classId: string) {
+    const cls = content.classes.find((c) => c.id === classId)
+    if (!cls) return
+    setDerivedName(suggestedFocusDiagramName(cls.name))
+    setDerivedError(null)
+    setDerivingClassId(classId)
+  }
+
+  async function confirmDerivedDiagram() {
+    if (!derivingClassId || !onCreateDerivedDiagram) return
+    // `'full'`: o diagrama criado renderiza cards inteiros (lista de
+    // atributos), não os compactos do modal — posicionar com a altura
+    // compacta faria os cards nascerem sobrepostos (RN-06/CA-03).
+    const subgraph = focusSubgraphFor(content, derivingClassId, 'full')
+    const cls = content.classes.find((c) => c.id === derivingClassId)
+    if (!subgraph || !cls) return
+    setCreatingDerived(true)
+    setDerivedError(null)
+    try {
+      // Nome vazio cai na sugestão — `diagrams.name` é `not null`, mesmo
+      // tratamento que `DiagramTypeListPage` dá desde a TASK-016.
+      await onCreateDerivedDiagram(
+        derivedName.trim() || suggestedFocusDiagramName(cls.name),
+        focusSubgraphToContent(subgraph),
+      )
+      setDerivingClassId(null)
+      // Fecha também o modal de foco: navegar para o diagrama novo troca
+      // só o parâmetro da rota, então este componente NÃO é remontado e o
+      // modal de foco do diagrama anterior ficaria aberto por cima do
+      // recém-criado. Achado na validação ao vivo.
+      setFocusClassId(null)
+    } catch (err) {
+      // Falhou: nada de navegar. O modal continua aberto com o erro, e o
+      // diagrama de origem segue intacto atrás dele (CA-11).
+      setDerivedError(err instanceof Error ? err.message : 'Erro ao criar o diagrama.')
+    } finally {
+      setCreatingDerived(false)
+    }
+  }
 
   function startConnectMode(fromId?: string) {
     setConnectMode(true)
@@ -448,6 +559,7 @@ export function ClassDiagramCanvas({
               onDelete={() => removeClass(selectedClass.id)}
               onSelectRelationship={(id) => setSelection({ type: 'relationship', id })}
               onStartConnect={() => startConnectMode(selectedClass.id)}
+              onOpenFocus={() => setFocusClassId(selectedClass.id)}
             />
           ) : selectedRelationship ? (
             <RelationshipInspector
@@ -471,8 +583,70 @@ export function ClassDiagramCanvas({
         }
       />
       <Toast message={message} />
+      {/* TASK-055 — fora do `DiagramShell`: é uma janela sobre o app
+          inteiro, não um painel do shell. Fechar não toca em `selection`
+          (CA-04). */}
+      {focusClassId && (
+        <ClassFocusModal
+          content={content}
+          focusClassId={focusClassId}
+          onClose={() => setFocusClassId(null)}
+          // TASK-056 (RN-07) — o lugar mais honesto para oferecer isto: o
+          // que está na tela é exatamente o recorte que vai virar
+          // diagrama. Só para `editor`, e só se o host souber criar.
+          onCreateDerivedDiagram={
+            !readOnly && onCreateDerivedDiagram ? () => openDerivedModal(focusClassId) : undefined
+          }
+        />
+      )}
+
+      {/* TASK-056 — nada é criado até confirmar aqui. Além de deixar o
+          usuário nomear (precedente da TASK-016: diagrama criado sem nome
+          próprio já foi reclamação dele), este passo é o que separa um
+          atalho útil de "criar diagrama sem querer ao digitar". */}
+      {derivingClassId && (
+        <Modal title="Novo diagrama com o recorte" onClose={() => setDerivingClassId(null)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              confirmDerivedDiagram()
+            }}
+          >
+            <p>{describeDerivedDiagram(content, derivingClassId)}</p>
+            <div className="field">
+              <label htmlFor="derived-diagram-name-input">Nome do novo diagrama</label>
+              <input
+                id="derived-diagram-name-input"
+                type="text"
+                value={derivedName}
+                onChange={(e) => setDerivedName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            {derivedError && <p className="error">{derivedError}</p>}
+            <div className="modal-actions">
+              <button type="submit" className="btn primary" disabled={creatingDerived}>
+                {creatingDerived ? 'Criando…' : 'Criar e abrir'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </>
   )
+}
+
+/** Texto de apoio do modal: diz exatamente o que vai ser criado, para a
+ * confirmação não ser às cegas. */
+function describeDerivedDiagram(content: ClassDiagramContent, focusClassId: string): string {
+  const subgraph = focusSubgraphFor(content, focusClassId)
+  const cls = content.classes.find((c) => c.id === focusClassId)
+  if (!subgraph || !cls) return ''
+  const outras = subgraph.classes.length - 1
+  const relacoes = subgraph.relationships.length
+  const listaClasses = outras === 1 ? '1 classe relacionada' : `${outras} classes relacionadas`
+  const listaRelacoes = relacoes === 1 ? '1 relação' : `${relacoes} relações`
+  return `Cria um Diagrama de Classes novo neste projeto com ${cls.name} + ${listaClasses} (${listaRelacoes}). É uma cópia independente — editar o novo não altera este diagrama.`
 }
 
 function Sidebar({
@@ -592,6 +766,7 @@ function ClassInspector({
   onDelete,
   onSelectRelationship,
   onStartConnect,
+  onOpenFocus,
 }: {
   cls: DiagramClass
   relationships: DiagramRelationship[]
@@ -602,6 +777,9 @@ function ClassInspector({
   onDelete: () => void
   onSelectRelationship: (id: string) => void
   onStartConnect: () => void
+  /** TASK-055 — abre o modal de foco desta classe. Mesmo caminho do
+   * atalho `V` (o botão não tem comportamento próprio, RN-09). */
+  onOpenFocus: () => void
 }) {
   function updateAttribute(id: string, patch: Partial<DiagramClass['attributes'][number]>) {
     onChange({ attributes: cls.attributes.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
@@ -736,6 +914,15 @@ function ClassInspector({
           collapsed={relationsCollapsed}
           onToggle={() => setRelationsCollapsed((v) => !v)}
         />
+        {/* TASK-055 (RN-09) — fora do `!relationsCollapsed`, de
+            propósito: a seção se recolhe sozinha quando a classe tem mais
+            de 6 relações, que é exatamente o caso em que ver o recorte
+            isolado mais ajuda. Escondido junto, o caminho descoberto
+            sumiria justo na hora em que é mais necessário. Visível
+            também para `visualizador` — é leitura, não edição. */}
+        <button type="button" className="btn ghost focus-open-btn" onClick={onOpenFocus}>
+          Ver só as relacionadas <kbd>V</kbd>
+        </button>
         {!relationsCollapsed && (
           <div className="rel-list">
             {relationships.length === 0 ? (

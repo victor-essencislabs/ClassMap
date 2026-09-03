@@ -47,6 +47,12 @@ interface ConnectorProps {
    * limpar o id rastreado e o efeito não repetir em re-renders futuros
    * (reduced-motion também dispara isto, com sua própria animação mais curta). */
   onJustCreatedAnimationEnd?: () => void
+  /** TASK-055 — altura real dos cards quando ela não é a estimada a
+   * partir dos atributos: o modal de foco desenha cards compactos
+   * (`ClassCard compact`), de altura fixa. Sem isto o conector ancoraria
+   * no meio da altura que o card TERIA com a lista inteira de atributos —
+   * centenas de pixels abaixo do card desenhado. */
+  cardHeight?: number
   onSelect: (id: string) => void
   onDragControlPoint: (id: string, controlX: number) => void
 }
@@ -77,8 +83,8 @@ export function isJustCreatedAnimationEnd(animationName: string | undefined): bo
   return animationName === 'connector-symbol-in' || animationName === 'connector-fade-once'
 }
 
-function anchorPoint(cls: DiagramClass, side: 'left' | 'right'): Point {
-  const y = cls.y + estimateClassCardHeight(cls) / 2
+function anchorPoint(cls: DiagramClass, side: 'left' | 'right', cardHeight?: number): Point {
+  const y = cls.y + (cardHeight ?? estimateClassCardHeight(cls)) / 2
   const x = side === 'right' ? cls.x + CLASS_CARD_WIDTH : cls.x
   return { x, y }
 }
@@ -91,6 +97,7 @@ export function Connector({
   readOnly,
   zoom,
   justCreated = false,
+  cardHeight,
   onJustCreatedAnimationEnd,
   onSelect,
   onDragControlPoint,
@@ -103,8 +110,8 @@ export function Connector({
   const fromDir = fromSide === 'right' ? 1 : -1 // sentido para FORA do card `from`
   const toDir = toSide === 'left' ? 1 : -1 // sentido para DENTRO do card `to`
 
-  const fromAnchor = anchorPoint(fromClass, fromSide)
-  const toAnchor = anchorPoint(toClass, toSide)
+  const fromAnchor = anchorPoint(fromClass, fromSide, cardHeight)
+  const toAnchor = anchorPoint(toClass, toSide, cardHeight)
 
   const hasFromDiamond = relationship.type === 'aggregation' || relationship.type === 'composition'
   const hasToTriangle = relationship.type === 'inheritance'
