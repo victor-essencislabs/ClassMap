@@ -1,5 +1,5 @@
 ---
-id: TASK-054
+id: TASK-055
 title: Modal de foco (tecla V) — classe selecionada + classes relacionadas
 status: backlog
 type: feature
@@ -11,16 +11,16 @@ related_use_cases: []
 related_adrs: []
 ---
 
-# TASK-054 — Modal de foco (tecla V): classe selecionada + classes relacionadas
+# TASK-055 — Modal de foco (tecla V): classe selecionada + classes relacionadas
 
 > **Branch obrigatória**: esta task **não** é implementada em `main`. Criar `feature/foco-classe-relacionadas` a partir de `main` antes de qualquer edição, e commitar só nela. Nada de push/merge em `main` sem pedido explícito do usuário. Mesmo padrão já usado em `feature/animacoes-sistema` (rodada TASK-038..045), desvio deliberado do fluxo padrão do projeto ("branch única `main`, sem PR" — ver CONTEXT.md, "Fluxo de git ajustado").
 >
-> **Ordem**: esta task vem **antes** da TASK-055 na mesma branch — ela cria o módulo puro (`focusSubgraph.ts`) que a TASK-055 reaproveita. Ver "Relação com a TASK-055".
+> **Ordem**: esta task vem **antes** da TASK-056 na mesma branch — ela cria o módulo puro (`focusSubgraph.ts`) que a TASK-056 reaproveita. Ver "Relação com a TASK-056".
 
 ## Contexto
 Pedido do usuário (2026-09-03, com print do diagrama real do ELIMS aberto — 85 classes, 190 relações): com um diagrama grande na tela, "fica muito confuso de olhar com qual classe ele se relaciona". A TASK-049 já resolveu parte disso pintando por sentido as relações da classe selecionada e recuando as demais (opacidade 0.35) — mas num diagrama desse tamanho as classes relacionadas continuam espalhadas por todo o canvas, longe umas das outras e do card selecionado, então "seguir a linha" com o olho continua difícil. O usuário pediu explicitamente um modal: selecionar o card, apertar `V`, e ver **só** aquela classe e as classes com que ela se relaciona.
 
-**Sem ritual de 3 opções/ADR**: é um modo de visualização 100% efêmero (nada persistido, nada recalculado no diagrama real), sem tocar contrato/schema JSON — mesmo padrão já aceito para decisões de UI de `frontend-diagramas` (TASK-038..045, TASK-049, TASK-052). A TASK-055, irmã desta, **persiste** um diagrama novo — mas também sem tocar o contrato (ver a task).
+**Sem ritual de 3 opções/ADR**: é um modo de visualização 100% efêmero (nada persistido, nada recalculado no diagrama real), sem tocar contrato/schema JSON — mesmo padrão já aceito para decisões de UI de `frontend-diagramas` (TASK-038..045, TASK-049, TASK-052). A TASK-056, irmã desta, **persiste** um diagrama novo — mas também sem tocar o contrato (ver a task).
 
 ## Problema
 Num diagrama grande, descobrir a vizinhança de uma classe exige uma das duas coisas, e nenhuma resolve bem:
@@ -35,7 +35,7 @@ Com uma classe selecionada no Diagrama de Classes, apertar `V` abre um modal que
 - **Reancorar o foco clicando numa classe vizinha dentro do modal** ("aprofundar" a navegação) — barato de fazer depois, mas não foi pedido; fica registrado aqui como evolução natural, não implementar sem o usuário pedir.
 - **Vizinhança de 2+ níveis** (vizinhos dos vizinhos) — o pedido é explicitamente "as outras classes que ele tem relação".
 - **Diagrama de Objetos**: o `ObjectDiagramCanvas` nem tem o destaque por seleção da TASK-049 ainda (nenhum `emphasis` no módulo). Estender para lá exigiria construir aquela base antes; não pedido, não fazer agora.
-- **Persistir o subgrafo como diagrama novo** — é exatamente a TASK-055, task irmã.
+- **Persistir o subgrafo como diagrama novo** — é exatamente a TASK-056, task irmã.
 - **Cards de comentário (`notes`) dentro do modal**: nota é anotação livre no canvas, sem vínculo com nenhuma classe (ADR-013) — não há critério para dizer que uma nota "pertence" ao subgrafo. Ficam de fora.
 
 ## Comportamento atual
@@ -80,10 +80,10 @@ Selecionar uma classe pinta seus conectores por sentido e recua os demais (`conn
 ### Backend
 Não aplicável.
 ### Frontend
-- **Novo** `src/features/class-diagram/focusSubgraph.ts` — lógica pura, sem React (padrão `contentOperations.ts`): monta o subgrafo induzido e calcula o layout do modal. **Este módulo é a fronteira compartilhada com a TASK-055** — desenhar a assinatura já pensando nos dois consumidores (ver "Relação com a TASK-055").
+- **Novo** `src/features/class-diagram/focusSubgraph.ts` — lógica pura, sem React (padrão `contentOperations.ts`): monta o subgrafo induzido e calcula o layout do modal. **Este módulo é a fronteira compartilhada com a TASK-056** — desenhar a assinatura já pensando nos dois consumidores (ver "Relação com a TASK-056").
 - **Novo** `src/features/class-diagram/ClassFocusModal.tsx` — o overlay, montado sobre o `Modal` genérico de `diagram-shell/`.
 - `src/features/class-diagram/ClassDiagramCanvas.tsx` — `useEffect` do atalho `V` + estado `focusClassId` + montagem condicional do modal + o botão da RN-09 no `ClassInspector` (seção "Relações", ~linhas 438-451).
-- `src/index.css` — bloco novo comentado com `TASK-054` (variante larga do modal + área de canvas do foco). Não editar blocos de outras tasks.
+- `src/index.css` — bloco novo comentado com `TASK-055` (variante larga do modal + área de canvas do foco). Não editar blocos de outras tasks.
 - Reaproveitar sem alterar comportamento: `Modal` (`diagram-shell/Modal.tsx` — já fecha por `Esc`/clique fora/`×`, com animação de saída), `ClassCard.tsx` (em modo não interativo), `Connector.tsx` + `ConnectorEmphasis`, `estimateClassCardHeight`/`CLASS_CARD_WIDTH` (`types.ts`).
 ### Banco de dados
 Nenhuma migration — nada é persistido.
@@ -112,12 +112,12 @@ Nenhuma superfície nova — só leitura de dados já carregados no cliente, nen
 ## Riscos e rollback
 Risco baixo e contido: feature puramente aditiva, sem persistência, sem migration, sem tocar contrato. O risco real é de **qualidade do layout**, não de correção — um subgrafo com muitas vizinhas (ex.: `Sample`, 21) pode ficar com colunas altas demais e escala pequena demais para ler. Mitigação: CA-10 valida exatamente esse caso contra o dado real antes de fechar a task; se não couber bem, ajustar o layout (ex.: mais de uma coluna por lado) ainda dentro desta task. Rollback: descartar a branch — `main` não é tocada.
 
-## Relação com a TASK-055
-A TASK-055 (tecla `N`: criar um **diagrama novo** com o mesmo subconjunto) consome o **mesmo** `focusSubgraph.ts` desta task — mesmo conjunto de classes/relações e mesmo layout, para que o diagrama gerado abra parecido com o que o usuário acabou de ver no modal. Consequências práticas:
+## Relação com a TASK-056
+A TASK-056 (tecla `N`: criar um **diagrama novo** com o mesmo subconjunto) consome o **mesmo** `focusSubgraph.ts` desta task — mesmo conjunto de classes/relações e mesmo layout, para que o diagrama gerado abra parecido com o que o usuário acabou de ver no modal. Consequências práticas:
 
-1. Implementar a TASK-054 primeiro, na mesma branch.
-2. `buildFocusSubgraph`/`layoutFocusSubgraph` são funções **puras sobre `ClassDiagramContent`**, sem nenhuma dependência de React, de modal ou de Supabase — a TASK-055 precisa chamá-las fora de qualquer contexto de renderização.
-3. Se durante a TASK-055 aparecer necessidade de mudar a assinatura dessas funções, mudar no módulo (com os testes desta task passando), nunca duplicar a lógica.
+1. Implementar a TASK-055 primeiro, na mesma branch.
+2. `buildFocusSubgraph`/`layoutFocusSubgraph` são funções **puras sobre `ClassDiagramContent`**, sem nenhuma dependência de React, de modal ou de Supabase — a TASK-056 precisa chamá-las fora de qualquer contexto de renderização.
+3. Se durante a TASK-056 aparecer necessidade de mudar a assinatura dessas funções, mudar no módulo (com os testes desta task passando), nunca duplicar a lógica.
 
 ## Registro de execução
 ### Alterações realizadas
