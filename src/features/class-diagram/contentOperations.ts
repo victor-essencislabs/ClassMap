@@ -134,5 +134,7 @@ export function removeNote(content: ClassDiagramContent, id: string): ClassDiagr
  * `toBoundedNode` acima, para o card de comentário entrar no cálculo de
  * bounds do "ajustar à tela". */
 export function noteToBoundedNode(note: DiagramNote): BoundedNode {
-  return { x: note.x, y: note.y, w: NOTE_CARD_WIDTH, h: estimateNoteCardHeight(note) }
+  // TASK-052: tamanho manual (redimensionado pelo grip) tem prioridade
+  // sobre a largura fixa/estimativa por texto.
+  return { x: note.x, y: note.y, w: note.width ?? NOTE_CARD_WIDTH, h: note.height ?? estimateNoteCardHeight(note) }
 }

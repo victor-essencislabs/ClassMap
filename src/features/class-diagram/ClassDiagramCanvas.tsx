@@ -187,6 +187,29 @@ export function ClassDiagramCanvas({
     setSelection(null)
   }
 
+  // TASK-052 — Delete/Backspace exclui o que estiver selecionado (classe,
+  // relação ou nota), sem precisar abrir o inspector e clicar em
+  // "Excluir...". Nunca dispara com foco num campo de texto (nome da
+  // classe, atributo, multiplicidade, texto do comentário, busca da
+  // sidebar, nome do diagrama na topbar) — senão apagar um caractere
+  // digitado apagaria o card inteiro junto.
+  useEffect(() => {
+    if (readOnly || !selection) return
+    const current = selection // capturado aqui para o narrowing sobreviver dentro do closure abaixo
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      if (current.type === 'class') removeClass(current.id)
+      else if (current.type === 'relationship') removeRelationship(current.id)
+      else if (current.type === 'note') removeNote(current.id)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, readOnly, content])
+
   function startConnectMode(fromId?: string) {
     setConnectMode(true)
     setConnectFrom(fromId ?? null)
@@ -363,6 +386,7 @@ export function ClassDiagramCanvas({
                   connectMode={connectMode}
                   onSelect={(id) => setSelection({ type: 'note', id })}
                   onMove={(id, x, y) => updateNote(id, { x, y })}
+                  onResize={(id, width, height) => updateNote(id, { width, height })}
                 />
               ))}
             </div>

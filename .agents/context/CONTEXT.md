@@ -1,7 +1,7 @@
 ---
 estado: real
 fonte: git (branch main, sem commits até este bootstrap) e ClassMap_Documentacao.pdf (Essencislabs, Agosto 2026)
-ultima-revisao: 2026-09-03 (TASK-051 — cards de comentário no Diagrama de Classes)
+ultima-revisao: 2026-09-03 (TASK-052 — excluir com Delete/Backspace + redimensionar comentário)
 ---
 
 # Contexto Atual do Projeto — ClassMap
@@ -232,6 +232,14 @@ Pedido do usuário, mesma sessão: poder colocar cards de comentário no diagram
 **TASK-051 implementada** (mesma sessão): `DiagramNote` novo (`types.ts`, campo opcional `notes?` em `ClassDiagramContent` — backward-compatible com diagramas já salvos), `addNote`/`updateNote`/`removeNote`/`noteToBoundedNode` em `contentOperations.ts` (mesmo padrão de `addClass`/etc.), `NoteCard.tsx` novo (arrastável, mesmo padrão de `ClassCard`), botão "+ Nota" + `NoteInspector` (texto livre + `ClassColorGrid` reaproveitado, mesma paleta do card de classe) em `ClassDiagramCanvas.tsx`. Notas entram no cálculo de bounds do "ajustar à tela". **Bug latente corrigido no caminho**: `removeClass` retornava um objeto sem espalhar `...content` — inofensivo enquanto o conteúdo só tinha `classes`/`relationships`, mas descartaria `notes` silenciosamente ao excluir qualquer classe; corrigido com teste de regressão. 15 testes novos (`contentOperations.test.ts`, `classDiagramConversion.test.ts` — export nunca inclui `notes`, `ClassDiagramCanvas.test.tsx`). `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (274 testes, nenhum warning novo).
 
 **Achado e corrigido durante a validação visual ao vivo**: num diagrama sem nenhuma classe, o aviso "Nenhuma classe ainda" (`.empty-hint`, centralizado no canvas) cobria visualmente a primeira nota criada, porque as duas caem na mesma posição padrão centralizada. Corrigido checando também `notes` na condição de exibição do aviso. Validado ao vivo (painel de teste descartável no projeto ELIMS, nenhum diagrama real tocado): criar comentário, editar texto, escolher cor (vermelho testado, tingindo o card imediatamente) e excluir — todos funcionando.
+
+## TASK-052 — excluir com Delete/Backspace + redimensionar o comentário (2026-09-03)
+
+Dois pedidos do usuário, mesma sessão da TASK-051: (1) excluir classe/relação/comentário selecionado apertando `Delete`/`Backspace`, sem precisar abrir o inspector; (2) redimensionar o card de comentário arrastando com o mouse, pra ler o texto sem precisar aproximar o zoom do canvas inteiro. Sem ritual de 3 opções/ADR — melhoria de interação sobre o que já existia (excluir e redimensionar já eram possíveis por outros caminhos), sem tocar contrato/schema.
+
+**TASK-052 implementada** (mesma sessão): novo `useEffect` em `ClassDiagramCanvas.tsx` registra um listener de `keydown` em `window` só quando há seleção e `!readOnly` — ignora quando o foco está num `input`/`textarea`/`select` (RN-01, pra nunca apagar o card inteiro enquanto o usuário edita um campo de texto), senão exclui a classe/relação/nota selecionada. Generalizado pras 3 seleções (não só classe, que era o pedido literal) — mesma raciocínio de generalização já usado na TASK-049. `DiagramNote` ganhou `width?`/`height?` opcionais; `NoteCard.tsx` ganhou um grip no canto inferior direito (`.note-resize-handle`, com `stopPropagation` pra nunca também mover o card) que arrasta pra redimensionar os dois eixos juntos, com piso mínimo (`NOTE_MIN_WIDTH`/`NOTE_MIN_HEIGHT` = 140×50). 9 testes novos. `npm run build`/`lint`/`npx vitest run --exclude "**/.claude/worktrees/**"` limpos (283 testes, nenhum warning novo — 1 falha intermitente numa rodada isolada, já documentada como flakiness pré-existente de `DiagramsRouteDispatcher.test.tsx`, limpo de novo na rodada seguinte).
+
+**Achado durante a validação ao vivo, não é bug do produto**: o ambiente de automação do navegador usado nesta sessão não consegue disparar a exclusão nativa de caractere (Backspace/Delete) dentro de um campo de texto real — só digitar caracteres funciona nesse ambiente. Confirmado que não é o código da task: reproduzido também com zero seleção ativa (cenário em que o listener da TASK-052 nem chega a ser registrado) e via `dispatchEvent` sintético mostrando `defaultPrevented: false`. Validado ao vivo, sem essa limitação de ambiente: excluir classe/relação/comentário por tecla (fora de campo de texto) e redimensionar o comentário arrastando o grip (200×auto → 396×210px, sem mover a posição) — ambos confirmados funcionando, num painel de teste descartável no projeto ELIMS real (excluído ao final).
 
 ## Decisões recentes
 

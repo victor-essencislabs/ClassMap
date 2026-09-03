@@ -7,7 +7,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { ClassDiagramCanvas, isBackgroundTarget } from './ClassDiagramCanvas'
-import { emptyClassDiagramContent, type ClassDiagramContent } from './types'
+import { emptyClassDiagramContent, NOTE_CARD_WIDTH, NOTE_MIN_HEIGHT, NOTE_MIN_WIDTH, type ClassDiagramContent } from './types'
 
 /** Wrapper com estado local, do jeito que `DiagramEditorPage` usa o canvas de verdade. */
 function ControlledCanvas({
@@ -366,6 +366,133 @@ describe('ClassDiagramCanvas — cards de comentário (TASK-051, ver ADR-013)', 
     fireEvent.click(screen.getByTitle('Ajustar à tela'))
 
     expect((noteCards()[0] as HTMLElement).style.left).toBe(originalLeft)
+  })
+
+  it('TASK-052: grip no canto redimensiona o card — encolhe até o mínimo, nunca menos', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const handle = noteCards()[0].querySelector('.note-resize-handle') as HTMLElement
+    expect(handle).toBeInTheDocument()
+
+    // arrasto bem grande pra dentro — deve bater no piso (NOTE_MIN_WIDTH/HEIGHT)
+    // independente do zoom exato do canvas neste ambiente de teste.
+    fireEvent.pointerDown(handle, { clientX: 1000, clientY: 1000 })
+    fireEvent.pointerMove(handle, { clientX: -9000, clientY: -9000 })
+    fireEvent.pointerUp(handle)
+
+    const resized = noteCards()[0] as HTMLElement
+    expect(resized.style.width).toBe(`${NOTE_MIN_WIDTH}px`)
+    expect(resized.style.height).toBe(`${NOTE_MIN_HEIGHT}px`)
+  })
+
+  it('TASK-052: grip no canto redimensiona o card — cresce além do padrão', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const handle = noteCards()[0].querySelector('.note-resize-handle') as HTMLElement
+
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(handle, { clientX: 5000, clientY: 5000 })
+    fireEvent.pointerUp(handle)
+
+    const resized = noteCards()[0] as HTMLElement
+    expect(parseFloat(resized.style.width)).toBeGreaterThan(NOTE_CARD_WIDTH)
+    expect(resized.style.height).not.toBe('')
+  })
+
+  it('TASK-052: redimensionar não move o card (grip precisa de stopPropagation)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    const [note] = noteCards()
+    const originalLeft = (note as HTMLElement).style.left
+    const originalTop = (note as HTMLElement).style.top
+    const handle = note.querySelector('.note-resize-handle') as HTMLElement
+
+    fireEvent.pointerDown(handle, { clientX: 0, clientY: 0 })
+    fireEvent.pointerMove(handle, { clientX: 80, clientY: 80 })
+    fireEvent.pointerUp(handle)
+
+    const resized = noteCards()[0] as HTMLElement
+    expect(resized.style.left).toBe(originalLeft)
+    expect(resized.style.top).toBe(originalTop)
+  })
+})
+
+describe('ClassDiagramCanvas — excluir com Delete/Backspace (TASK-052)', () => {
+  it('Delete exclui a classe selecionada', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.pointerDown(classCards()[0])
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(0)
+  })
+
+  it('Backspace exclui o comentário selecionado', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addNoteButton())
+    expect(noteCards()).toHaveLength(1)
+
+    fireEvent.keyDown(window, { key: 'Backspace' })
+
+    expect(noteCards()).toHaveLength(0)
+  })
+
+  it('Delete exclui a relação selecionada', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.click(addClassButton())
+    fireEvent.click(startConnectButton())
+    const [from, to] = classCards()
+    fireEvent.pointerDown(from)
+    fireEvent.pointerDown(to)
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(1)
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(document.querySelectorAll('.connectors-layer > g')).toHaveLength(0)
+    // exclui só a relação — as 2 classes continuam
+    expect(classCards()).toHaveLength(2)
+  })
+
+  it('nunca dispara com o foco num campo de texto (não apaga o card ao editar o nome)', () => {
+    render(<ControlledCanvas />)
+    fireEvent.click(addClassButton())
+    fireEvent.pointerDown(classCards()[0])
+
+    const nameInput = screen.getByLabelText('Nome da classe')
+    nameInput.focus()
+    fireEvent.keyDown(nameInput, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(1)
+  })
+
+  it('sem nenhuma seleção, não faz nada', () => {
+    // "+ Classe" já deixa a classe recém-criada selecionada (mesmo
+    // comportamento de sempre) — para testar "nada selecionado" de
+    // verdade, carrega um diagrama já existente sem nunca clicar nele.
+    const content: ClassDiagramContent = {
+      classes: [{ id: 'c1', name: 'Pedido', attributes: [], x: 0, y: 0 }],
+      relationships: [],
+    }
+    render(<ControlledCanvas initial={content} />)
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(1)
+  })
+
+  it('visualizador: Delete não exclui nada (RN-03 — só editor)', () => {
+    const content: ClassDiagramContent = {
+      classes: [{ id: 'c1', name: 'Pedido', attributes: [{ id: 'a1', name: 'id', type: 'long' }], x: 0, y: 0 }],
+      relationships: [],
+    }
+    render(<ControlledCanvas initial={content} readOnly />)
+    fireEvent.pointerDown(classCards()[0])
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(1)
   })
 })
 

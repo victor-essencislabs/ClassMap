@@ -1932,6 +1932,10 @@ button.ov-flag {
   font-size: 12px;
   cursor: grab;
   user-select: none;
+  /* TASK-052: com altura manual (grip arrastado), o texto que não coube
+     rola em vez de vazar do card — sem efeito na altura automática
+     (nunca sobra conteúdo pra rolar nesse caso). */
+  overflow-y: auto;
   transition: border-color 120ms ease-out, box-shadow 120ms ease-out, background 120ms ease-out;
 }
 
@@ -1964,6 +1968,38 @@ button.ov-flag {
 .diagram-shell-canvas .note-card-empty {
   color: var(--text-faint);
   font-style: italic;
+}
+
+/* TASK-052 — grip de redimensionar no canto inferior direito: mesmo
+   truque visual do `resize` nativo de `<textarea>` (linhas diagonais),
+   desenhado com `linear-gradient` em vez de SVG. Discreto por padrão
+   (opacidade baixa), mais visível ao passar o mouse ou com a nota
+   selecionada — mesmo padrão de opacidade já usado no ponto de controle
+   do conector (`Connector.tsx`). */
+.diagram-shell-canvas .note-resize-handle {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 13px;
+  height: 13px;
+  cursor: nwse-resize;
+  opacity: 0.35;
+  background: linear-gradient(
+    135deg,
+    transparent 0 30%,
+    var(--text-faint) 30% 40%,
+    transparent 40% 55%,
+    var(--text-faint) 55% 65%,
+    transparent 65% 80%,
+    var(--text-faint) 80% 90%,
+    transparent 90%
+  );
+  transition: opacity 120ms ease-out;
+}
+
+.diagram-shell-canvas .note-card:hover .note-resize-handle,
+.diagram-shell-canvas .note-card.selected .note-resize-handle {
+  opacity: 0.9;
 }
 
 /* TASK-042 (ADR-011) — destaque de "valor herdado da classe" no momento

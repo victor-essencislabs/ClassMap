@@ -74,6 +74,11 @@ export interface DiagramNote {
   x: number
   y: number
   color?: string
+  /** Tamanho manual (TASK-052), arrastando o grip no canto do card
+   * (`NoteCard.tsx`). `undefined` mantém o comportamento padrão: largura
+   * fixa (`NOTE_CARD_WIDTH`) e altura automática pelo texto. */
+  width?: number
+  height?: number
 }
 
 export interface ClassDiagramContent {
@@ -167,6 +172,11 @@ export function estimateClassCardHeight(cls: { stereotype?: string; attributes: 
 // real renderizada cresce com `white-space: pre-wrap`, não precisa bater
 // exatamente).
 export const NOTE_CARD_WIDTH = 200
+// TASK-052 — piso de tamanho ao redimensionar pelo grip do canto
+// (`NoteCard.tsx`): pequeno o suficiente para não atrapalhar, grande o
+// suficiente para o texto não virar ilegível.
+export const NOTE_MIN_WIDTH = 140
+export const NOTE_MIN_HEIGHT = 50
 const NOTE_CHARS_PER_LINE = 26
 const NOTE_LINE_HEIGHT = 18
 const NOTE_PADDING = 24
