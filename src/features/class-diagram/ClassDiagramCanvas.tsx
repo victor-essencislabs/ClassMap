@@ -20,6 +20,7 @@ import { Toast, useToast } from '../diagram-shell/Toast'
 import { useCanvasZoomPan } from '../diagram-shell/useCanvasZoomPan'
 import { ClassCard } from './ClassCard'
 import { ClassColorGrid } from './ClassColorGrid'
+import { ClassFocusModal } from './ClassFocusModal'
 import { resolveConnectClick } from './connectMode'
 import * as ops from './contentOperations'
 import { EdgeTypeGrid } from './EdgeTypeGrid'
@@ -89,6 +90,10 @@ export function ClassDiagramCanvas({
   // carregar um diagrama existente). `Connector` limpa isto sozinho
   // quando a animação termina (`onJustCreatedAnimationEnd`).
   const [justCreatedRelationshipId, setJustCreatedRelationshipId] = useState<string | null>(null)
+  // TASK-055 — id da classe cujo recorte está aberto no modal de foco
+  // (`null` = modal fechado). Separado de `selection` de propósito: fechar
+  // o modal não pode mexer na seleção do canvas (CA-04).
+  const [focusClassId, setFocusClassId] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const zoomPan = useCanvasZoomPan(canvasRef)
@@ -201,8 +206,11 @@ export function ClassDiagramCanvas({
   // classe, atributo, multiplicidade, texto do comentário, busca da
   // sidebar, nome do diagrama na topbar) — senão apagar um caractere
   // digitado apagaria o card inteiro junto.
+  // TASK-055 — `focusClassId` entra na guarda: com o modal de foco aberto,
+  // `Delete` apagaria a classe atrás dele, sem o usuário estar vendo o
+  // canvas nem ter como perceber o que sumiu.
   useEffect(() => {
-    if (readOnly || !selection) return
+    if (readOnly || !selection || focusClassId) return
     const current = selection // capturado aqui para o narrowing sobreviver dentro do closure abaixo
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return
@@ -216,7 +224,30 @@ export function ClassDiagramCanvas({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, readOnly, content])
+  }, [selection, readOnly, content, focusClassId])
+
+  // TASK-055 — `V` abre o modal de foco da classe selecionada. Duas
+  // diferenças deliberadas em relação ao atalho de excluir acima:
+  // 1. Sem guarda de `readOnly` — é visualização, não edição: um
+  //    `visualizador` precisa disso tanto quanto um `editor` (RN-03).
+  // 2. Ignora combinações com modificador — `Ctrl+V`/`Cmd+V` é colar em
+  //    qualquer aplicação; abrir um modal em cima disso seria hostil.
+  // A guarda de campo de texto é a mesma da TASK-052 (RN-04): sem ela,
+  // digitar a letra "v" no nome de uma classe abriria o modal.
+  useEffect(() => {
+    if (selection?.type !== 'class') return
+    const classId = selection.id
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'v' && e.key !== 'V') return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      setFocusClassId(classId)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selection])
 
   function startConnectMode(fromId?: string) {
     setConnectMode(true)
@@ -448,6 +479,7 @@ export function ClassDiagramCanvas({
               onDelete={() => removeClass(selectedClass.id)}
               onSelectRelationship={(id) => setSelection({ type: 'relationship', id })}
               onStartConnect={() => startConnectMode(selectedClass.id)}
+              onOpenFocus={() => setFocusClassId(selectedClass.id)}
             />
           ) : selectedRelationship ? (
             <RelationshipInspector
@@ -471,6 +503,12 @@ export function ClassDiagramCanvas({
         }
       />
       <Toast message={message} />
+      {/* TASK-055 — fora do `DiagramShell`: é uma janela sobre o app
+          inteiro, não um painel do shell. Fechar não toca em `selection`
+          (CA-04). */}
+      {focusClassId && (
+        <ClassFocusModal content={content} focusClassId={focusClassId} onClose={() => setFocusClassId(null)} />
+      )}
     </>
   )
 }
@@ -592,6 +630,7 @@ function ClassInspector({
   onDelete,
   onSelectRelationship,
   onStartConnect,
+  onOpenFocus,
 }: {
   cls: DiagramClass
   relationships: DiagramRelationship[]
@@ -602,6 +641,9 @@ function ClassInspector({
   onDelete: () => void
   onSelectRelationship: (id: string) => void
   onStartConnect: () => void
+  /** TASK-055 — abre o modal de foco desta classe. Mesmo caminho do
+   * atalho `V` (o botão não tem comportamento próprio, RN-09). */
+  onOpenFocus: () => void
 }) {
   function updateAttribute(id: string, patch: Partial<DiagramClass['attributes'][number]>) {
     onChange({ attributes: cls.attributes.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
@@ -736,6 +778,15 @@ function ClassInspector({
           collapsed={relationsCollapsed}
           onToggle={() => setRelationsCollapsed((v) => !v)}
         />
+        {/* TASK-055 (RN-09) — fora do `!relationsCollapsed`, de
+            propósito: a seção se recolhe sozinha quando a classe tem mais
+            de 6 relações, que é exatamente o caso em que ver o recorte
+            isolado mais ajuda. Escondido junto, o caminho descoberto
+            sumiria justo na hora em que é mais necessário. Visível
+            também para `visualizador` — é leitura, não edição. */}
+        <button type="button" className="btn ghost focus-open-btn" onClick={onOpenFocus}>
+          Ver só as relacionadas <kbd>V</kbd>
+        </button>
         {!relationsCollapsed && (
           <div className="rel-list">
             {relationships.length === 0 ? (

@@ -14,6 +14,15 @@ interface ClassCardProps {
   /** Em modo de conexão (TASK-007), o card não é arrastável — só
    * clicável, para completar a relação (ver `ClassDiagramCanvas`). */
   connectMode: boolean
+  /** TASK-055 — troca a lista de atributos por uma linha com a contagem,
+   * dando ao card uma altura fixa e pequena (`FOCUS_CARD_HEIGHT`). Usado
+   * só pelo modal de foco: lá a pergunta é "com quem esta classe se
+   * relaciona", e a lista de atributos é justamente o que impede de
+   * responder — no diagrama real do ELIMS uma classe tem 97 atributos, o
+   * que faz um card de ~2000px de altura e obriga o enquadramento a
+   * encolher o recorte inteiro até ficar ilegível. Quem quer os atributos
+   * clica na classe no canvas. */
+  compact?: boolean
   onSelect: (id: string) => void
   onMove: (id: string, x: number, y: number) => void
 }
@@ -22,7 +31,16 @@ interface ClassCardProps {
  * Arrastável quando `!readOnly` e fora do modo de conexão — a edição de
  * nome/estereótipo/atributos acontece no inspector do shell (TASK-006),
  * não aqui. */
-export function ClassCard({ cls, selected, readOnly, zoom, connectMode, onSelect, onMove }: ClassCardProps) {
+export function ClassCard({
+  cls,
+  selected,
+  readOnly,
+  zoom,
+  connectMode,
+  compact = false,
+  onSelect,
+  onMove,
+}: ClassCardProps) {
   const dragStart = useRef<{ clientX: number; clientY: number; origX: number; origY: number } | null>(null)
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
@@ -53,7 +71,7 @@ export function ClassCard({ cls, selected, readOnly, zoom, connectMode, onSelect
 
   return (
     <div
-      className={`node-box${selected ? ' selected' : ''}${cls.color ? ' has-color' : ''}`}
+      className={`node-box${selected ? ' selected' : ''}${cls.color ? ' has-color' : ''}${compact ? ' compact' : ''}`}
       style={style}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -66,7 +84,11 @@ export function ClassCard({ cls, selected, readOnly, zoom, connectMode, onSelect
         {cls.name}
       </div>
       <div className="node-body">
-        {cls.attributes.length === 0 ? (
+        {compact ? (
+          <div className="node-row node-attr-count">
+            {cls.attributes.length} {cls.attributes.length === 1 ? 'atributo' : 'atributos'}
+          </div>
+        ) : cls.attributes.length === 0 ? (
           <div className="node-empty-row">sem atributos</div>
         ) : (
           cls.attributes.map((attr) => (

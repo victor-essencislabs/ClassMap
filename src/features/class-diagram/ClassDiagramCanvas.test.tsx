@@ -3,9 +3,9 @@
 // componente só recebe `content`/`onChange` via props). Reescrito na
 // TASK-007 para as novas interações (shell/inspector fixo/modo de
 // conexão) — ver "Estratégia de testes" e CA-01..CA-07 da task.
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ClassDiagramCanvas, isBackgroundTarget } from './ClassDiagramCanvas'
 import { emptyClassDiagramContent, NOTE_CARD_WIDTH, NOTE_MIN_HEIGHT, NOTE_MIN_WIDTH, type ClassDiagramContent } from './types'
 
@@ -21,8 +21,12 @@ function ControlledCanvas({
   return <ClassDiagramCanvas content={content} readOnly={readOnly} onChange={setContent} />
 }
 
+/** Cards do canvas REAL. O `:not(.focus-canvas)` não é detalhe: desde a
+ * TASK-055 o modal de foco também carrega a classe `diagram-shell-canvas`
+ * (é sob esse escopo que todo o CSS de card/conector está escrito), então
+ * sem isto os cards do modal entrariam na contagem do canvas. */
 function classCards() {
-  return Array.from(document.querySelectorAll('.diagram-shell-canvas .node-box'))
+  return Array.from(document.querySelectorAll('.diagram-shell-canvas:not(.focus-canvas) .node-box'))
 }
 
 function noteCards() {
@@ -561,5 +565,146 @@ describe('isBackgroundTarget', () => {
 
   it('trata null (fora de um Element, ex. document) como fundo', () => {
     expect(isBackgroundTarget(null)).toBe(true)
+  })
+})
+
+// TASK-055 — modal de foco (tecla `V` / botão no inspector). O que entra
+// no recorte é testado em `focusSubgraph.test.ts` (lógica pura); aqui só
+// o que é responsabilidade do componente: quando abre, quando NÃO abre, e
+// que abrir/fechar não altera o diagrama.
+describe('ClassDiagramCanvas — modal de foco (TASK-055)', () => {
+  /** Foco ── Pedido; Cliente ──▶ Foco; Avulsa sem relação nenhuma. */
+  function graph(): ClassDiagramContent {
+    return {
+      classes: [
+        { id: 'foco', name: 'Pedido', attributes: [], x: 0, y: 0 },
+        { id: 'item', name: 'ItemPedido', attributes: [], x: 400, y: 0 },
+        { id: 'cliente', name: 'Cliente', attributes: [], x: 0, y: 300 },
+        { id: 'avulsa', name: 'Avulsa', attributes: [], x: 800, y: 800 },
+      ],
+      relationships: [
+        { id: 'r1', from: 'foco', to: 'item', type: 'composition', controlX: 300 },
+        { id: 'r2', from: 'cliente', to: 'foco', type: 'association', controlX: 150 },
+      ],
+    }
+  }
+
+  function focusCards() {
+    return Array.from(document.querySelectorAll('.focus-canvas .node-box'))
+  }
+
+  function selectFocusClass() {
+    fireEvent.pointerDown(classCards()[0]) // "Pedido" é a primeira do content
+  }
+
+  it('CA-01: V abre o modal com a classe focada e só as relacionadas', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+    const names = focusCards().map((c) => c.textContent)
+    expect(names).toHaveLength(3)
+    expect(names.join(' ')).toContain('ItemPedido')
+    expect(names.join(' ')).toContain('Cliente')
+    expect(names.join(' ')).not.toContain('Avulsa')
+  })
+
+  it('desenha um conector para cada relação do recorte', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'V' })
+
+    expect(document.querySelectorAll('.focus-canvas .connectors-layer > g')).toHaveLength(2)
+  })
+
+  it('CA-08: classe sem nenhuma relação abre o modal com o aviso, não em branco (RN-07)', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    fireEvent.pointerDown(classCards()[3]) // "Avulsa"
+
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.getByText(/não se relaciona com nenhuma outra classe/)).toBeInTheDocument()
+    expect(focusCards()).toHaveLength(1)
+  })
+
+  it('CA-06: sem seleção, V não abre nada', () => {
+    render(<ControlledCanvas initial={graph()} />)
+
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.queryByText(/^Foco: /)).not.toBeInTheDocument()
+  })
+
+  it('CA-06: com uma relação selecionada, V não abre nada', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    fireEvent.click(document.querySelectorAll('.connectors-layer > g')[0])
+
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.queryByText(/^Foco: /)).not.toBeInTheDocument()
+  })
+
+  it('CA-05: com o foco num campo de texto, V digita a letra e não abre o modal (RN-04)', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+
+    const nameInput = screen.getByLabelText('Nome da classe')
+    nameInput.focus()
+    fireEvent.keyDown(nameInput, { key: 'v' })
+
+    expect(screen.queryByText(/^Foco: /)).not.toBeInTheDocument()
+  })
+
+  it('Ctrl+V (colar) não abre o modal', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'v', ctrlKey: true })
+
+    expect(screen.queryByText(/^Foco: /)).not.toBeInTheDocument()
+  })
+
+  it('CA-07: visualizador consegue abrir o modal (RN-03 — é leitura, não edição)', () => {
+    render(<ControlledCanvas initial={graph()} readOnly />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'v' })
+
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+  })
+
+  it('CA-11: o botão do inspector abre o mesmo modal que o atalho (RN-09)', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+
+    fireEvent.click(screen.getByRole('button', { name: /Ver só as relacionadas/ }))
+
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+    expect(focusCards()).toHaveLength(3)
+  })
+
+  it('CA-04: abrir e fechar nunca altera o conteúdo do diagrama (RN-01)', async () => {
+    const onChange = vi.fn()
+    render(<ClassDiagramCanvas content={graph()} readOnly={false} onChange={onChange} />)
+    selectFocusClass()
+
+    fireEvent.keyDown(window, { key: 'v' })
+    expect(screen.getByText('Foco: Pedido')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByText('Foco: Pedido')).not.toBeInTheDocument())
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('com o modal aberto, Delete não exclui a classe atrás dele', () => {
+    render(<ControlledCanvas initial={graph()} />)
+    selectFocusClass()
+    fireEvent.keyDown(window, { key: 'v' })
+
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(classCards()).toHaveLength(4)
   })
 })
