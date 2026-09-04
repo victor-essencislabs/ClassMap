@@ -13,6 +13,7 @@
 // ponto de controle do conector não fazem parte do contrato (são
 // detalhes de layout do ClassMap, não da estrutura do diagrama).
 import { z } from 'zod'
+import { CLASS_DIAGRAM_FILE_TYPE, declaredFileType, wrongFileTypeError } from './fileType'
 
 export const RELATIONSHIP_TYPE_VALUES = [
   'association',
@@ -48,6 +49,11 @@ const DiagramObjectSchema = z.object({
 })
 
 export const DiagramExportSchema = z.object({
+  /** TASK-058 (ADR-014, decisão 6) — **opcional** de propósito: os JSONs já
+   * gerados pelo `classmap-keeper` do E-LIMS não têm esse campo e não podem
+   * parar de importar (RN-04). O que é recusado é um `type` de **outro**
+   * contrato, checado em `parseDiagramExport`. */
+  type: z.literal(CLASS_DIAGRAM_FILE_TYPE).optional(),
   classes: z.array(ClassSchema).default([]),
   relationships: z.array(RelationshipSchema).default([]),
   objects: z.array(DiagramObjectSchema).default([]),
@@ -69,6 +75,14 @@ export interface ParseResult {
  * mostrar uma mensagem clara sem corromper o diagrama atual (CA-03 da
  * TASK-005). */
 export function parseDiagramExport(json: unknown): ParseResult {
+  // Sem esta checagem, um arquivo de Visão do Sistema colado aqui passaria
+  // pelo schema (todos os arrays têm default `[]`) e importaria um diagrama
+  // **vazio**, em silêncio — TASK-058/CA-04.
+  const declared = declaredFileType(json)
+  if (declared && declared !== CLASS_DIAGRAM_FILE_TYPE) {
+    return { ok: false, errors: [wrongFileTypeError(declared, CLASS_DIAGRAM_FILE_TYPE)] }
+  }
+
   const result = DiagramExportSchema.safeParse(json)
   if (result.success) {
     return { ok: true, data: result.data, errors: [] }

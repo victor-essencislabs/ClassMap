@@ -6,13 +6,14 @@ import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { addClass } from '../class-diagram/contentOperations'
 import { emptyClassDiagramContent, type ClassDiagramContent } from '../class-diagram/types'
+import { classDiagramIO } from './classDiagramConversion'
 import { ImportExportControls } from './ImportExportControls'
 
 function ControlledControls() {
   const [content, setContent] = useState<ClassDiagramContent>(emptyClassDiagramContent())
   return (
     <>
-      <ImportExportControls content={content} fileName="teste" canImport onImport={setContent} />
+      <ImportExportControls content={content} fileName="teste" canImport onImport={setContent} io={classDiagramIO} />
       <pre data-testid="content">{JSON.stringify(content)}</pre>
     </>
   )
@@ -34,6 +35,7 @@ describe('ImportExportControls — exportar', () => {
         fileName="teste"
         canImport
         onImport={() => {}}
+        io={classDiagramIO}
       />,
     )
 
@@ -54,6 +56,7 @@ describe('ImportExportControls — exportar', () => {
         fileName="teste"
         canImport
         onImport={() => {}}
+        io={classDiagramIO}
       />,
     )
 
@@ -140,6 +143,7 @@ describe('ImportExportControls — permissão', () => {
         fileName="teste"
         canImport={false}
         onImport={() => {}}
+        io={classDiagramIO}
       />,
     )
     expect(screen.queryByText('Importar JSON')).not.toBeInTheDocument()

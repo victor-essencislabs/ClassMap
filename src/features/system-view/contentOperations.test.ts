@@ -10,8 +10,9 @@ import {
   updateEntity,
   updateModule,
   updateField,
+  updatePermissionRule,
 } from './contentOperations'
-import { emptySystemViewContent, type SystemViewContent } from './types'
+import { emptySystemViewContent, normalizeSystemViewContent, type SystemViewContent } from './types'
 
 function withModuleAndEntity(): { content: SystemViewContent; moduleId: string; entityId: string } {
   let content = addModule(emptySystemViewContent())
@@ -122,6 +123,132 @@ describe('updateEntity', () => {
     const entity = content.modules[0].entities[0]
     expect(entity.name).toBe('Pedido')
     expect(entity.fields).toHaveLength(1)
+  })
+})
+
+describe('TASK-057 — campos da linha de correlação (ADR-014)', () => {
+  it('updateField edita os campos novos, inclusive apagando o alvo da FK', () => {
+    let { content, moduleId, entityId } = withModuleAndEntity()
+    content = addField(content, moduleId, entityId)
+    const fieldId = content.modules[0].entities[0].fields[0].id
+
+    content = updateField(content, moduleId, entityId, fieldId, {
+      name: 'user',
+      dbColumn: undefined,
+      isForeignKey: true,
+      foreignKeyTarget: 'User',
+      dtoRequired: true,
+      dtoMin: '4',
+      dtoMax: '40',
+    })
+
+    expect(content.modules[0].entities[0].fields[0]).toMatchObject({
+      name: 'user',
+      isForeignKey: true,
+      foreignKeyTarget: 'User',
+      dtoRequired: true,
+      dtoMin: '4',
+      dtoMax: '40',
+    })
+    expect(content.modules[0].entities[0].fields[0].dbColumn).toBeUndefined()
+  })
+
+  it('RN-02: o NN do banco e o REQ do DTO são independentes', () => {
+    let { content, moduleId, entityId } = withModuleAndEntity()
+    content = addField(content, moduleId, entityId)
+    const fieldId = content.modules[0].entities[0].fields[0].id
+
+    content = updateField(content, moduleId, entityId, fieldId, { dtoRequired: true })
+
+    const field = content.modules[0].entities[0].fields[0]
+    expect(field.dtoRequired).toBe(true)
+    expect(field.isRequired).toBe(false)
+  })
+
+  it('updatePermissionRule edita o método que a regra guarda', () => {
+    let { content, moduleId, entityId } = withModuleAndEntity()
+    content = addPermissionRule(content, moduleId, entityId)
+    const ruleId = content.modules[0].entities[0].permissionRules[0].id
+
+    content = updatePermissionRule(content, moduleId, entityId, ruleId, { method: 'update' })
+
+    expect(content.modules[0].entities[0].permissionRules[0].method).toBe('update')
+  })
+})
+
+describe('normalizeSystemViewContent (RN-01 da TASK-057)', () => {
+  /** Formato salvo antes da `ADR-014`: sem `name`, sem `dtoRequired`, sem
+   * `method` — é o que existe hoje em `diagrams.content` em produção. */
+  const formatoAntigo = {
+    modules: [
+      {
+        id: 'm1',
+        name: 'identidade-e-tenant',
+        entities: [
+          {
+            id: 'e1',
+            name: 'Account',
+            fields: [{ id: 'f1', dbColumn: 'name', dbType: 'varchar(200)', validationRule: '' }],
+            apiMethods: [{ id: 'a1', controller: 'Get()', service: '', repository: '' }],
+            permissionRules: [{ id: 'p1', description: 'p1 - ...', codeCondition: 'return Forbid();' }],
+          },
+        ],
+      },
+    ],
+  }
+
+  it('linha antiga ganha `name` a partir do `dbColumn` — nenhuma fica sem rótulo', () => {
+    const content = normalizeSystemViewContent(formatoAntigo)
+    const field = content.modules[0].entities[0].fields[0]
+    expect(field.name).toBe('name')
+    expect(field.dbColumn).toBe('name')
+  })
+
+  it('preenche os padrões de `dtoRequired` e `method` sem tocar no resto', () => {
+    const content = normalizeSystemViewContent(formatoAntigo)
+    const entity = content.modules[0].entities[0]
+    expect(entity.fields[0].dtoRequired).toBe(false)
+    expect(entity.permissionRules[0].method).toBe('')
+    expect(entity.fields[0].dbType).toBe('varchar(200)')
+    expect(entity.apiMethods[0].controller).toBe('Get()')
+  })
+
+  it('não sobrescreve um `name` que já existe', () => {
+    const content = normalizeSystemViewContent({
+      modules: [
+        {
+          id: 'm1',
+          name: 'm',
+          entities: [
+            {
+              id: 'e1',
+              name: 'E',
+              fields: [{ id: 'f1', name: 'user', dbColumn: 'user_id' }],
+              apiMethods: [],
+              permissionRules: [],
+            },
+          ],
+        },
+      ],
+    })
+    expect(content.modules[0].entities[0].fields[0].name).toBe('user')
+  })
+
+  it('linha sem `dbColumn` e sem `name` fica com rótulo vazio, sem quebrar', () => {
+    const content = normalizeSystemViewContent({
+      modules: [
+        { id: 'm1', name: 'm', entities: [{ id: 'e1', name: 'E', fields: [{ id: 'f1' }] }] },
+      ],
+    })
+    const entity = content.modules[0].entities[0]
+    expect(entity.fields[0].name).toBe('')
+    expect(entity.apiMethods).toEqual([])
+    expect(entity.permissionRules).toEqual([])
+  })
+
+  it('valor que não é conteúdo de Visão do Sistema cai no conteúdo vazio', () => {
+    expect(normalizeSystemViewContent(null)).toEqual(emptySystemViewContent())
+    expect(normalizeSystemViewContent({ classes: [] })).toEqual(emptySystemViewContent())
   })
 })
 

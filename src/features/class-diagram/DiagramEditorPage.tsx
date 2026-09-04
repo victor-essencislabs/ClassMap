@@ -17,6 +17,7 @@ import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import { ClassDiagramCanvas } from './ClassDiagramCanvas'
 import { emptyClassDiagramContent, isClassDiagramContent, type ClassDiagramContent } from './types'
 import { ImportExportControls } from '../import-export/ImportExportControls'
+import { classDiagramIO } from '../import-export/classDiagramConversion'
 
 const AUTOSAVE_DELAY_MS = 800
 
@@ -199,6 +200,7 @@ export function DiagramEditorPage() {
             fileName={diagram.name}
             canImport={!readOnly}
             onImport={handleChange}
+            io={classDiagramIO}
           />
         </>
       }

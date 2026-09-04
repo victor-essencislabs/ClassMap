@@ -1030,6 +1030,42 @@ button.ov-flag {
   background: var(--surface);
 }
 
+/* TASK-057 — os campos que a ADR-014 acrescentou entram como conteúdo
+   secundário da célula que já existe (nome → coluna de banco, FK → alvo,
+   REQ/mín/máx → resíduo da validação), sem coluna nova na tabela. */
+table.ov-table input.ov-subinput {
+  font-size: 10px;
+  color: var(--text-faint);
+  min-width: 0;
+  margin-top: 2px;
+}
+
+table.ov-table input.ov-minmax {
+  width: 3.2rem;
+  flex: none;
+  margin-top: 0;
+}
+
+.ov-fname-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* REQ é do DTO, não do banco — cor própria para não se confundir com o NN
+   que fica na coluna "Restrições" (RN-02 da TASK-057). */
+.ov-flag.req {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+  color: var(--accent-strong);
+}
+
+.ov-valid-rule {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
 .ov-row-remove {
   flex: none;
   width: 22px;
@@ -1163,6 +1199,32 @@ button.ov-flag {
 }
 
 .ov-perm-title-input:focus {
+  outline: none;
+  border-color: var(--accent-soft-border);
+  background: var(--surface-alt);
+}
+
+/* TASK-057 — método que a regra guarda (ADR-014, decisão 5): subtítulo do
+   card, discreto em relação à descrição. */
+.ov-perm-method-input {
+  display: block;
+  width: calc(100% - 26px);
+  font: inherit;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  padding: 2px 4px;
+  margin: 0 0 4px -4px;
+}
+
+.ov-perm-method-input:hover {
+  border-color: var(--border);
+}
+
+.ov-perm-method-input:focus {
   outline: none;
   border-color: var(--accent-soft-border);
   background: var(--surface-alt);

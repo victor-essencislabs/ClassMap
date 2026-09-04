@@ -3,7 +3,7 @@
 // lançariam por não haver client configurado no ambiente de teste.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SystemViewPage } from './SystemViewPage'
 import { emptySystemViewContent } from './types'
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
@@ -96,6 +96,8 @@ describe('SystemViewPage', () => {
     fireEvent.click(screen.getByText('+ Campo'))
 
     expect(screen.queryByText('Nenhum campo cadastrado.')).not.toBeInTheDocument()
+    // TASK-057/CA-01: a linha nasce com nome próprio, além da coluna de banco
+    expect(screen.getByDisplayValue('campo')).toBeInTheDocument()
     expect(screen.getByDisplayValue('coluna')).toBeInTheDocument()
   })
 
@@ -279,6 +281,221 @@ describe('SystemViewPage', () => {
 
       await waitFor(() => expect(getMyProjectRole).toHaveBeenCalled())
       expect(screen.queryByLabelText(/Excluir entidade/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('TASK-058 — import/export na Visão do Sistema (ADR-014)', () => {
+    it('a topbar oferece exportar e importar para quem edita', async () => {
+      renderPage()
+
+      expect(await screen.findByText('Exportar JSON')).toBeInTheDocument()
+      expect(screen.getByText('Importar JSON')).toBeInTheDocument()
+    })
+
+    it('CA-08: em modo visualizador, exportar continua, importar não aparece', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+
+      expect(await screen.findByText('Exportar JSON')).toBeInTheDocument()
+      expect(screen.queryByText('Importar JSON')).not.toBeInTheDocument()
+    })
+
+    it('importar um módulo pelo modal traz o módulo e persiste', async () => {
+      renderPage()
+
+      fireEvent.click(await screen.findByText('Importar JSON'))
+      fireEvent.change(screen.getByLabelText('JSON para importar'), {
+        target: {
+          value: JSON.stringify({
+            type: 'system-view',
+            modules: [
+              {
+                name: 'identidade-e-tenant',
+                entities: [{ name: 'Account', fields: [{ name: 'id', dbColumn: 'id', dbType: 'int' }] }],
+              },
+            ],
+          }),
+        },
+      })
+      fireEvent.click(screen.getByText('Importar módulos'))
+
+      expect(await screen.findByDisplayValue('identidade-e-tenant')).toBeInTheDocument()
+      expect(screen.getByText('Account')).toBeInTheDocument()
+      await waitFor(() =>
+        expect(updateDiagramContent).toHaveBeenCalledWith(
+          'diagram-1',
+          expect.objectContaining({
+            modules: [expect.objectContaining({ name: 'identidade-e-tenant' })],
+          }),
+        ),
+      )
+    })
+
+    it('TASK-059/CA-02: o modal de exportar oferece o prompt para IA', async () => {
+      renderPage()
+
+      fireEvent.click(await screen.findByText('Exportar JSON'))
+
+      expect(screen.getByText('Baixar prompt para IA (.md)')).toBeInTheDocument()
+    })
+
+    it('CA-03: arquivo de Diagrama de Classes é recusado, sem tocar no conteúdo', async () => {
+      renderPage()
+
+      fireEvent.click(await screen.findByText('Importar JSON'))
+      fireEvent.change(screen.getByLabelText('JSON para importar'), {
+        target: { value: JSON.stringify({ type: 'class-diagram', classes: [{ name: 'User' }] }) },
+      })
+      fireEvent.click(screen.getByText('Importar módulos'))
+
+      expect(await screen.findByText(/Diagrama de Classes/)).toBeInTheDocument()
+      expect(updateDiagramContent).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('TASK-057 — linha de correlação entre camadas (ADR-014)', () => {
+    /** Conteúdo no formato anterior à `ADR-014` (sem `name`, sem
+     * `dtoRequired`, sem `method`), com as três situações reais medidas no
+     * E-LIMS: linha completa, coluna FK com alvo, e propriedade de navegação
+     * sem coluna de banco. */
+    const conteudoSalvo = {
+      modules: [
+        {
+          id: 'm1',
+          name: 'identidade-e-tenant',
+          entities: [
+            {
+              id: 'e1',
+              name: 'Account',
+              fields: [
+                {
+                  id: 'f1',
+                  dbColumn: 'name',
+                  dbType: 'varchar(200)',
+                  isRequired: true,
+                  modelType: 'string?',
+                  dtoType: 'string?',
+                  dtoRequired: true,
+                  dtoMin: '4',
+                  dtoMax: '40',
+                  validationRule: 'EmailAddress',
+                  frontendType: 'string',
+                },
+                {
+                  id: 'f2',
+                  name: 'userId',
+                  dbColumn: 'user_id',
+                  dbType: 'int',
+                  isForeignKey: true,
+                  foreignKeyTarget: 'User',
+                  modelType: 'int?',
+                  dtoType: 'int?',
+                  validationRule: '',
+                  frontendType: 'number',
+                },
+                {
+                  id: 'f3',
+                  name: 'user',
+                  dbType: '',
+                  modelType: 'User?',
+                  dtoType: 'UserDto?',
+                  validationRule: '',
+                  frontendType: 'User',
+                },
+              ],
+              apiMethods: [],
+              permissionRules: [
+                {
+                  id: 'p1',
+                  description: 'p1 - dono da conta atualiza a própria',
+                  method: 'update',
+                  codeCondition: 'if (AccountIdToken != accountDto.Id) return Forbid();',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const conteudoVazio = diagram.content
+
+    beforeEach(() => {
+      diagram.content = conteudoSalvo as unknown as Record<string, unknown>
+    })
+
+    afterEach(() => {
+      diagram.content = conteudoVazio
+    })
+
+    /** Seleciona a entidade `Account` do conteúdo carregado. */
+    async function selectAccount() {
+      fireEvent.click(await screen.findByText('Account'))
+    }
+
+    it('CA-02: conteúdo salvo antes da ADR-014 carrega, com o `dbColumn` servindo de rótulo', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+      await selectAccount()
+
+      // `f1` não tem `name` salvo — o rótulo vem do `dbColumn` (RN-01).
+      expect(screen.getByText('name')).toBeInTheDocument()
+      expect(screen.getByText('varchar(200)')).toBeInTheDocument()
+    })
+
+    it('CA-03: linha sem coluna de banco usa o `name` como rótulo', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+      await selectAccount()
+
+      expect(screen.getByText('user')).toBeInTheDocument()
+      // quando os dois existem e diferem, os dois aparecem
+      expect(screen.getByText('userId')).toBeInTheDocument()
+      expect(screen.getByText('user_id')).toBeInTheDocument()
+    })
+
+    it('CA-04: FK com alvo aparece como `FK → alvo`', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+      await selectAccount()
+
+      expect(screen.getByText('FK → User')).toBeInTheDocument()
+    })
+
+    it('CA-05: REQ/mín/máx convivem com o resíduo em texto livre', async () => {
+      getMyProjectRole.mockResolvedValue('visualizador')
+      renderPage()
+      await selectAccount()
+
+      expect(screen.getByText('REQ')).toBeInTheDocument()
+      expect(screen.getByText('mín 4')).toBeInTheDocument()
+      expect(screen.getByText('máx 40')).toBeInTheDocument()
+      expect(screen.getByText('EmailAddress')).toBeInTheDocument()
+      // RN-02: o NN do banco continua na coluna de restrições, separado do REQ
+      expect(screen.getByText('NN')).toBeInTheDocument()
+    })
+
+    it('CA-06: o método da regra de permissão é editável e persistido', async () => {
+      renderPage()
+      await selectAccount()
+
+      const input = (await screen.findByLabelText('Método')) as HTMLInputElement
+      expect(input.value).toBe('update')
+
+      fireEvent.change(input, { target: { value: 'delete' } })
+
+      await waitFor(() =>
+        expect(updateDiagramContent).toHaveBeenCalledWith(
+          'diagram-1',
+          expect.objectContaining({
+            modules: [
+              expect.objectContaining({
+                entities: [expect.objectContaining({ permissionRules: [expect.objectContaining({ method: 'delete' })] })],
+              }),
+            ],
+          }),
+        ),
+      )
     })
   })
 })

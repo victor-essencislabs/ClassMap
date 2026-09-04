@@ -15,12 +15,18 @@ import {
   type RelationshipType,
 } from '../class-diagram/types'
 import { newId } from '../class-diagram/contentOperations'
+import { buildAgentPromptMarkdown } from './agentPrompt'
+import type { DiagramFileIO } from './diagramFileIO'
+import { CLASS_DIAGRAM_FILE_TYPE } from './fileType'
 import { parseDiagramExport, validateReferentialIntegrity, type DiagramExportFile } from './schema'
 
 export function exportClassDiagram(content: ClassDiagramContent): DiagramExportFile {
   const nameOf = new Map(content.classes.map((c) => [c.id, c.name]))
 
   return {
+    // TASK-058 — o arquivo passou a se identificar. Ler continua tolerante a
+    // arquivo sem `type` (RN-04); escrever sempre declara.
+    type: CLASS_DIAGRAM_FILE_TYPE,
     classes: content.classes.map((c) => ({
       name: c.name,
       stereotype: c.stereotype,
@@ -143,4 +149,18 @@ export function importClassDiagram(json: unknown): ImportResult {
   })
 
   return { ok: true, content: { classes, relationships }, errors: [] }
+}
+
+export const classDiagramIO: DiagramFileIO<ClassDiagramContent> = {
+  fileType: CLASS_DIAGRAM_FILE_TYPE,
+  export: exportClassDiagram,
+  // O conteúdo atual é ignorado: aqui o import substitui o diagrama inteiro
+  // (comportamento desde a TASK-005), diferente da Visão do Sistema.
+  import: (json) => importClassDiagram(json),
+  importPlaceholder:
+    '{"type":"class-diagram","classes":[{"name":"User","attributes":[{"name":"id","type":"long"}]}],"relationships":[{"from":"User","to":"Log","type":"association"}]}',
+  importHint: 'Isso substitui o diagrama atual.',
+  confirmImportLabel: 'Importar e substituir diagrama',
+  agentPrompt: buildAgentPromptMarkdown,
+  agentPromptFileName: 'classmap-prompt-ia.md',
 }

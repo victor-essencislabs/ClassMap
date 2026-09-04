@@ -14,6 +14,8 @@ import { useDiagramRemoteUpdate } from '../diagram-shell/useDiagramRemoteUpdate'
 import { PresenceAvatars } from '../diagram-shell/PresenceAvatars'
 import { RemoteUpdateBanner } from '../diagram-shell/RemoteUpdateBanner'
 import { Modal } from '../diagram-shell/Modal'
+import { ImportExportControls } from '../import-export/ImportExportControls'
+import { systemViewIO } from '../import-export/systemViewConversion'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import {
   getCurrentUserId,
@@ -25,8 +27,7 @@ import {
 import type { Diagram, ProjectRole } from '../../lib/supabase/types'
 import * as ops from './contentOperations'
 import {
-  emptySystemViewContent,
-  isSystemViewContent,
+  normalizeSystemViewContent,
   type SystemViewContent,
   type SystemViewEntity,
   type SystemViewField,
@@ -55,6 +56,14 @@ const FIELD_FLAGS: {
 function flagClassName(active: boolean, variant: string): string {
   if (!active) return 'ov-flag'
   return variant ? `ov-flag ${variant}` : 'ov-flag active'
+}
+
+/** Rótulo do badge de restrição. Só a FK muda: quando o alvo é conhecido,
+ * mostra `FK → User` em vez de só `FK` (ADR-014, decisão 2 — no material
+ * real do E-LIMS, todas as 174 FKs têm alvo). */
+function flagLabel(field: SystemViewField, key: string, label: string): string {
+  if (key === 'isForeignKey' && field.foreignKeyTarget) return `FK → ${field.foreignKeyTarget}`
+  return label
 }
 
 export function SystemViewPage() {
@@ -102,7 +111,7 @@ export function SystemViewPage() {
       .then(([loadedDiagram, userId]) => {
         setDiagram(loadedDiagram)
         setNameInput(loadedDiagram.name)
-        setContent(isSystemViewContent(loadedDiagram.content) ? loadedDiagram.content : emptySystemViewContent())
+        setContent(normalizeSystemViewContent(loadedDiagram.content))
         return userId ? getMyProjectRole(projectId, userId) : null
       })
       .then(setRole)
@@ -197,7 +206,7 @@ export function SystemViewPage() {
       .then((loaded) => {
         setDiagram(loaded)
         setNameInput(loaded.name)
-        setContent(isSystemViewContent(loaded.content) ? loaded.content : emptySystemViewContent())
+        setContent(normalizeSystemViewContent(loaded.content))
         dismissRemoteUpdate()
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao recarregar diagrama.'))
@@ -248,6 +257,15 @@ export function SystemViewPage() {
         </div>
         <div className="topbar-actions">
           <PresenceAvatars viewers={viewers} />
+          {/* TASK-058 — mesmo componente do Diagrama de Classes, com o
+              adaptador da Visão do Sistema (import mescla por módulo). */}
+          <ImportExportControls
+            content={content}
+            fileName={diagram.name}
+            canImport={!readOnly}
+            onImport={handleChange}
+            io={systemViewIO}
+          />
           {!readOnly && (
             <button type="button" className="btn primary" onClick={openCreateModuleModal}>
               + Módulo
@@ -508,42 +526,78 @@ function EntityDetail({
                 <tr key={field.id}>
                   {readOnly ? (
                     <>
-                      <td className="fname">{field.dbColumn}</td>
+                      <td className="fname">
+                        {field.name}
+                        {field.dbColumn && field.dbColumn !== field.name && (
+                          <span className="ov-fname-sub">{field.dbColumn}</span>
+                        )}
+                      </td>
                       <td>{field.dbType}</td>
                       <td>
                         <div className="ov-flags">
                           {FIELD_FLAGS.filter((f) => field[f.key]).map((f) => (
                             <span key={f.label} className={flagClassName(true, f.variant)} title={f.title}>
-                              {f.label}
+                              {flagLabel(field, f.key, f.label)}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td>{field.modelType}</td>
                       <td>{field.dtoType}</td>
-                      <td>{field.validationRule}</td>
+                      <td>
+                        <div className="ov-flags">
+                          {field.dtoRequired && (
+                            <span className="ov-flag req" title="Obrigatório no DTO">
+                              REQ
+                            </span>
+                          )}
+                          {field.dtoMin && <span className="ov-flag">mín {field.dtoMin}</span>}
+                          {field.dtoMax && <span className="ov-flag">máx {field.dtoMax}</span>}
+                          {field.validationRule && <span className="ov-valid-rule">{field.validationRule}</span>}
+                        </div>
+                      </td>
                       <td>{field.frontendType}</td>
                     </>
                   ) : (
                     <>
-                      {(
-                        [
-                          ['dbColumn', 'Coluna'],
-                          ['dbType', 'Tipo BD'],
-                        ] as const
-                      ).map(([key, label]) => (
-                        <td key={key}>
-                          <input
-                            aria-label={label}
-                            value={field[key]}
-                            onChange={(e) =>
-                              onChange(
-                                ops.updateField(content, moduleId, entity.id, field.id, { [key]: e.target.value }),
-                              )
-                            }
-                          />
-                        </td>
-                      ))}
+                      {/* "Campo" carrega o nome canônico da linha e, embaixo, a
+                          coluna de banco — que é opcional desde a ADR-014
+                          (38% das linhas reais não têm uma). */}
+                      <td>
+                        <input
+                          aria-label="Campo"
+                          value={field.name}
+                          onChange={(e) =>
+                            onChange(
+                              ops.updateField(content, moduleId, entity.id, field.id, { name: e.target.value }),
+                            )
+                          }
+                        />
+                        <input
+                          aria-label="Coluna no banco"
+                          className="ov-subinput"
+                          placeholder="coluna"
+                          value={field.dbColumn ?? ''}
+                          onChange={(e) =>
+                            onChange(
+                              ops.updateField(content, moduleId, entity.id, field.id, {
+                                dbColumn: e.target.value || undefined,
+                              }),
+                            )
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label="Tipo BD"
+                          value={field.dbType}
+                          onChange={(e) =>
+                            onChange(
+                              ops.updateField(content, moduleId, entity.id, field.id, { dbType: e.target.value }),
+                            )
+                          }
+                        />
+                      </td>
                       <td>
                         <div className="ov-flags">
                           {FIELD_FLAGS.map((f) => (
@@ -556,6 +610,10 @@ function EntityDetail({
                                 onChange(
                                   ops.updateField(content, moduleId, entity.id, field.id, {
                                     [f.key]: !field[f.key],
+                                    // Desmarcar FK não deixa um alvo órfão invisível para trás.
+                                    ...(f.key === 'isForeignKey' && field.isForeignKey
+                                      ? { foreignKeyTarget: undefined }
+                                      : {}),
                                   }),
                                 )
                               }
@@ -564,13 +622,26 @@ function EntityDetail({
                             </button>
                           ))}
                         </div>
+                        {field.isForeignKey && (
+                          <input
+                            aria-label="Alvo da FK"
+                            className="ov-subinput"
+                            placeholder="alvo"
+                            value={field.foreignKeyTarget ?? ''}
+                            onChange={(e) =>
+                              onChange(
+                                ops.updateField(content, moduleId, entity.id, field.id, {
+                                  foreignKeyTarget: e.target.value || undefined,
+                                }),
+                              )
+                            }
+                          />
+                        )}
                       </td>
                       {(
                         [
                           ['modelType', 'Tipo model'],
                           ['dtoType', 'Tipo DTO'],
-                          ['validationRule', 'Validação'],
-                          ['frontendType', 'Tipo frontend'],
                         ] as const
                       ).map(([key, label]) => (
                         <td key={key}>
@@ -585,6 +656,80 @@ function EntityDetail({
                           />
                         </td>
                       ))}
+                      {/* Validação é a camada do DTO: REQ/mín/máx estruturados
+                          (ADR-014, decisão 3) + o resíduo em texto livre.
+                          REQ nunca se mistura ao NN do banco, ao lado — são
+                          camadas diferentes (RN-02 da TASK-057). */}
+                      <td>
+                        <div className="ov-flags">
+                          <button
+                            type="button"
+                            className={flagClassName(field.dtoRequired, 'req')}
+                            title="Obrigatório no DTO (REQ)"
+                            onClick={() =>
+                              onChange(
+                                ops.updateField(content, moduleId, entity.id, field.id, {
+                                  dtoRequired: !field.dtoRequired,
+                                }),
+                              )
+                            }
+                          >
+                            REQ
+                          </button>
+                          <input
+                            aria-label="Mínimo (DTO)"
+                            className="ov-subinput ov-minmax"
+                            placeholder="mín"
+                            value={field.dtoMin ?? ''}
+                            onChange={(e) =>
+                              onChange(
+                                ops.updateField(content, moduleId, entity.id, field.id, {
+                                  dtoMin: e.target.value || undefined,
+                                }),
+                              )
+                            }
+                          />
+                          <input
+                            aria-label="Máximo (DTO)"
+                            className="ov-subinput ov-minmax"
+                            placeholder="máx"
+                            value={field.dtoMax ?? ''}
+                            onChange={(e) =>
+                              onChange(
+                                ops.updateField(content, moduleId, entity.id, field.id, {
+                                  dtoMax: e.target.value || undefined,
+                                }),
+                              )
+                            }
+                          />
+                        </div>
+                        <input
+                          aria-label="Validação"
+                          className="ov-subinput"
+                          placeholder="regex, e-mail…"
+                          value={field.validationRule}
+                          onChange={(e) =>
+                            onChange(
+                              ops.updateField(content, moduleId, entity.id, field.id, {
+                                validationRule: e.target.value,
+                              }),
+                            )
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label="Tipo frontend"
+                          value={field.frontendType}
+                          onChange={(e) =>
+                            onChange(
+                              ops.updateField(content, moduleId, entity.id, field.id, {
+                                frontendType: e.target.value,
+                              }),
+                            )
+                          }
+                        />
+                      </td>
                       <td>
                         <button
                           type="button"
@@ -735,19 +880,38 @@ function EntityDetail({
               </button>
             )}
             {readOnly ? (
-              <div className="ov-perm-title">{rule.description || 'Sem descrição'}</div>
+              <div className="ov-perm-title">
+                {rule.description || 'Sem descrição'}
+                {/* Qual método a regra guarda — ADR-014, decisão 5. */}
+                {rule.method && <span className="ov-perm-badge">{rule.method}</span>}
+              </div>
             ) : (
-              <input
-                className="ov-perm-title-input"
-                aria-label="Descrição"
-                placeholder="Descrição"
-                value={rule.description}
-                onChange={(e) =>
-                  onChange(
-                    ops.updatePermissionRule(content, moduleId, entity.id, rule.id, { description: e.target.value }),
-                  )
-                }
-              />
+              <>
+                <input
+                  className="ov-perm-title-input"
+                  aria-label="Descrição"
+                  placeholder="Descrição"
+                  value={rule.description}
+                  onChange={(e) =>
+                    onChange(
+                      ops.updatePermissionRule(content, moduleId, entity.id, rule.id, {
+                        description: e.target.value,
+                      }),
+                    )
+                  }
+                />
+                <input
+                  className="ov-perm-method-input"
+                  aria-label="Método"
+                  placeholder="Método (ex.: update)"
+                  value={rule.method}
+                  onChange={(e) =>
+                    onChange(
+                      ops.updatePermissionRule(content, moduleId, entity.id, rule.id, { method: e.target.value }),
+                    )
+                  }
+                />
+              </>
             )}
             {readOnly ? (
               rule.codeCondition && <div className="ov-perm-cond">{rule.codeCondition}</div>

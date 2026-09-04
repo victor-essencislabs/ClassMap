@@ -1,20 +1,19 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import type { ClassDiagramContent } from '../class-diagram/types'
 import { CheckGlyph } from '../diagram-shell/Icons'
 import { Modal } from '../diagram-shell/Modal'
-import { buildAgentPromptMarkdown } from './agentPrompt'
-import { exportClassDiagram, importClassDiagram } from './classDiagramConversion'
+import type { DiagramFileIO } from './diagramFileIO'
 
-const IMPORT_PLACEHOLDER =
-  '{"classes":[{"name":"User","attributes":[{"name":"id","type":"long"}]}],"relationships":[{"from":"User","to":"Log","type":"association"}]}'
-
-interface ImportExportControlsProps {
-  content: ClassDiagramContent
+interface ImportExportControlsProps<T> {
+  content: T
   /** Nome de arquivo sugerido para o download (sem extensão). */
   fileName: string
-  /** Importar sobrescreve o diagrama atual — só faz sentido para quem tem papel editor. */
+  /** Importar escreve no diagrama — só faz sentido para quem tem papel editor. */
   canImport: boolean
-  onImport: (content: ClassDiagramContent) => void
+  onImport: (content: T) => void
+  /** TASK-058 — o que muda entre Diagrama de Classes e Visão do Sistema
+   * (schema, conversão e os textos que dependem do tipo). O resto dos dois
+   * modais é o mesmo, e continua num lugar só. */
+  io: DiagramFileIO<T>
 }
 
 /** Botões "Exportar JSON"/"Importar JSON" do Diagrama de Classes
@@ -27,7 +26,7 @@ interface ImportExportControlsProps {
  * diagrama — não é uma escrita. Importar sobrescreve o conteúdo atual,
  * então só aparece para `editor` (mesmo reforço de UI das demais telas;
  * a garantia real de escrita continua sendo RLS). */
-export function ImportExportControls({ content, fileName, canImport, onImport }: ImportExportControlsProps) {
+export function ImportExportControls<T>({ content, fileName, canImport, onImport, io }: ImportExportControlsProps<T>) {
   const [openModal, setOpenModal] = useState<'export' | 'import' | null>(null)
   const [importText, setImportText] = useState('')
   const [errors, setErrors] = useState<string[] | null>(null)
@@ -49,7 +48,7 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
     setOpenModal(null)
   }
 
-  const exportJson = openModal === 'export' ? JSON.stringify(exportClassDiagram(content), null, 2) : ''
+  const exportJson = openModal === 'export' ? JSON.stringify(io.export(content), null, 2) : ''
 
   function handleDownload() {
     const blob = new Blob([exportJson], { type: 'application/json' })
@@ -67,11 +66,12 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
   // pedindo pra ele gerar o diagrama a partir do código-fonte real —
   // independente do diagrama atual (o conteúdo não usa `content`/`exportJson`).
   function handleDownloadAgentPrompt() {
-    const blob = new Blob([buildAgentPromptMarkdown()], { type: 'text/markdown' })
+    if (!io.agentPrompt) return
+    const blob = new Blob([io.agentPrompt()], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'classmap-prompt-ia.md'
+    a.download = io.agentPromptFileName ?? 'classmap-prompt-ia.md'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -114,7 +114,7 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
       return
     }
 
-    const result = importClassDiagram(parsed)
+    const result = io.import(parsed, content)
     if (!result.ok || !result.content) {
       setErrors(result.errors)
       return
@@ -170,16 +170,18 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
             </button>
           </div>
 
-          <div className="import-export-guide">
-            <p className="field-hint">
-              Não sabe qual é o formato esperado? Baixe um prompt pronto para colar num agente de IA (Claude
-              Code/Codex) rodando no repositório do sistema que você quer documentar — ele lê o código-fonte real
-              e gera o JSON no modelo certo.
-            </p>
-            <button type="button" className="btn ghost small" onClick={handleDownloadAgentPrompt}>
-              Baixar prompt para IA (.md)
-            </button>
-          </div>
+          {io.agentPrompt && (
+            <div className="import-export-guide">
+              <p className="field-hint">
+                Não sabe qual é o formato esperado? Baixe um prompt pronto para colar num agente de IA (Claude
+                Code/Codex) rodando no repositório do sistema que você quer documentar — ele lê o código-fonte
+                real e gera o JSON no modelo certo.
+              </p>
+              <button type="button" className="btn ghost small" onClick={handleDownloadAgentPrompt}>
+                Baixar prompt para IA (.md)
+              </button>
+            </div>
+          )}
         </Modal>
       )}
 
@@ -188,11 +190,11 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
           <p>
             Cole aqui o JSON no mesmo formato do "Exportar JSON" — é o formato pensado para ser gerado
             automaticamente por um agente (Claude Code / Codex) a partir do código-fonte de um projeto, por
-            exemplo depois de um merge na main. Isso substitui o diagrama atual.
+            exemplo depois de um merge na main. {io.importHint}
           </p>
           <textarea
             aria-label="JSON para importar"
-            placeholder={IMPORT_PLACEHOLDER}
+            placeholder={io.importPlaceholder}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
           />
@@ -220,7 +222,7 @@ export function ImportExportControls({ content, fileName, canImport, onImport }:
           )}
           <div className="modal-actions">
             <button type="button" className="btn primary" onClick={handleConfirmImport}>
-              Importar e substituir diagrama
+              {io.confirmImportLabel}
             </button>
           </div>
         </Modal>

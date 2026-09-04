@@ -9,7 +9,7 @@ Leia nesta ordem:
 4. o subagente especializado relevante em `.claude/agents/`
 
 Subagentes: `.claude/agents/` (`frontend-diagramas`, `supabase-multitenant`, `parser-vpp`, `contrato-ia-diagrama`)
-Skills: `.claude/skills/` (`gerar-diagrama-classmap` — geração do JSON de diagrama a partir de código-fonte, para uso neste repositório ou copiada para Elims/GeoCloudAI)
+Skills: `.claude/skills/` — `gerar-diagrama-classmap` (JSON do Diagrama de Classes a partir de código-fonte) e `gerar-visao-sistema-classmap` (JSON da Visão do Sistema, um módulo por arquivo). As duas são portáteis: servem neste repositório ou copiadas para Elims/GeoCloudAI.
 Regras globais: `.claude/rules/global.md`
 
 Não trate este arquivo como documentação completa. Siga os links indicados e registre o estado necessário à continuidade em `.agents/tasks/` e `.agents/handoffs/`.
